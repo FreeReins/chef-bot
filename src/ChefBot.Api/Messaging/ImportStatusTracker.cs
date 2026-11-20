@@ -1,4 +1,4 @@
-using ChefBot.Core.Recipes;
+using ChefBot.Core.Contracts.Messages;
 
 namespace ChefBot.Api.Messaging;
 

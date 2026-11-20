@@ -1,0 +1,266 @@
+using ChefBot.Core.ResourceAccess.Contracts;
+using Microsoft.EntityFrameworkCore;
+
+namespace ChefBot.Core.ResourceAccess.Persistence;
+
+/// <summary>Copies between the stored entities and the data contracts, in both directions.</summary>
+internal static class EntityMapping
+{
+    // ---------- entity to contract ----------
+
+    public static Recipe ToContract(this RecipeEntity entity) => new()
+    {
+        Id = entity.Id,
+        Origin = entity.Origin,
+        ExternalId = entity.ExternalId,
+        Name = entity.Name,
+        Servings = entity.Servings,
+        Course = entity.Course,
+        IsSlowCooker = entity.IsSlowCooker,
+        IsArchived = entity.IsArchived,
+        UpdatedAt = entity.UpdatedAt,
+        Ingredients = entity.Ingredients.OrderBy(i => i.Position).Select(i => new RecipeIngredient
+        {
+            Id = i.Id,
+            Position = i.Position,
+            Key = i.Key,
+            CatalogName = i.CatalogName,
+            DisplayName = i.DisplayName,
+            Quantity = i.Quantity,
+            Unit = i.Unit,
+        }).ToList(),
+    };
+
+    public static MealPlan ToContract(this MealPlanEntity entity)
+    {
+        // Meals that follow the same recipe share one copy of it, as they share one row.
+        var recipes = entity.Meals
+            .Where(meal => meal.Recipe is not null)
+            .Select(meal => meal.Recipe!)
+            .DistinctBy(recipe => recipe.Id)
+            .ToDictionary(recipe => recipe.Id, recipe => recipe.ToContract());
+
+        return new MealPlan
+        {
+            Id = entity.Id,
+            WeekStart = entity.WeekStart,
+            Status = entity.Status,
+            CreatedAt = entity.CreatedAt,
+            Meals = entity.Meals.Select(meal => new PlannedMeal
+            {
+                Id = meal.Id,
+                Date = meal.Date,
+                Slot = meal.Slot,
+                RecipeId = meal.RecipeId,
+                Recipe = meal.RecipeId is Guid id ? recipes.GetValueOrDefault(id) : null,
+                Title = meal.Title,
+                Portions = meal.Portions,
+                IsOptional = meal.IsOptional,
+                LeftoverOfMealId = meal.LeftoverOfMealId,
+                Status = meal.Status,
+                CustomIngredients = meal.CustomIngredients.Select(i => new PlannedMealIngredient
+                {
+                    Id = i.Id,
+                    Key = i.Key,
+                    CatalogName = i.CatalogName,
+                    DisplayName = i.DisplayName,
+                }).ToList(),
+            }).ToList(),
+            ShoppingItems = entity.ShoppingItems.Select(item => new ShoppingItem
+            {
+                Id = item.Id,
+                Key = item.Key,
+                CatalogName = item.CatalogName,
+                DisplayName = item.DisplayName,
+                Quantity = item.Quantity,
+                Unit = item.Unit,
+                Store = item.Store,
+                IsOptional = item.IsOptional,
+                IsPurchased = item.IsPurchased,
+                PurchasedOn = item.PurchasedOn,
+            }).ToList(),
+        };
+    }
+
+    public static PantryItem ToContract(this PantryItemEntity entity) => new()
+    {
+        Id = entity.Id,
+        Key = entity.Key,
+        CatalogName = entity.CatalogName,
+        DisplayName = entity.DisplayName,
+        Quantity = entity.Quantity,
+        Unit = entity.Unit,
+        PurchasedOn = entity.PurchasedOn,
+        ExpiresOn = entity.ExpiresOn,
+    };
+
+    public static UserAccount ToContract(this UserEntity entity) => new()
+    {
+        Id = entity.Id,
+        Username = entity.Username,
+        DisplayName = entity.DisplayName,
+        PasswordHash = entity.PasswordHash,
+        IsAdmin = entity.IsAdmin,
+        CreatedAt = entity.CreatedAt,
+        FailedSignIns = entity.FailedSignIns,
+        LockedUntil = entity.LockedUntil,
+        SessionVersion = entity.SessionVersion,
+    };
+
+    public static AccessLink ToContract(this AccessLinkEntity entity) => new()
+    {
+        Id = entity.Id,
+        Purpose = entity.Purpose,
+        TokenHash = entity.TokenHash,
+        UserId = entity.UserId,
+        CreatedByUserId = entity.CreatedByUserId,
+        CreatedAt = entity.CreatedAt,
+        ExpiresAt = entity.ExpiresAt,
+    };
+
+    // ---------- contract to entity ----------
+
+    public static RecipeEntity ToEntity(this Recipe recipe) => new()
+    {
+        Id = recipe.Id,
+        Origin = recipe.Origin,
+        ExternalId = recipe.ExternalId,
+        Name = recipe.Name,
+        Servings = recipe.Servings,
+        Course = recipe.Course,
+        IsSlowCooker = recipe.IsSlowCooker,
+        IsArchived = recipe.IsArchived,
+        UpdatedAt = recipe.UpdatedAt,
+        Ingredients = recipe.Ingredients.Select(i => new RecipeIngredientEntity
+        {
+            Id = i.Id,
+            RecipeId = recipe.Id,
+            Position = i.Position,
+            Key = i.Key,
+            CatalogName = i.CatalogName,
+            DisplayName = i.DisplayName,
+            Quantity = i.Quantity,
+            Unit = i.Unit,
+        }).ToList(),
+    };
+
+    public static MealPlanEntity ToEntity(this MealPlan plan) => new()
+    {
+        Id = plan.Id,
+        WeekStart = plan.WeekStart,
+        Status = plan.Status,
+        CreatedAt = plan.CreatedAt,
+        Meals = plan.Meals.Select(meal => new PlannedMealEntity
+        {
+            Id = meal.Id,
+            MealPlanId = plan.Id,
+            Date = meal.Date,
+            Slot = meal.Slot,
+            RecipeId = meal.RecipeId,
+            Title = meal.Title,
+            Portions = meal.Portions,
+            IsOptional = meal.IsOptional,
+            LeftoverOfMealId = meal.LeftoverOfMealId,
+            Status = meal.Status,
+            CustomIngredients = meal.CustomIngredients.Select(i => new PlannedMealIngredientEntity
+            {
+                Id = i.Id,
+                PlannedMealId = meal.Id,
+                Key = i.Key,
+                CatalogName = i.CatalogName,
+                DisplayName = i.DisplayName,
+            }).ToList(),
+        }).ToList(),
+        ShoppingItems = plan.ShoppingItems.Select(item => new ShoppingItemEntity
+        {
+            Id = item.Id,
+            MealPlanId = plan.Id,
+            Key = item.Key,
+            CatalogName = item.CatalogName,
+            DisplayName = item.DisplayName,
+            Quantity = item.Quantity,
+            Unit = item.Unit,
+            Store = item.Store,
+            IsOptional = item.IsOptional,
+            IsPurchased = item.IsPurchased,
+            PurchasedOn = item.PurchasedOn,
+        }).ToList(),
+    };
+
+    public static PantryItemEntity ToEntity(this PantryItem item) => new()
+    {
+        Id = item.Id,
+        Key = item.Key,
+        CatalogName = item.CatalogName,
+        DisplayName = item.DisplayName,
+        Quantity = item.Quantity,
+        Unit = item.Unit,
+        PurchasedOn = item.PurchasedOn,
+        ExpiresOn = item.ExpiresOn,
+    };
+
+    public static UserEntity ToEntity(this UserAccount user) => new()
+    {
+        Id = user.Id,
+        Username = user.Username,
+        DisplayName = user.DisplayName,
+        PasswordHash = user.PasswordHash,
+        IsAdmin = user.IsAdmin,
+        CreatedAt = user.CreatedAt,
+        FailedSignIns = user.FailedSignIns,
+        LockedUntil = user.LockedUntil,
+        SessionVersion = user.SessionVersion,
+    };
+
+    public static AccessLinkEntity ToEntity(this AccessLink link) => new()
+    {
+        Id = link.Id,
+        Purpose = link.Purpose,
+        TokenHash = link.TokenHash,
+        UserId = link.UserId,
+        CreatedByUserId = link.CreatedByUserId,
+        CreatedAt = link.CreatedAt,
+        ExpiresAt = link.ExpiresAt,
+    };
+
+    // ---------- saving ----------
+
+    /// <summary>
+    /// Brings a tracked row in line with a freshly mapped one: copies its columns, then does the same for each
+    /// child collection, adding new children and deleting ones that are gone.
+    /// </summary>
+    public static void CopyInto<TEntity>(this DbContext db, TEntity tracked, TEntity fresh)
+        where TEntity : class =>
+        db.Entry(tracked).CurrentValues.SetValues(fresh);
+
+    /// <summary>Makes <paramref name="current"/> hold exactly the children in <paramref name="fresh"/>, matched by id.</summary>
+    /// <param name="db">The context tracking <paramref name="current"/>.</param>
+    /// <param name="current">The tracked collection.</param>
+    /// <param name="fresh">The children as they should be.</param>
+    /// <param name="id">Reads a child's id.</param>
+    /// <param name="nested">Syncs a matched child's own children, if it has any.</param>
+    public static void SyncChildren<TEntity>(
+        this DbContext db, List<TEntity> current, IEnumerable<TEntity> fresh, Func<TEntity, Guid> id, Action<TEntity, TEntity>? nested = null)
+        where TEntity : class
+    {
+        var wanted = fresh.ToList();
+        var wantedIds = wanted.Select(id).ToHashSet();
+
+        // Removing a child from its parent's collection deletes its row.
+        current.RemoveAll(child => !wantedIds.Contains(id(child)));
+
+        var existing = current.ToDictionary(id);
+        foreach (var child in wanted)
+        {
+            if (existing.TryGetValue(id(child), out var match))
+            {
+                db.CopyInto(match, child);
+                nested?.Invoke(match, child);
+            }
+            else
+            {
+                current.Add(child);
+            }
+        }
+    }
+}

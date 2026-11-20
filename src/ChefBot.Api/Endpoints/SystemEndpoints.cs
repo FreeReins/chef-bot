@@ -1,9 +1,9 @@
-using System.Security.Claims;
 using System.Text;
-using ChefBot.Api.Contracts;
 using ChefBot.Api.Https;
-using ChefBot.Core.Accounts;
-using ChefBot.Core.Common;
+using ChefBot.Core.Contracts;
+using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Contracts.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine.Http;
 
@@ -12,34 +12,27 @@ namespace ChefBot.Api.Endpoints;
 /// <summary>System-wide settings: sign-in rules and HTTPS.</summary>
 public static class SystemEndpoints
 {
+    [Authorize(Policy = Sessions.AdminPolicy)]
     [WolverineGet("/api/system/security")]
-    public static async Task<SecurityResponse> GetSecurity(
-        ClaimsPrincipal principal, [FromServices] AccountService accounts, CancellationToken cancellationToken)
-    {
-        await accounts.RequireAdminAsync(Sessions.UserId(principal), cancellationToken);
-        return (await accounts.GetSecuritySettingsAsync(cancellationToken)).ToResponse();
-    }
+    public static Task<SecurityResponse> GetSecurity([FromServices] IAccountManager accounts, CancellationToken cancellationToken) =>
+        accounts.GetSecurityAsync(cancellationToken);
 
     /// <summary>Changes the lockout rules and whether plain HTTP visitors are sent to HTTPS. Takes effect at once.</summary>
+    [Authorize(Policy = Sessions.AdminPolicy)]
     [WolverinePut("/api/system/security")]
-    public static async Task<SecurityResponse> UpdateSecurity(
+    public static Task<SecurityResponse> UpdateSecurity(
         SecurityRequest request,
-        ClaimsPrincipal principal,
-        [FromServices] AccountService accounts,
+        [FromServices] IAccountManager accounts,
         [FromServices] CertificateStore certificates,
-        [FromServices] HttpsPolicy policy,
         CancellationToken cancellationToken)
     {
-        await accounts.RequireAdminAsync(Sessions.UserId(principal), cancellationToken);
+        // Whether HTTPS can be served is up to the host, so it is checked here.
         if (request.RequireHttps && !certificates.IsEnabled)
         {
             throw new RuleViolationException("HTTPS is switched off (Https:Mode is Off), so it can't be required.");
         }
 
-        var rules = await accounts.UpdateSecuritySettingsAsync(
-            request.MaxFailedSignIns, request.LockoutMinutes, request.RequireHttps, cancellationToken);
-        policy.RequireHttps = rules.RequireHttps;
-        return rules.ToResponse();
+        return accounts.UpdateSecurityAsync(request, cancellationToken);
     }
 
     /// <summary>How HTTPS is set up, for the setup wizard and the Settings tab.</summary>
@@ -49,17 +42,11 @@ public static class SystemEndpoints
         Describe(http, certificates, policy);
 
     /// <summary>Creates a new self-signed certificate for the given names and starts using it straight away.</summary>
+    [Authorize(Policy = Sessions.AdminPolicy)]
     [WolverinePost("/api/system/https/certificate")]
-    public static async Task<HttpsStatusResponse> RegenerateCertificate(
-        NewCertificateRequest request,
-        HttpContext http,
-        ClaimsPrincipal principal,
-        [FromServices] AccountService accounts,
-        [FromServices] CertificateStore certificates,
-        [FromServices] HttpsPolicy policy,
-        CancellationToken cancellationToken)
+    public static HttpsStatusResponse RegenerateCertificate(
+        NewCertificateRequest request, HttpContext http, [FromServices] CertificateStore certificates, [FromServices] HttpsPolicy policy)
     {
-        await accounts.RequireAdminAsync(Sessions.UserId(principal), cancellationToken);
         certificates.Regenerate(request.Hostnames ?? []);
         return Describe(http, certificates, policy);
     }

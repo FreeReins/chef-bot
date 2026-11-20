@@ -1,101 +1,51 @@
 using ChefBot.Api.Https;
 using ChefBot.Api.Messaging;
-using ChefBot.Core.Accounts;
-using ChefBot.Core.Backups;
-using ChefBot.Core.Notifications;
-using ChefBot.Core.Abstractions;
-using ChefBot.Core.Ingredients;
-using ChefBot.Core.Pantry;
-using ChefBot.Core.Planning;
-using ChefBot.Core.Recipes;
-using ChefBot.Core.Recipes.Files;
-using ChefBot.Core.Shopping;
-using ChefBot.Core.Swaps;
 using ChefBot.Core;
+using ChefBot.Core.Contracts.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Wolverine;
 
 namespace ChefBot.Api;
 
-/// <summary>The composition root: wires settings, the core logic and the infrastructure together.</summary>
+/// <summary>The composition root: wires the core, sign-in, HTTPS and the background jobs together.</summary>
 public static class ServiceRegistration
 {
     public static IServiceCollection AddChefBot(this IServiceCollection services, IConfiguration configuration)
     {
-        var planner = configuration.GetSection("Planner").Get<PlannerOptions>() ?? new PlannerOptions();
-        planner.Validate();
-
-        // Settings and reference data: loaded once, never changed while running.
-        services.AddSingleton(planner);
-        services.AddSingleton(configuration.GetSection("Classifier").Get<ClassifierOptions>() ?? new ClassifierOptions());
-        services.AddSingleton(configuration.GetSection("Stores").Get<StoreOptions>() ?? new StoreOptions());
-        services.AddSingleton(configuration.GetSection("Schedule").Get<WeeklyScheduleOptions>() ?? new WeeklyScheduleOptions());
-        services.AddSingleton(IngredientCatalog.FromJson(File.ReadAllText(DataFile(configuration, "Data:IngredientCatalog", "config/ingredients.json"))));
-        services.AddSingleton(TimeProvider.System);
+        services.AddChefBotCore(configuration);
         services.AddSingleton<ImportStatusTracker>();
-
-        // Pure logic with no state of its own.
-        services.AddSingleton<RecipeClassifier>();
-        services.AddSingleton<RecipeIngredientBuilder>();
-        services.AddSingleton<RecipeFileReader>();
-
-        // Recipe file formats, chosen by file name ending and then by the first one that recognises the file.
-        // Add a line here for each new kind of file; put specific formats before general ones like JsonRecipeFormat.
-        services.AddSingleton<IRecipeFileFormat, MealieBackupFormat>();
-        services.AddSingleton<IRecipeFileFormat, JsonRecipeFormat>();
-        services.AddSingleton<WeekPlanner>();
-        services.AddSingleton<StoreRouter>();
-        services.AddSingleton<ShoppingListBuilder>();
-        services.AddSingleton<PlanRefresher>();
-        services.AddSingleton<IngredientOverviewBuilder>();
-        services.AddSingleton<AlternativeFinder>();
-        services.AddSingleton<CreativeMealGenerator>();
-        services.AddSingleton<PantryItemFactory>();
-
-        // Use cases: one instance per request or message, sharing one database transaction.
-        services.AddScoped<RecipeService>();
-        services.AddScoped<RecipeImportService>();
-        services.AddScoped<PlanningService>();
-        services.AddScoped<MealService>();
-        services.AddScoped<ShoppingService>();
-        services.AddScoped<PantryService>();
-        services.AddScoped<AccountService>();
-        services.AddScoped<ReminderService>();
-        services.AddScoped<BackupService>();
-        services.AddSingleton(new SampleRecipes(DataFile(configuration, "Data:SampleRecipes", "config/sample-recipes.json")));
-
-        return services.AddChefBotInfrastructure(configuration);
+        services.AddHostedService<MaintenanceTimer>();
+        return services;
     }
 
     /// <summary>
-    /// Wolverine generates the code that calls endpoints and handlers. These services are built by
-    /// the container (database context, HTTP clients), so Wolverine is told to ask the container for them.
+    /// Wolverine generates the code that calls endpoints and handlers. The managers are built by the container
+    /// (they need the database context and HTTP clients), so Wolverine is told to ask the container for them.
     /// </summary>
     public static void ResolveChefBotServicesFromContainer(this WolverineOptions wolverine)
     {
-        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<RecipeService>();
-        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<RecipeImportService>();
-        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<PlanningService>();
-        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<MealService>();
-        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<ShoppingService>();
-        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<PantryService>();
-        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<AccountService>();
-        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<ReminderService>();
-        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<BackupService>();
+        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<IPlanManager>();
+        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<IPantryManager>();
+        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<IRecipeManager>();
+        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<IAccountManager>();
+        wolverine.CodeGeneration.AlwaysUseServiceLocationFor<IMaintenanceManager>();
     }
 
     /// <summary>
-    /// Sign-in with a cookie. The API answers 401 or 403 instead of redirecting to a login page,
-    /// and a session ends as soon as its account is removed.
+    /// Sign-in with a cookie. The API answers 401 or 403 instead of redirecting to a login page, a session ends as
+    /// soon as its account is removed or its password changes, and endpoints marked with the
+    /// <see cref="Sessions.AdminPolicy"/> policy are for admins only.
     /// </summary>
     public static IServiceCollection AddChefBotSignIn(this IServiceCollection services, IConfiguration configuration)
     {
         // Cookies are encrypted with keys kept on disk, so sessions survive a restart.
         services.AddDataProtection().SetApplicationName("ChefBot").PersistKeysToFileSystem(new DirectoryInfo(KeysFolder(configuration)));
 
-        services.AddAuthorization();
+        services.AddAuthorizationBuilder().AddPolicy(Sessions.AdminPolicy, policy => policy.RequireRole(Sessions.AdminRole));
+        services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, AdminOnlyHandler>();
         services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
         {
             options.Cookie.Name = "chefbot.session";
@@ -116,14 +66,19 @@ public static class ServiceRegistration
             };
             options.Events.OnValidatePrincipal = async context =>
             {
-                var accounts = context.HttpContext.RequestServices.GetRequiredService<AccountService>();
-                var user = Sessions.UserId(context.Principal) is Guid userId
-                    ? await accounts.FindUserAsync(userId, context.HttpContext.RequestAborted)
+                var accounts = context.HttpContext.RequestServices.GetRequiredService<IAccountManager>();
+                var session = Sessions.UserId(context.Principal) is Guid userId
+                    ? await accounts.FindSessionAsync(userId, context.HttpContext.RequestAborted)
                     : null;
 
-                if (!Sessions.IsCurrent(context.Principal, user))
+                if (!Sessions.IsCurrent(context.Principal, session))
                 {
                     context.RejectPrincipal();
+                }
+                else if (Sessions.AdminChanged(context.Principal, session!))
+                {
+                    context.ReplacePrincipal(Sessions.Principal(session!));
+                    context.ShouldRenew = true;
                 }
             };
         });
@@ -139,7 +94,7 @@ public static class ServiceRegistration
     public static CertificateStore AddChefBotHttps(this IServiceCollection services, IConfiguration configuration)
     {
         DataFolders.RequireWritable(KeysFolder(configuration), "Data:SessionKeys");
-        DataFolders.RequireWritable(DataFile(configuration, "Data:Backups", "backups"), "Data:Backups");
+        DataFolders.RequireWritable(CoreRegistration.DataPath(configuration, "Data:Backups", "backups"), "Data:Backups");
 
         var options = configuration.GetSection("Https").Get<HttpsOptions>() ?? new HttpsOptions();
         var certificates = new CertificateStore(options, KeysFolder(configuration));
@@ -206,8 +161,9 @@ public static class ServiceRegistration
     }
 
     /// <summary>
-    /// Runs once at startup: creates the database tables, loads the admin's settings, and, when
-    /// Accounts:RecoverUsername is set, writes a password reset link for that account to the log.
+    /// Runs once at startup, before the app starts serving: creates the database tables (before the message bus
+    /// creates its own, see <see cref="CoreRegistration.InitializeChefBotDatabaseAsync"/>) and loads the
+    /// "always use HTTPS" setting.
     /// </summary>
     public static async Task PrepareChefBotAsync(this IServiceProvider services)
     {
@@ -218,17 +174,32 @@ public static class ServiceRegistration
         await services.InitializeChefBotDatabaseAsync();
 
         await using var scope = services.CreateAsyncScope();
-        var accounts = scope.ServiceProvider.GetRequiredService<AccountService>();
-        var rules = await accounts.GetSecuritySettingsAsync(CancellationToken.None);
+        var rules = await scope.ServiceProvider.GetRequiredService<IAccountManager>().GetSecurityAsync(CancellationToken.None);
         services.GetRequiredService<HttpsPolicy>().RequireHttps = rules.RequireHttps;
+    }
+
+    /// <summary>
+    /// Runs once the app and its message bus have started: saves the starting values from the configuration,
+    /// writes a password reset link to the log when Accounts:RecoverUsername is set, and says when the weekly
+    /// schedule next stages a plan.
+    /// </summary>
+    public static async Task ApplyChefBotStartupSettingsAsync(this IServiceProvider services)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var loggers = services.GetRequiredService<ILoggerFactory>();
 
         // A webhook and a Mealie connection in the configuration are the starting values until something
         // is saved on the Settings tab.
-        var configuration = services.GetRequiredService<IConfiguration>();
-        await scope.ServiceProvider.GetRequiredService<ReminderService>()
+        await scope.ServiceProvider.GetRequiredService<IMaintenanceManager>()
             .UseDefaultWebhookAsync(configuration["Notifications:WebhookUrl"], CancellationToken.None);
-        await scope.ServiceProvider.GetRequiredService<RecipeImportService>()
-            .UseDefaultConnectionAsync(configuration["Mealie:Url"], configuration["Mealie:ApiToken"], CancellationToken.None);
+        await scope.ServiceProvider.GetRequiredService<IRecipeManager>()
+            .UseDefaultMealieConnectionAsync(configuration["Mealie:Url"], configuration["Mealie:ApiToken"], CancellationToken.None);
+
+        if (scope.ServiceProvider.GetRequiredService<IPlanManager>().NextScheduledStaging() is { } next)
+        {
+            loggers.CreateLogger("ChefBot.Schedule").LogInformation("Next week's plan will be staged automatically at {When}.", next);
+        }
 
         var username = configuration["Accounts:RecoverUsername"];
         if (string.IsNullOrWhiteSpace(username))
@@ -236,8 +207,8 @@ public static class ServiceRegistration
             return;
         }
 
-        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("ChefBot.Recovery");
-        var link = await accounts.CreatePasswordResetForUsernameAsync(username, CancellationToken.None);
+        var logger = loggers.CreateLogger("ChefBot.Recovery");
+        var link = await scope.ServiceProvider.GetRequiredService<IAccountManager>().CreateRecoveryLinkAsync(username, CancellationToken.None);
         if (link is null)
         {
             logger.LogWarning("Accounts:RecoverUsername is set to {Username}, but there is no such account.", username);
@@ -252,12 +223,5 @@ public static class ServiceRegistration
     }
 
     /// <summary>The folder for files ChefBot creates and must keep: session keys and its own HTTPS certificate.</summary>
-    private static string KeysFolder(IConfiguration configuration) => DataFile(configuration, "Data:SessionKeys", "keys");
-
-    /// <summary>Resolves a data file path from settings. Relative paths are relative to the application folder.</summary>
-    private static string DataFile(IConfiguration configuration, string key, string fallback)
-    {
-        var path = configuration[key] is { Length: > 0 } configured ? configured : fallback;
-        return Path.IsPathRooted(path) ? path : Path.Combine(AppContext.BaseDirectory, path);
-    }
+    private static string KeysFolder(IConfiguration configuration) => CoreRegistration.DataPath(configuration, "Data:SessionKeys", "keys");
 }

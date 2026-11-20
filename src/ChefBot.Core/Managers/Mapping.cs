@@ -1,0 +1,121 @@
+using System.Globalization;
+using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Engines;
+using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.Utilities;
+
+namespace ChefBot.Core.Managers;
+
+/// <summary>Turns the internal data contracts and engine results into the public response messages, and back.</summary>
+internal static class Mapping
+{
+    public static PlanResponse ToResponse(this MealPlan plan, IEnumerable<string> notes)
+    {
+        var meals = plan.Meals
+            .OrderBy(meal => meal.Date ?? DateOnly.MaxValue)
+            .ThenBy(meal => meal.Slot)
+            .ThenBy(meal => meal.Title, StringComparer.OrdinalIgnoreCase)
+            .Select(meal => meal.ToResponse())
+            .ToList();
+
+        var shopping = plan.ShoppingItems
+            .OrderBy(item => item.IsPurchased)
+            .ThenBy(item => item.Store, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new ShoppingItemResponse(
+                item.Id, item.DisplayName, item.Quantity, item.Unit, item.Store, item.IsOptional, item.IsPurchased, item.PurchasedOn))
+            .ToList();
+
+        return new PlanResponse(plan.Id, plan.WeekStart, WeekLayout.WeekEnd(plan.WeekStart), plan.Status, meals, shopping, notes.ToList());
+    }
+
+    public static MealResponse ToResponse(this PlannedMeal meal) => new(
+        meal.Id,
+        meal.Date,
+        meal.Date?.DayOfWeek.ToString(),
+        meal.Slot,
+        meal.Title,
+        meal.RecipeId,
+        meal.Status,
+        meal.IsOptional,
+        meal.IsLeftover,
+        meal.Recipe?.IsSlowCooker ?? false,
+        meal.Portions,
+        meal.Ingredients.Select(ingredient => ingredient.DisplayName).Distinct().ToList());
+
+    public static AlternativesResponse ToResponse(this Suggestions suggestions, PlannedMeal meal) => new(
+        meal.ToResponse(),
+        suggestions.Recipes.Select(alternative => new RecipeAlternative(
+            alternative.Recipe.Id,
+            alternative.Recipe.Name,
+            alternative.Recipe.IsSlowCooker,
+            alternative.Score,
+            alternative.OnHand,
+            alternative.ExpiringSoon,
+            alternative.ToBuy)).ToList(),
+        suggestions.Ideas.Select(idea => new CreativeMeal(
+            idea.Title,
+            idea.Parts.Select(part => new CreativeComponent(part.Name, part.Group, part.OnHand, part.ExpiresOn)).ToList())).ToList());
+
+    public static IngredientsResponse ToResponse(this IngredientOverview overview, DateOnly today, int expiringSoonDays, IngredientCatalog catalog) => new(
+        overview.Ingredients.Select(line => new IngredientLine(
+            line.Name, line.Status, line.Quantity, line.Unit, line.Store, line.ExpiresOn, line.IsOptional, line.UsedIn, line.ShoppingItemId)).ToList(),
+        overview.Pantry.Select(line => new PantryUseResponse(line.Item.ToResponse(today, expiringSoonDays, catalog), line.UsedByPlan)).ToList());
+
+    public static PantryItemResponse ToResponse(this PantryItem item, DateOnly today, int expiringSoonDays, IngredientCatalog catalog) => new(
+        item.Id,
+        item.DisplayName,
+        item.Quantity,
+        item.Unit,
+        item.PurchasedOn,
+        item.ExpiresOn,
+        item.DaysLeft(today),
+        item.FreshnessOn(today, expiringSoonDays),
+        catalog.Get(item.CatalogName)?.Group);
+
+    public static RecipeResponse ToResponse(this Recipe recipe) => new(
+        recipe.Id,
+        recipe.Name,
+        recipe.Course,
+        recipe.Origin,
+        recipe.IsSlowCooker,
+        recipe.Servings,
+        recipe.Ingredients.OrderBy(ingredient => ingredient.Position).Select(Describe).ToList());
+
+    public static RecipeText ToText(this RecipeDraft draft) =>
+        new(draft.Name, draft.Course, draft.Ingredients ?? [], draft.IsSlowCooker, draft.Servings);
+
+    public static MealieSettingsResponse ToResponse(this MealieSettings settings) =>
+        new(settings.Url, settings.ApiToken.Length > 0, settings.IsConfigured);
+
+    public static UserResponse ToResponse(this UserAccount user) =>
+        new(user.Id, user.Username, user.DisplayName, user.IsAdmin, user.CreatedAt, user.LockedUntil);
+
+    public static SessionInfo ToSession(this UserAccount user) => new(user.Id, user.Username, user.IsAdmin, user.SessionVersion);
+
+    public static AccountSession ToAccountSession(this UserAccount user) => new(user.ToResponse(), user.ToSession());
+
+    public static SecurityResponse ToResponse(this SecuritySettings rules) =>
+        new(rules.MaxFailedSignIns, rules.LockoutMinutes, rules.RequireHttps);
+
+    public static NotificationSettingsResponse ToResponse(this NotificationSettings settings) => new(
+        settings.WebhookUrl,
+        settings.PlanReady,
+        settings.SlowCooker,
+        settings.MealsToday,
+        settings.ExpiringFood,
+        settings.Shopping,
+        settings.DailyTime,
+        settings.LastDailyRunOn);
+
+    public static BackupFile ToResponse(this StoredBackup file) => new(file.Name, file.CreatedAt, file.SizeBytes);
+
+    public static DeliveryResult ToResponse(this Delivery delivery) => new(delivery.Delivered, delivery.Problem);
+
+    /// <summary>Writes an ingredient the way it would be typed: "1.5 lb chicken thigh".</summary>
+    private static string Describe(RecipeIngredient ingredient)
+    {
+        var amount = ingredient.Quantity is decimal quantity ? quantity.ToString("0.###", CultureInfo.InvariantCulture) : string.Empty;
+        return string.Join(' ', new[] { amount, ingredient.Unit, ingredient.DisplayName }.Where(part => part.Length > 0));
+    }
+}

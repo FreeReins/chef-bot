@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using ChefBot.Api;
-using ChefBot.Api.Messaging;
+using ChefBot.Core;
 using Wolverine;
 using Wolverine.Http;
 
@@ -18,9 +18,13 @@ builder.Services.AddOpenApi();
 builder.Services.ConfigureHttpJsonOptions(json =>
     json.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-// Wolverine runs the HTTP endpoints (Endpoints/), the background message
-// handlers (Messaging/) and the weekly schedule.
-builder.Host.UseWolverine(wolverine => wolverine.ResolveChefBotServicesFromContainer());
+// Wolverine runs the HTTP endpoints (Endpoints/) and the message handlers (Messaging/). Messages the managers
+// publish are kept in PostgreSQL with their data, so they survive a restart.
+builder.Host.UseWolverine(wolverine =>
+{
+    wolverine.UseChefBotMessageStorage(builder.Configuration);
+    wolverine.ResolveChefBotServicesFromContainer();
+});
 builder.Services.AddWolverineHttp();
 
 var app = builder.Build();
@@ -50,7 +54,8 @@ app.MapWolverineEndpoints(endpoints => endpoints.RequireAuthorizeOnAll());
 app.MapFallbackToFile("index.html", webPage).AllowAnonymous();
 app.MapFallback("/api/{**rest}", () => Results.NotFound()).AllowAnonymous().ExcludeFromDescription();
 
+// ChefBot's tables are created before the message bus starts and creates its own.
 await app.Services.PrepareChefBotAsync();
 await app.StartAsync();
-await app.Services.ScheduleNextWeeklyPlanAsync();
+await app.Services.ApplyChefBotStartupSettingsAsync();
 await app.WaitForShutdownAsync();

@@ -1,7 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Domain logic, application services, and their PostgreSQL, Mealie and webhook implementations. -->
+  <!--
+    Everything below the API: public contracts (Contracts/), and the internal managers, engines, resource
+    accessors and utilities behind them. Only Contracts/ and CoreRegistration are public.
+  -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="WolverineFx.EntityFrameworkCore" />
+    <PackageReference Include="WolverineFx.Postgresql" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChefBot.Core.Tests" />
   </ItemGroup>
 </Project>
