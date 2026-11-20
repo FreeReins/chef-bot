@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChefBot</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>ChefBot</h1>
+      <p id="week" class="muted">Loading…</p>
+    </div>
+    <div id="actions" class="actions"></div>
+  </header>
+
+  <div id="messages" aria-live="polite"></div>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Views" hidden>
+    <button role="tab" data-tab="meals" aria-selected="true">Meals</button>
+    <button role="tab" data-tab="schedule" aria-selected="false">Schedule</button>
+    <button role="tab" data-tab="ingredients" aria-selected="false">Ingredients</button>
+    <button role="tab" data-tab="recipes" aria-selected="false">Recipes</button>
+    <button role="tab" data-tab="people" aria-selected="false" id="people-tab" hidden>People</button>
+    <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+  </nav>
+
+  <main id="view"></main>
+
+  <footer class="muted" id="footer" hidden>API reference: <a href="/openapi/v1.json">/openapi/v1.json</a></footer>
+  <script src="app.js"></script>
+</body>
+</html>

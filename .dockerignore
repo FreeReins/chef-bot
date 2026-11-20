@@ -1,0 +1,10 @@
+# Keeps local build output and other clutter out of the image build. Podman and Docker both read this file.
+**/bin/
+**/obj/
+**/TestResults/
+.git/
+.vs/
+.vscode/
+.idea/
+*.user
+deploy/

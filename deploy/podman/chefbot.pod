@@ -1,0 +1,11 @@
+# The pod ChefBot and its database share. Containers in a pod reach each other on localhost, and only the
+# ports published here can be reached from outside.
+[Unit]
+Description=ChefBot pod
+
+[Pod]
+PodName=chefbot
+# HTTP, then HTTPS. To use other ports on the host, change the left-hand number. If you change the HTTPS one,
+# set Https__PublicPort in chefbot.env to match.
+PublishPort=8080:8080
+PublishPort=8443:8443

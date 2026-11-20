@@ -1,0 +1,25 @@
+# ChefBot's PostgreSQL database.
+[Unit]
+Description=ChefBot database
+
+[Container]
+ContainerName=chefbot-db
+Image=docker.io/library/postgres:17-alpine
+Pod=chefbot.pod
+Environment=POSTGRES_DB=chefbot
+Environment=POSTGRES_USER=chefbot
+# Created by install.sh. PostgreSQL only reads it when the database is first created.
+Secret=chefbot-db-password,type=env,target=POSTGRES_PASSWORD
+Volume=chefbot-db.volume:/var/lib/postgresql/data
+Timezone=local
+# Checked over TCP, like ChefBot connects. While the image creates the database on first start it runs a
+# temporary server that only listens on a socket, which a socket check would wrongly report as ready.
+HealthCmd=pg_isready -h 127.0.0.1 -U chefbot -d chefbot
+HealthInterval=5s
+HealthTimeout=3s
+HealthRetries=12
+# The service only counts as started once the health check passes, so ChefBot waits for a ready database.
+Notify=healthy
+
+[Service]
+Restart=always

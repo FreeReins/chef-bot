@@ -1,0 +1,103 @@
+using ChefBot.Core.Ingredients;
+using ChefBot.Core.Pantry;
+using ChefBot.Core.Recipes;
+
+namespace ChefBot.Core.Planning;
+
+/// <summary>
+/// Scores a set of recipes as a week: higher when they share perishables, suit the season
+/// and use up what is in the pantry, lower when they lean on one protein.
+/// </summary>
+/// <param name="catalog">What is known about each ingredient.</param>
+/// <param name="options">The scoring weights.</param>
+/// <param name="pantry">What is on hand.</param>
+/// <param name="month">The month being planned, for seasons.</param>
+/// <param name="pantryBoost">Multiplies the reward for using pantry food. Above 1 when a plan is rebuilt around what was bought.</param>
+public sealed class WeekScorer(IngredientCatalog catalog, PlannerOptions options, PantrySnapshot pantry, int month, double pantryBoost = 1)
+{
+    private readonly Dictionary<Guid, Profile> _profiles = new();
+
+    /// <summary>The part of a recipe's score that doesn't depend on the other meals.</summary>
+    public double ScoreAlone(Recipe recipe) => ProfileOf(recipe).Score;
+
+    public double Score(IEnumerable<Recipe> meals)
+    {
+        var weights = options.Weights;
+        var perishables = new Dictionary<string, int>(StringComparer.Ordinal);
+        var proteins = new Dictionary<string, int>(StringComparer.Ordinal);
+        var total = 0d;
+
+        foreach (var meal in meals)
+        {
+            var profile = ProfileOf(meal);
+            total += profile.Score;
+            Count(perishables, profile.Perishables);
+            Count(proteins, profile.Proteins);
+        }
+
+        foreach (var (name, uses) in perishables)
+        {
+            if (uses > 1)
+            {
+                total += weights.SharedPerishable * (uses - 1);
+            }
+            else if (!pantry.Has(name))
+            {
+                total += weights.StrandedPerishable;
+            }
+        }
+
+        foreach (var uses in proteins.Values.Where(uses => uses > 2))
+        {
+            total += weights.SameProtein * (uses - 2);
+        }
+
+        return total;
+    }
+
+    private Profile ProfileOf(Recipe recipe)
+    {
+        if (_profiles.TryGetValue(recipe.Id, out var cached))
+        {
+            return cached;
+        }
+
+        var weights = options.Weights;
+        var entries = recipe.GetCatalogNames()
+            .Select(name => catalog.Get(name))
+            .OfType<CatalogEntry>()
+            .Where(entry => !entry.PantryStaple)
+            .ToList();
+
+        var inSeason = entries.Count(entry => entry.IsInSeason(month) == true);
+        var outOfSeason = entries.Count(entry => entry.IsInSeason(month) == false);
+        var score = weights.Seasonal * (inSeason - outOfSeason) / Math.Max(1, inSeason + outOfSeason);
+
+        foreach (var entry in entries.Where(entry => pantry.Has(entry.Name)))
+        {
+            score += weights.OnHand * pantryBoost;
+            if (pantry.ExpiresSoon(entry.Name))
+            {
+                score += weights.ExpiringSoon;
+            }
+        }
+
+        var profile = new Profile(
+            score,
+            entries.Where(entry => entry.SpoilsWithin(options.PerishableWithinDays)).Select(entry => entry.Name).ToList(),
+            entries.Where(entry => entry.Group == IngredientGroup.Protein).Select(entry => entry.Name).ToList());
+
+        _profiles[recipe.Id] = profile;
+        return profile;
+    }
+
+    private static void Count(Dictionary<string, int> counts, IEnumerable<string> names)
+    {
+        foreach (var name in names)
+        {
+            counts[name] = counts.GetValueOrDefault(name) + 1;
+        }
+    }
+
+    private sealed record Profile(double Score, IReadOnlyList<string> Perishables, IReadOnlyList<string> Proteins);
+}

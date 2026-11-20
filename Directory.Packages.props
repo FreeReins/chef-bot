@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageVersion Include="TUnit" Version="1.83.0" />
+    <PackageVersion Include="WolverineFx" Version="6.35.0" />
+    <PackageVersion Include="WolverineFx.Http" Version="6.35.0" />
+    <PackageVersion Include="WolverineFx.RuntimeCompilation" Version="6.35.0" />
+  </ItemGroup>
+</Project>

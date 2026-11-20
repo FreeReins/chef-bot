@@ -1,0 +1,32 @@
+# The ChefBot app. Its settings are in ~/.config/chefbot/chefbot.env.
+[Unit]
+Description=ChefBot
+Requires=chefbot-db.service
+After=chefbot-db.service
+
+[Container]
+ContainerName=chefbot
+# Built from this repository by install.sh.
+Image=localhost/chefbot:latest
+Pod=chefbot.pod
+# The database runs in the same pod. The password comes from the secret, through PGPASSWORD.
+Environment="ConnectionStrings__ChefBot=Host=127.0.0.1;Port=5432;Database=chefbot;Username=chefbot"
+Secret=chefbot-db-password,type=env,target=PGPASSWORD
+EnvironmentFile=%h/.config/chefbot/chefbot.env
+Timezone=local
+# Keeps people signed in, and keeps the HTTPS certificate, across restarts.
+Volume=chefbot-keys.volume:/app/keys
+# Automatic backups. To keep them in a host folder instead, create it, give it to the app's user with
+#   podman unshare chown 1654 ~/chefbot-backups
+# and use this line in place of the one below:
+#   Volume=%h/chefbot-backups:/app/backups:Z
+Volume=chefbot-backups.volume:/app/backups
+# To use your own ingredient list or starter recipes, mount them over the built-in ones:
+#   Volume=%h/.config/chefbot/ingredients.json:/app/config/ingredients.json:ro,Z
+
+[Service]
+Restart=always
+
+[Install]
+# Start with your user session, or at boot once lingering is on (loginctl enable-linger).
+WantedBy=default.target
