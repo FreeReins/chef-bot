@@ -74,6 +74,7 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(ReminderRun))]
 [JsonSerializable(typeof(BackupSettingsRequest))]
 [JsonSerializable(typeof(BackupsResponse))]
+[JsonSerializable(typeof(BackupSummary))]
 [JsonSerializable(typeof(SendDueReminders))]
 [JsonSerializable(typeof(RunDueBackup))]
 public sealed partial class ContractJsonContext : JsonSerializerContext;

@@ -16,6 +16,9 @@ internal interface IBackupAccess
     /// <summary>Opens a backup for download.</summary>
     Stream OpenRead(string name);
 
+    /// <summary>Counts what a backup file holds without loading it into the database.</summary>
+    Task<BackupCounts> CountAsync(string name, CancellationToken cancellationToken);
+
     /// <summary>Replaces everything in the database with the contents of a backup, in its own transaction.</summary>
     Task RestoreAsync(string name, CancellationToken cancellationToken);
 }

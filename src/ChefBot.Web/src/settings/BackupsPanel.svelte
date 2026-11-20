@@ -1,9 +1,30 @@
 <script>
   import { app, run, toast, ask } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
 
   const backups = $derived(app.backups);
   const size = (bytes) => (bytes < 1048576 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`);
+
+  // Opened rows and the counts loaded for them, by file name. Counts are fetched the first time a row opens.
+  let open = $state({});
+  let summaries = $state({});
+
+  const counts = [
+    ['recipes', 'Recipes'], ['recipePhotos', 'Recipe photos'], ['mealPlans', 'Meal plans'],
+    ['plannedMeals', 'Planned meals'], ['shoppingItems', 'Shopping list items'], ['pantryItems', 'Pantry items'],
+    ['users', 'Accounts'], ['groceryStores', 'Grocery stores'],
+  ];
+
+  function toggle(file) {
+    open[file.name] = !open[file.name];
+    if (!open[file.name] || summaries[file.name]) return;
+    run(async () => {
+      summaries[file.name] = await api('GET', `/api/system/backups/${file.name}/summary`);
+    }).finally(() => {
+      if (!summaries[file.name]) open[file.name] = false;
+    });
+  }
 
   function save(event) {
     event.preventDefault();
@@ -62,14 +83,42 @@
   {#if backups.files.length === 0}<p class="muted">No backups yet.</p>{/if}
   <ul class="plain">
     {#each backups.files as file (file.name)}
-      <li class="row">
-        <div><strong>{new Date(file.createdAt).toLocaleString()}</strong> <span class="muted">{size(file.sizeBytes)}</span></div>
-        <div class="row-actions">
-          <a class="button small" href="/api/system/backups/{file.name}" download={file.name}>Download</a>
-          <button class="small" onclick={() => restore(file)}>Restore</button>
-          <button class="small" onclick={() => remove(file)}>Delete</button>
+      <li>
+        <div class="row">
+          <button type="button" class="toggle" aria-expanded={!!open[file.name]} onclick={() => toggle(file)}>
+            <ChevronRight class="chevron" size={16} />
+            <strong>{new Date(file.createdAt).toLocaleString()}</strong> <span class="muted">{size(file.sizeBytes)}</span>
+          </button>
+          <div class="row-actions">
+            <a class="button small" href="/api/system/backups/{file.name}" download={file.name}>Download</a>
+            <button class="small" onclick={() => restore(file)}>Restore</button>
+            <button class="small" onclick={() => remove(file)}>Delete</button>
+          </div>
         </div>
+        {#if open[file.name]}
+          {@const summary = summaries[file.name]}
+          {#if summary}
+            <dl class="counts">
+              {#each counts as [key, label] (key)}
+                <div><dt>{label}</dt><dd>{summary[key]}</dd></div>
+              {/each}
+            </dl>
+          {:else}
+            <p class="muted details">Reading the backup…</p>
+          {/if}
+        {/if}
       </li>
     {/each}
   </ul>
 </div>
+
+<style>
+  .toggle { display: flex; gap: .4rem; align-items: baseline; flex-wrap: wrap; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .toggle :global(.chevron) { align-self: center; flex: none; color: var(--muted); transition: transform .15s; }
+  .toggle[aria-expanded='true'] :global(.chevron) { transform: rotate(90deg); }
+  .details { margin: .35rem 0 .2rem 1.4rem; }
+  .counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .3rem 1rem; margin: .4rem 0 .2rem 1.4rem; font-size: .9rem; }
+  .counts div { display: flex; justify-content: space-between; gap: .5rem; }
+  .counts dt { color: var(--muted); }
+  .counts dd { margin: 0; font-variant-numeric: tabular-nums; }
+</style>

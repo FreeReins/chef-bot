@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ChefBot.Core.Engines;
 using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.Managers.Contracts.Messages;
@@ -133,6 +134,19 @@ internal sealed class MaintenanceManager(
 
     public Task<Stream> OpenBackupAsync(string name, CancellationToken cancellationToken) =>
         Task.FromResult(backups.OpenRead(validation.ExistingBackup(name)));
+
+    public async Task<BackupSummary> GetBackupSummaryAsync(string name, CancellationToken cancellationToken)
+    {
+        var file = validation.ExistingBackup(name);
+        try
+        {
+            return (await backups.CountAsync(file, cancellationToken)).ToResponse();
+        }
+        catch (Exception exception) when (exception is InvalidDataException or JsonException)
+        {
+            throw new RuleViolationException("This backup couldn't be read. It may be damaged: download it to check, or delete it.");
+        }
+    }
 
     public async Task<BackupsResponse> DeleteBackupAsync(string name, CancellationToken cancellationToken)
     {

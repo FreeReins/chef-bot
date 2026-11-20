@@ -39,6 +39,9 @@ public interface IMaintenanceManager
     /// <summary>Opens a backup file for download.</summary>
     Task<Stream> OpenBackupAsync(string name, CancellationToken cancellationToken);
 
+    /// <summary>Counts what a backup holds, so it can be checked before restoring it.</summary>
+    Task<BackupSummary> GetBackupSummaryAsync(string name, CancellationToken cancellationToken);
+
     Task<BackupsResponse> DeleteBackupAsync(string name, CancellationToken cancellationToken);
 
     /// <summary>Replaces all of ChefBot's data with a backup. Everything saved since that backup is lost.</summary>

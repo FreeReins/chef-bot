@@ -13,5 +13,7 @@ internal sealed class NoBackups : IBackupAccess
 
     public Stream OpenRead(string name) => throw new NotSupportedException();
 
+    public Task<BackupCounts> CountAsync(string name, CancellationToken cancellationToken) => throw new NotSupportedException();
+
     public Task RestoreAsync(string name, CancellationToken cancellationToken) => throw new NotSupportedException();
 }

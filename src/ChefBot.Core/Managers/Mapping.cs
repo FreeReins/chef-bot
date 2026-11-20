@@ -177,6 +177,10 @@ internal static class Mapping
 
     public static BackupFile ToResponse(this StoredBackup file) => new(file.Name, file.CreatedAt, file.SizeBytes);
 
+    public static BackupSummary ToResponse(this BackupCounts counts) => new(
+        counts.Recipes, counts.RecipePhotos, counts.MealPlans, counts.PlannedMeals,
+        counts.ShoppingItems, counts.PantryItems, counts.Users, counts.GroceryStores);
+
     public static DeliveryResult ToResponse(this Delivery delivery) => new(delivery.Delivered, delivery.Problem);
 
     /// <summary>The ingredient line as written, or rebuilt from its parts for rows saved before lines were kept.</summary>

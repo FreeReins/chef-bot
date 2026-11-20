@@ -30,6 +30,11 @@ public static class BackupEndpoints
     public static async Task<IResult> Download(string name, [FromServices] IMaintenanceManager maintenance, CancellationToken cancellationToken) =>
         Results.File(await maintenance.OpenBackupAsync(name, cancellationToken), "application/gzip", name);
 
+    /// <summary>Counts what a backup holds, so it can be checked before restoring it.</summary>
+    [WolverineGet("/api/system/backups/{name}/summary")]
+    public static Task<BackupSummary> Summary(string name, [FromServices] IMaintenanceManager maintenance, CancellationToken cancellationToken) =>
+        maintenance.GetBackupSummaryAsync(name, cancellationToken);
+
     [WolverineDelete("/api/system/backups/{name}")]
     public static Task<BackupsResponse> Delete(string name, [FromServices] IMaintenanceManager maintenance, CancellationToken cancellationToken) =>
         maintenance.DeleteBackupAsync(name, cancellationToken);

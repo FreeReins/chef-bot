@@ -70,6 +70,27 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
 
     public Stream OpenRead(string name) => File.OpenRead(Path.Combine(folder, name));
 
+    public async Task<BackupCounts> CountAsync(string name, CancellationToken cancellationToken)
+    {
+        BackupOutline outline;
+        await using (var file = File.OpenRead(Path.Combine(folder, name)))
+        await using (var zip = new GZipStream(file, CompressionMode.Decompress))
+        {
+            outline = await JsonSerializer.DeserializeAsync(zip, BackupJson.Default.BackupOutline, cancellationToken)
+                ?? throw new InvalidDataException("The backup file is empty.");
+        }
+
+        return new BackupCounts(
+            outline.Recipes.Count,
+            outline.RecipeImageData.Count,
+            outline.MealPlans.Count,
+            outline.MealPlans.Sum(plan => plan.Meals.Count),
+            outline.MealPlans.Sum(plan => plan.ShoppingItems.Count),
+            outline.PantryItems.Count,
+            outline.Users.Count,
+            outline.GroceryStores.Count);
+    }
+
     public async Task RestoreAsync(string name, CancellationToken cancellationToken)
     {
         BackupContents contents;
@@ -155,8 +176,39 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         public List<GroceryStoreEntity> GroceryStores { get; set; } = [];
     }
 
+    /// <summary>
+    /// Just enough of a backup file to count what it holds. The records' fields are skipped, so
+    /// no entities or photo bytes are built. A list an older backup lacks reads as empty.
+    /// </summary>
+    private sealed class BackupOutline
+    {
+        public List<Counted> Recipes { get; init => field = value ?? []; } = [];
+
+        public List<Counted> RecipeImageData { get; init => field = value ?? []; } = [];
+
+        public List<PlanOutline> MealPlans { get; init => field = value ?? []; } = [];
+
+        public List<Counted> PantryItems { get; init => field = value ?? []; } = [];
+
+        public List<Counted> Users { get; init => field = value ?? []; } = [];
+
+        public List<Counted> GroceryStores { get; init => field = value ?? []; } = [];
+    }
+
+    /// <summary>A meal plan in a backup, counted by its meals and shopping items.</summary>
+    private sealed class PlanOutline
+    {
+        public List<Counted> Meals { get; init => field = value ?? []; } = [];
+
+        public List<Counted> ShoppingItems { get; init => field = value ?? []; } = [];
+    }
+
+    /// <summary>One record in a backup, counted but not read.</summary>
+    private sealed class Counted;
+
     /// <summary>The backup file's JSON shape, made at build time.</summary>
     [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
     [JsonSerializable(typeof(BackupContents))]
+    [JsonSerializable(typeof(BackupOutline))]
     private sealed partial class BackupJson : JsonSerializerContext;
 }

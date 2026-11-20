@@ -1,7 +1,10 @@
+using System.IO.Compression;
+using System.Text;
 using ChefBot.Core.Engines;
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.ResourceAccess;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
@@ -185,5 +188,39 @@ public class ReminderAndBackupTests
         // ...but with them bought, both tomato-and-basil meals are planned.
         await Assert.That(titles.Contains(TestData.Caprese.Name)).IsTrue();
         await Assert.That(titles.Contains(TestData.TomatoSalad.Name)).IsTrue();
+    }
+
+    [Test]
+    public async Task Counting_a_backup_reads_what_it_holds_and_treats_missing_lists_as_empty()
+    {
+        var folder = Directory.CreateTempSubdirectory("chefbot-backup-test").FullName;
+        try
+        {
+            // An older backup: it has no groceryStores list.
+            const string name = "chefbot-backup-test.json.gz";
+            const string json = """
+                {
+                  "createdAt": "2026-01-01T00:00:00Z",
+                  "recipes": [{ "id": 1, "name": "Soup", "ingredients": [{ "id": 1 }] }, { "id": 2 }],
+                  "recipeImageData": [{ "id": 1, "data": "AAEC" }],
+                  "mealPlans": [{ "id": 1, "meals": [{ "id": 1 }, { "id": 2 }, { "id": 3 }], "shoppingItems": [{ "id": 1 }, { "id": 2 }] }],
+                  "pantryItems": [],
+                  "users": [{ "id": 1, "email": "admin@example.com" }]
+                }
+                """;
+            await using (var file = File.Create(Path.Combine(folder, name)))
+            await using (var zip = new GZipStream(file, CompressionLevel.Fastest))
+            {
+                await zip.WriteAsync(Encoding.UTF8.GetBytes(json));
+            }
+
+            var counts = await new BackupAccess(null!, folder).CountAsync(name, CancellationToken.None);
+
+            await Assert.That(counts).IsEqualTo(new BackupCounts(2, 1, 1, 3, 2, 0, 1, 0));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
     }
 }
