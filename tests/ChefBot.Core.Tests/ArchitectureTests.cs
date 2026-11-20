@@ -72,7 +72,7 @@ public class ArchitectureTests
     public async Task Only_managers_commit_and_publish_messages()
     {
         var others = Dependencies(Core.GetTypes().Where(type => type.Namespace != "ChefBot.Core.Managers"))
-            .Where(pair => pair.Dependency == typeof(ResourceAccess.IUnitOfWork))
+            .Where(pair => pair.Dependency == typeof(ResourceAccess.IMessageAccess))
             .ToList();
 
         await Assert.That(Describe(others)).IsEqualTo(string.Empty);

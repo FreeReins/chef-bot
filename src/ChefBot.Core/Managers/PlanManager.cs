@@ -19,7 +19,7 @@ internal sealed class PlanManager(
     IRecipeAccess recipes,
     IPantryAccess pantry,
     ISettingsAccess settings,
-    IUnitOfWork unitOfWork,
+    IMessageAccess messages,
     PlanningEngine planning,
     ShoppingEngine shopping,
     SuggestionEngine suggestions,
@@ -44,7 +44,7 @@ internal sealed class PlanManager(
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var plan = await validation.PlanAsync(planId, cancellationToken);
         await plans.RemoveAsync(plan.Id, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
     }
 
     public async Task<PlanResponse> GetCurrentAsync(CancellationToken cancellationToken)
@@ -63,7 +63,7 @@ internal sealed class PlanManager(
         var plan = await validation.PlanAsync(planId, cancellationToken);
         plan.Status = PlanStatus.Confirmed;
         await plans.SaveAsync(plan, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
     }
 
@@ -72,7 +72,7 @@ internal sealed class PlanManager(
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var plan = await validation.PlanAsync(planId, cancellationToken);
         var notes = await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return plan.ToResponse(notes);
     }
 
@@ -85,7 +85,7 @@ internal sealed class PlanManager(
             await ReconcileAsync(plan, stock, cancellationToken);
         }
 
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
     }
 
     public async Task<IngredientsResponse> GetIngredientsAsync(Guid planId, CancellationToken cancellationToken)
@@ -127,7 +127,7 @@ internal sealed class PlanManager(
         }
 
         var notes = await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return plan.ToResponse(notes);
     }
 
@@ -163,7 +163,7 @@ internal sealed class PlanManager(
         meal.Status = request.Status;
         var stock = new PantrySnapshot(items, clock.Today(), options.ExpiringSoonDays);
         var notes = await ReconcileAsync(plan, stock, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return plan.ToResponse(notes);
     }
 
@@ -177,7 +177,7 @@ internal sealed class PlanManager(
 
         await StockAsync(item, details, cancellationToken);
         await plans.SaveAsync(plan, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
     }
 
@@ -192,7 +192,7 @@ internal sealed class PlanManager(
         }
 
         await plans.SaveAsync(plan, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
     }
 
@@ -210,12 +210,12 @@ internal sealed class PlanManager(
 
         if (options.ImportFromMealieBeforePlanning && (await settings.GetMealieAsync(cancellationToken)).IsConfigured)
         {
-            await unitOfWork.PublishAsync(new ImportMealieRecipes(StageWeekAfter: week));
-            await unitOfWork.CommitAsync(cancellationToken);
+            await messages.PublishAsync(new ImportMealieRecipes(StageWeekAfter: week));
+            await messages.CommitAsync(cancellationToken);
             return;
         }
 
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         await StageScheduledWeekAsync(new StageScheduledWeek(week), cancellationToken);
     }
 
@@ -249,12 +249,12 @@ internal sealed class PlanManager(
         {
             // Saved separately so the old and new plan never compete for the same week.
             await plans.RemoveAsync(existing.Id, cancellationToken);
-            await unitOfWork.CommitAsync(cancellationToken);
+            await messages.CommitAsync(cancellationToken);
         }
 
         var notes = await ReconcileAsync(draft.Plan, stock, cancellationToken);
-        await unitOfWork.PublishAsync(new PlanStaged(draft.Plan.Id, trigger));
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.PublishAsync(new PlanStaged(draft.Plan.Id, trigger));
+        await messages.CommitAsync(cancellationToken);
 
         return draft.Plan.ToResponse([.. draft.Warnings, .. notes]);
     }

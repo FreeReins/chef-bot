@@ -10,7 +10,7 @@ namespace ChefBot.Core.Managers;
 /// <inheritdoc cref="IPantryManager"/>
 internal sealed class PantryManager(
     IPantryAccess pantry,
-    IUnitOfWork unitOfWork,
+    IMessageAccess messages,
     TransformationEngine transformation,
     ValidationEngine validation,
     IngredientCatalog catalog,
@@ -36,8 +36,8 @@ internal sealed class PantryManager(
 
         var item = transformation.ToPantryItem(request.Name, request.Quantity, request.Unit, purchasedOn, request.ExpiresOn);
         await pantry.SaveAsync(item, cancellationToken);
-        await unitOfWork.PublishAsync(new PantryChanged());
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.PublishAsync(new PantryChanged());
+        await messages.CommitAsync(cancellationToken);
         return item.ToResponse(clock.Today(), options.ExpiringSoonDays, catalog);
     }
 
@@ -49,8 +49,8 @@ internal sealed class PantryManager(
         item.Quantity = request.Quantity ?? item.Quantity;
         item.ExpiresOn = request.ExpiresOn ?? item.ExpiresOn;
         await pantry.SaveAsync(item, cancellationToken);
-        await unitOfWork.PublishAsync(new PantryChanged());
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.PublishAsync(new PantryChanged());
+        await messages.CommitAsync(cancellationToken);
         return item.ToResponse(clock.Today(), options.ExpiringSoonDays, catalog);
     }
 
@@ -58,7 +58,7 @@ internal sealed class PantryManager(
     {
         var item = await validation.PantryItemAsync(id, cancellationToken);
         await pantry.RemoveAsync(item.Id, cancellationToken);
-        await unitOfWork.PublishAsync(new PantryChanged());
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.PublishAsync(new PantryChanged());
+        await messages.CommitAsync(cancellationToken);
     }
 }

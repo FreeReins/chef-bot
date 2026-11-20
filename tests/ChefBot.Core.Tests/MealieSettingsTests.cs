@@ -110,7 +110,7 @@ public class MealieSettingsTests
         await Assert.That(finished.Problem).IsEqualTo("Not a real Mealie.");
         await Assert.That(core.Mealie.UsedUrl).IsEqualTo(Address);
         await Assert.That(core.Mealie.UsedToken).IsEqualTo("token");
-        await Assert.That(core.UnitOfWork.Published.Contains(finished)).IsTrue();
+        await Assert.That(core.Messages.Published.Contains(finished)).IsTrue();
         await Assert.That(core.Recipes.Rows.Count).IsEqualTo(0);
     }
 

@@ -28,8 +28,8 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 - Everything in Core is `internal` except `Contracts/` and `CoreRegistration`. Requests, responses, commands and
   events are records in `Contracts/Messages/`; they are the HTTP JSON, so keep their shapes stable.
 - Accessors take and return the plain data contracts in `ResourceAccess/Contracts/`, never EF entities, and
-  changes only count once passed back to a `Save` method. Managers commit once through `IUnitOfWork`.
-- Managers react to each other through messages, not calls: publish with `IUnitOfWork.PublishAsync` (sent only
+  changes only count once passed back to a `Save` method. Managers commit once through `IMessageAccess.CommitAsync`.
+- Managers react to each other through messages, not calls: publish with `IMessageAccess.PublishAsync` (sent only
   when the commit succeeds), and handle it in `src/ChefBot.Api/Messaging/<Message>Handler.cs` by calling the
   other manager. Keep handlers simple: log expected failures, don't add retry logic.
 - Ingredient needs come only from `MealRequirements`. Anything that changes a plan goes through `PlanManager`,

@@ -7,7 +7,7 @@ namespace ChefBot.Core.ResourceAccess;
 /// Saves the database changes and sends the queued messages together, through Wolverine's EF Core outbox: the
 /// messages are written to the database in the same transaction and sent once it commits.
 /// </summary>
-internal sealed class OutboxUnitOfWork(IDbContextOutbox<ChefBotDbContext> outbox) : IUnitOfWork
+internal sealed class MessageAccess(IDbContextOutbox<ChefBotDbContext> outbox) : IMessageAccess
 {
     public Task PublishAsync(object message) => outbox.PublishAsync(message).AsTask();
 

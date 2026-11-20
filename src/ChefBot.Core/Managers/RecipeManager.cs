@@ -14,7 +14,7 @@ internal sealed class RecipeManager(
     ISettingsAccess settings,
     IRecipeSourceAccess mealie,
     ISampleRecipeAccess samples,
-    IUnitOfWork unitOfWork,
+    IMessageAccess messages,
     TransformationEngine transformation,
     ValidationEngine validation,
     TimeProvider clock) : IRecipeManager
@@ -32,7 +32,7 @@ internal sealed class RecipeManager(
         var recipe = new Recipe { Origin = RecipeOrigin.Local };
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return recipe.ToResponse();
     }
 
@@ -45,7 +45,7 @@ internal sealed class RecipeManager(
         recipe.Origin = RecipeOrigin.Local;
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return recipe.ToResponse();
     }
 
@@ -55,7 +55,7 @@ internal sealed class RecipeManager(
         recipe.IsArchived = true;
         recipe.Origin = RecipeOrigin.Local;
         await recipes.SaveAsync(recipe, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
     }
 
     public IReadOnlyList<RecipeFileFormatResponse> GetFileFormats() =>
@@ -93,7 +93,7 @@ internal sealed class RecipeManager(
         var current = await settings.GetMealieAsync(cancellationToken);
         (current.Url, current.ApiToken) = ValidationEngine.MealieConnection(request.Url, request.ApiToken, current.ApiToken);
         await settings.SaveMealieAsync(current, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return current.ToResponse();
     }
 
@@ -107,14 +107,14 @@ internal sealed class RecipeManager(
             await settings.SaveMealieAsync(current, cancellationToken);
         }
 
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
     }
 
     public async Task RequestMealieImportAsync(CancellationToken cancellationToken)
     {
         ValidationEngine.MealieIsSetUp(await settings.GetMealieAsync(cancellationToken));
-        await unitOfWork.PublishAsync(new ImportMealieRecipes());
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.PublishAsync(new ImportMealieRecipes());
+        await messages.CommitAsync(cancellationToken);
     }
 
     public async Task<RecipeImportFinished> ImportFromMealieAsync(ImportMealieRecipes command, CancellationToken cancellationToken)
@@ -145,8 +145,8 @@ internal sealed class RecipeManager(
             }
         }
 
-        await unitOfWork.PublishAsync(finished);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.PublishAsync(finished);
+        await messages.CommitAsync(cancellationToken);
         return finished;
     }
 
@@ -163,7 +163,7 @@ internal sealed class RecipeManager(
             await recipes.SaveAsync(recipe, cancellationToken);
         }
 
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return fresh.Count;
     }
 }

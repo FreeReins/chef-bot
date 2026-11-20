@@ -12,7 +12,7 @@ namespace ChefBot.Core.Managers;
 internal sealed class AccountManager(
     IAccountAccess accounts,
     ISettingsAccess settings,
-    IUnitOfWork unitOfWork,
+    IMessageAccess messages,
     ValidationEngine validation,
     SecurityEngine security,
     IPasswordHasher passwords,
@@ -35,7 +35,7 @@ internal sealed class AccountManager(
         await validation.SetupIsOpenAsync(cancellationToken);
         var user = await BuildUserAsync(account, isAdmin: true, cancellationToken);
         await accounts.SaveUserAsync(user, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return user.ToAccountSession();
     }
 
@@ -56,7 +56,7 @@ internal sealed class AccountManager(
             {
                 security.Unlock(user);
                 await accounts.SaveUserAsync(user, cancellationToken);
-                await unitOfWork.CommitAsync(cancellationToken);
+                await messages.CommitAsync(cancellationToken);
             }
 
             return user.ToAccountSession();
@@ -64,7 +64,7 @@ internal sealed class AccountManager(
 
         var message = security.RecordFailedSignIn(user, await settings.GetSecurityAsync(cancellationToken), now);
         await accounts.SaveUserAsync(user, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         throw new NotSignedInException(message);
     }
 
@@ -81,7 +81,7 @@ internal sealed class AccountManager(
         var user = await BuildUserAsync(new NewAccount(request.Username, request.DisplayName, request.Password), isAdmin: false, cancellationToken);
         await accounts.SaveUserAsync(user, cancellationToken);
         await accounts.RemoveLinkAsync(invite.Id, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return user.ToAccountSession();
     }
 
@@ -93,7 +93,7 @@ internal sealed class AccountManager(
         security.SetPassword(user, passwords.Hash(ValidationEngine.Password(request.Password)));
         await accounts.SaveUserAsync(user, cancellationToken);
         await accounts.RemoveLinkAsync(link.Id, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return user.ToAccountSession();
     }
 
@@ -107,7 +107,7 @@ internal sealed class AccountManager(
 
         security.SetPassword(user, passwords.Hash(ValidationEngine.Password(request.NewPassword)));
         await accounts.SaveUserAsync(user, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return user.ToAccountSession();
     }
 
@@ -120,7 +120,7 @@ internal sealed class AccountManager(
         var user = await validation.UserAsync(id, cancellationToken);
         await RemoveLinksAsync(link => link.UserId == user.Id, cancellationToken);
         await accounts.RemoveUserAsync(user.Id, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
     }
 
     public async Task<UserResponse> UnlockUserAsync(Guid id, CancellationToken cancellationToken)
@@ -128,7 +128,7 @@ internal sealed class AccountManager(
         var user = await validation.UserAsync(id, cancellationToken);
         security.Unlock(user);
         await accounts.SaveUserAsync(user, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return user.ToResponse();
     }
 
@@ -159,7 +159,7 @@ internal sealed class AccountManager(
                 await accounts.RemoveLinkAsync(link.Id, cancellationToken);
             }
 
-            await unitOfWork.CommitAsync(cancellationToken);
+            await messages.CommitAsync(cancellationToken);
         }
 
         var names = (await accounts.ListUsersAsync(cancellationToken)).ToDictionary(user => user.Id, user => user.Username);
@@ -181,7 +181,7 @@ internal sealed class AccountManager(
     {
         var link = await validation.LinkAsync(id, cancellationToken);
         await accounts.RemoveLinkAsync(link.Id, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
     }
 
     public async Task<SecurityResponse> GetSecurityAsync(CancellationToken cancellationToken) =>
@@ -195,8 +195,8 @@ internal sealed class AccountManager(
         rules.LockoutMinutes = request.LockoutMinutes;
         rules.RequireHttps = request.RequireHttps;
         await settings.SaveSecurityAsync(rules, cancellationToken);
-        await unitOfWork.PublishAsync(new SecuritySettingsChanged(rules.RequireHttps));
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.PublishAsync(new SecuritySettingsChanged(rules.RequireHttps));
+        await messages.CommitAsync(cancellationToken);
         return rules.ToResponse();
     }
 
@@ -211,7 +211,7 @@ internal sealed class AccountManager(
     {
         var issued = security.IssueLink(purpose, userId, createdByUserId, clock.GetUtcNow());
         await accounts.SaveLinkAsync(issued.Link, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return new IssuedLink(issued.Link.Id, purpose, issued.Token, issued.Link.ExpiresAt);
     }
 

@@ -65,9 +65,9 @@ Utilities/   the ingredient catalog, text and units, clock, settings options, pa
 | `Contracts/Services/` | The public manager interfaces: `IPlanManager`, `IPantryManager`, `IRecipeManager`, `IAccountManager`, `IMaintenanceManager` | Clients depend on these and nothing else in Core |
 | `Contracts/Messages/` | The managers' requests and responses (these are the HTTP JSON bodies), the commands and events sent through the message bus, and the enums they use | Plain records. Changing one changes the API |
 | `Contracts/` | `ChefBotException` and the exceptions built on it (`NotFoundException`, `RuleViolationException`, ...), which the API turns into problem responses; `ContractJsonContext` | |
-| `Managers/` | The manager classes and `Mapping.cs` (data contracts to messages) | Call engines and accessors, never another manager. Commit once through `IUnitOfWork`, which also sends what they published |
+| `Managers/` | The manager classes and `Mapping.cs` (data contracts to messages) | Call engines and accessors, never another manager. Commit once through `IMessageAccess.CommitAsync`, which also sends what they published |
 | `Engines/` | `PlanningEngine`, `ShoppingEngine`, `SuggestionEngine`, `TransformationEngine` (recipe files, Mealie recipes, typed-in recipes and pantry items), `ValidationEngine`, `SecurityEngine`, `NotificationEngine`, the records they return, and the calculations several of them use (`MealRequirements`, `PantrySnapshot`, `PantryFreshness`, `WeekScorer`). Those calculations are plain functions and value types, not engines, so using one doesn't make one engine call another | Never call a manager or another engine. Only `ValidationEngine` reads through accessors, for rules that depend on what is stored; the others take everything as arguments and can be tested without a database |
-| `ResourceAccess/` | The accessor interfaces (`IRecipeAccess`, `IPlanAccess`, ..., `IUnitOfWork`) and implementations, the plain data contracts they pass (`Contracts/`), and the EF Core entities and `ChefBotDbContext` (`Persistence/`) | Return copies, never tracked entities. Never call each other. The entities don't leave this folder. The database accessors read through the change tracker, so a row saved earlier in the same request is seen before the commit. Backups are the entities serialized as JSON, so renaming an entity property changes the backup format: keep old names readable |
+| `ResourceAccess/` | The accessor interfaces (`IRecipeAccess`, `IPlanAccess`, ..., `IMessageAccess`, the Wolverine outbox that publishes messages and commits) and implementations, the plain data contracts they pass (`Contracts/`), and the EF Core entities and `ChefBotDbContext` (`Persistence/`) | Return copies, never tracked entities. Never call each other. The entities don't leave this folder. The database accessors read through the change tracker, so a row saved earlier in the same request is seen before the commit. Backups are the entities serialized as JSON, so renaming an entity property changes the backup format: keep old names readable |
 | `Utilities/` | `IngredientCatalog`, `TextNormalizer`, `Units`, `WeekLayout`, `DailyTime`, the settings options, `PlanWriteLock` | Depend on no layer |
 
 `tests/ChefBot.Core.Tests/ArchitectureTests.cs` checks these rules, so a call in the wrong direction fails the
@@ -79,7 +79,7 @@ Rules of thumb:
   endpoints carry `[Authorize(Policy = Sessions.AdminPolicy)]`; nothing checks for admins inside the core.
 - A manager loads through accessors, hands the data to engines, saves through accessors and commits once.
   Managers that need to react to each other do it with messages: one publishes an event or command through
-  `IUnitOfWork.PublishAsync`, and a handler in `ChefBot.Api/Messaging/` calls the other. For example,
+  `IMessageAccess.PublishAsync`, and a handler in `ChefBot.Api/Messaging/` calls the other. For example,
   `PantryManager` publishes `PantryChanged` and its handler calls `IPlanManager.RefreshOpenPlansAsync`.
 - Messages are kept in PostgreSQL (the `wolverine` schema) and only sent once the transaction that published
   them commits. Handlers log expected problems, such as Mealie being down, rather than throwing; there is no
@@ -102,7 +102,7 @@ Assertions are awaited: `await Assert.That(actual).IsEqualTo(expected);`.
 - Engines are tested directly, with the small catalog and recipe library in `TestData.cs`.
 - Managers are tested with the in-memory accessors (`FakeRecipes`, `FakePlans`, ..., `NoBackups`), wired up by
   `TestCore` (`new TestCore().PlanManager()`). They hand out copies the way the real ones do, and
-  `FakeUnitOfWork` records what was published.
+  `FakeMessages` records what was published.
 - The test project can see Core's internal types (`InternalsVisibleTo`).
 
 ## Database changes

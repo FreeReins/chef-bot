@@ -21,7 +21,7 @@ internal sealed class TestCore
 
     public FakeSource Mealie { get; } = new();
 
-    public FakeUnitOfWork UnitOfWork { get; } = new();
+    public FakeMessages Messages { get; } = new();
 
     public TestCore(WeeklyScheduleOptions? schedule = null, PlannerOptions? options = null)
     {
@@ -37,13 +37,13 @@ internal sealed class TestCore
     private ValidationEngine Validation => new(Plans, Recipes, Pantry, Accounts, new NoBackups());
 
     public PlanManager PlanManager() => new(
-        Plans, Recipes, Pantry, Settings, UnitOfWork,
+        Plans, Recipes, Pantry, Settings, Messages,
         new PlanningEngine(TestData.Catalog, Options, Schedule), TestData.Shopping, TestData.Suggestions, TestData.Transformation,
         Validation, TestData.Catalog, Options, new PlanWriteLock(), Clock);
 
-    public PantryManager PantryManager() => new(Pantry, UnitOfWork, TestData.Transformation, Validation, TestData.Catalog, Options, Clock);
+    public PantryManager PantryManager() => new(Pantry, Messages, TestData.Transformation, Validation, TestData.Catalog, Options, Clock);
 
-    public RecipeManager RecipeManager() => new(Recipes, Settings, Mealie, new NoSamples(), UnitOfWork, TestData.Transformation, Validation, Clock);
+    public RecipeManager RecipeManager() => new(Recipes, Settings, Mealie, new NoSamples(), Messages, TestData.Transformation, Validation, Clock);
 
-    public AccountManager AccountManager() => new(Accounts, Settings, UnitOfWork, Validation, new SecurityEngine(), new PlainHasher(), Clock);
+    public AccountManager AccountManager() => new(Accounts, Settings, Messages, Validation, new SecurityEngine(), new PlainHasher(), Clock);
 }

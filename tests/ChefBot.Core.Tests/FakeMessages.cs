@@ -2,7 +2,7 @@ using ChefBot.Core.ResourceAccess;
 
 namespace ChefBot.Core.Tests;
 
-internal sealed class FakeUnitOfWork : IUnitOfWork
+internal sealed class FakeMessages : IMessageAccess
 {
     public List<object> Published { get; } = [];
 

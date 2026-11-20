@@ -15,7 +15,7 @@ internal sealed class MaintenanceManager(
     IPantryAccess pantry,
     INotificationAccess webhook,
     IBackupAccess backups,
-    IUnitOfWork unitOfWork,
+    IMessageAccess messages,
     NotificationEngine notifications,
     ValidationEngine validation,
     PlannerOptions options,
@@ -40,7 +40,7 @@ internal sealed class MaintenanceManager(
         current.Shopping = request.Shopping;
         current.DailyTime = time;
         await settings.SaveNotificationsAsync(current, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return current.ToResponse();
     }
 
@@ -53,7 +53,7 @@ internal sealed class MaintenanceManager(
             await settings.SaveNotificationsAsync(current, cancellationToken);
         }
 
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
     }
 
     public async Task<DeliveryResult> SendTestNotificationAsync(CancellationToken cancellationToken)
@@ -86,7 +86,7 @@ internal sealed class MaintenanceManager(
         var current = await settings.GetNotificationsAsync(cancellationToken);
         current.LastDailyRunOn = today;
         await settings.SaveNotificationsAsync(current, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return run;
     }
 
@@ -113,7 +113,7 @@ internal sealed class MaintenanceManager(
         current.KeepCount = request.KeepCount;
         current.KeepDays = request.KeepDays;
         await settings.SaveBackupsAsync(current, cancellationToken);
-        await unitOfWork.CommitAsync(cancellationToken);
+        await messages.CommitAsync(cancellationToken);
         return await DescribeBackupsAsync(cancellationToken);
     }
 
@@ -197,7 +197,7 @@ internal sealed class MaintenanceManager(
         finally
         {
             await settings.SaveBackupsAsync(current, cancellationToken);
-            await unitOfWork.CommitAsync(cancellationToken);
+            await messages.CommitAsync(cancellationToken);
         }
     }
 

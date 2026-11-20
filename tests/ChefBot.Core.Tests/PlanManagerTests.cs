@@ -30,7 +30,7 @@ public class PlanManagerTests
         await Assert.That(plan.WeekStart).IsEqualTo(NextSunday);
         await Assert.That(plan.Shopping.Count > 0).IsTrue();
         await Assert.That(core.Plans.Rows.Single().ShoppingItems.Count).IsEqualTo(plan.Shopping.Count);
-        await Assert.That(core.UnitOfWork.Published.OfType<PlanStaged>().Single()).IsEqualTo(new PlanStaged(plan.Id, "manual"));
+        await Assert.That(core.Messages.Published.OfType<PlanStaged>().Single()).IsEqualTo(new PlanStaged(plan.Id, "manual"));
     }
 
     [Test]
@@ -57,7 +57,7 @@ public class PlanManagerTests
         var item = plan.Shopping.First();
 
         await core.PantryManager().AddAsync(new NewPantryItem(item.Name, 100, item.Unit), default);
-        await Assert.That(core.UnitOfWork.Published.OfType<PantryChanged>().Count()).IsEqualTo(1);
+        await Assert.That(core.Messages.Published.OfType<PantryChanged>().Count()).IsEqualTo(1);
 
         // What the PantryChanged handler does: the item now on hand drops off the list.
         await core.PlanManager().RefreshOpenPlansAsync(default);
@@ -106,7 +106,7 @@ public class PlanManagerTests
 
         await Assert.That(core.Plans.Rows.Single().WeekStart).IsEqualTo(NextSunday);
         await Assert.That(core.Settings.Schedule.LastStagedWeek).IsEqualTo(NextSunday);
-        await Assert.That(core.UnitOfWork.Published.OfType<PlanStaged>().Single().Trigger).IsEqualTo("schedule");
+        await Assert.That(core.Messages.Published.OfType<PlanStaged>().Single().Trigger).IsEqualTo("schedule");
     }
 
     [Test]
@@ -129,7 +129,7 @@ public class PlanManagerTests
 
         await core.PlanManager().CheckWeeklyScheduleAsync(default);
 
-        await Assert.That(core.UnitOfWork.Published.OfType<ImportMealieRecipes>().Single().StageWeekAfter).IsEqualTo(NextSunday);
+        await Assert.That(core.Messages.Published.OfType<ImportMealieRecipes>().Single().StageWeekAfter).IsEqualTo(NextSunday);
         await Assert.That(core.Plans.Rows.Count).IsEqualTo(0);
 
         // What follows RecipeImportFinished, whether the import worked or not.

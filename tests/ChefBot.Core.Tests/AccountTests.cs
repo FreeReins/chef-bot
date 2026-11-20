@@ -192,7 +192,7 @@ public class AccountTests
 
         await accounts.UpdateSecurityAsync(new SecurityRequest(5, 15, RequireHttps: true), default);
 
-        await Assert.That(core.UnitOfWork.Published.OfType<SecuritySettingsChanged>().Single().RequireHttps).IsTrue();
+        await Assert.That(core.Messages.Published.OfType<SecuritySettingsChanged>().Single().RequireHttps).IsTrue();
     }
 
     [Test]
