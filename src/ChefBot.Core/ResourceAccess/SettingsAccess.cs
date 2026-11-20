@@ -1,7 +1,6 @@
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace ChefBot.Core.ResourceAccess;
 
@@ -90,12 +89,10 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
         SaveRowAsync(new ScheduleStateEntity { LastStagedWeek = state.LastStagedWeek }, cancellationToken);
 
     /// <summary>The single row of a settings table, if one has been saved (or added earlier in this request).</summary>
+    /// <remarks>Every settings row has Id 1; looking it up by key also finds a row added but not yet saved.</remarks>
     private async Task<TRow?> RowAsync<TRow>(CancellationToken cancellationToken)
-        where TRow : class
-    {
-        var set = db.Set<TRow>();
-        return set.Local.FirstOrDefault() ?? await set.FirstOrDefaultAsync(cancellationToken);
-    }
+        where TRow : class =>
+        await db.Set<TRow>().FindAsync([1], cancellationToken);
 
     private async Task SaveRowAsync<TRow>(TRow fresh, CancellationToken cancellationToken)
         where TRow : class
