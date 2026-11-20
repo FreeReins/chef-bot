@@ -39,9 +39,9 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
 /* For confirming a change that loses data. */
 button.danger { background: var(--bad); color: var(--bg); border-color: var(--bad); }
 button.small { padding: .15rem .55rem; font-size: .85rem; }
-/* A borderless icon button, such as a meal's swap arrows. Add remove for a trash can that turns red on hover. */
-button.icon { display: inline-flex; border: 0; background: none; padding: .2rem; line-height: 1; color: var(--muted); }
-button.icon:hover { color: var(--accent); }
+/* A borderless icon button or link, such as a meal's swap arrows. Add remove for a trash can that turns red on hover. */
+button.icon, a.icon { display: inline-flex; border: 0; background: none; padding: .2rem; line-height: 1; color: var(--muted); }
+button.icon:hover, a.icon:hover { color: var(--accent); }
 button.icon.remove:hover { color: var(--bad); }
 button:disabled { opacity: .5; cursor: default; }
 a.button { display: inline-block; border: 1px solid var(--line); border-radius: .4rem; background: var(--panel); color: var(--ink);

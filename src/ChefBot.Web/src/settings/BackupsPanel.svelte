@@ -3,6 +3,8 @@
   import { api } from '../lib/api.js';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Download from '@lucide/svelte/icons/download';
+  import ArchiveArrowUp from '@lucide/svelte/icons/archive-arrow-up';
 
   const backups = $derived(app.backups);
   const size = (bytes) => (bytes < 1048576 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`);
@@ -91,8 +93,8 @@
             <strong>{new Date(file.createdAt).toLocaleString()}</strong> <span class="muted">{size(file.sizeBytes)}</span>
           </button>
           <div class="row-actions">
-            <a class="button small" href="/api/system/backups/{file.name}" download={file.name}>Download</a>
-            <button class="small" onclick={() => restore(file)}>Restore</button>
+            <a class="icon" href="/api/system/backups/{file.name}" download={file.name} aria-label="Download this backup" title="Download"><Download size={16} /></a>
+            <button class="icon" aria-label="Restore this backup" title="Restore" onclick={() => restore(file)}><ArchiveArrowUp size={16} /></button>
             <button class="icon remove" aria-label="Delete this backup" title="Delete" onclick={() => remove(file)}><Trash2 size={16} /></button>
           </div>
         </div>
