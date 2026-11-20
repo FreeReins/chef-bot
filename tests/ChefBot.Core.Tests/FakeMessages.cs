@@ -1,4 +1,4 @@
-using ChefBot.Core.ResourceAccess;
+using ChefBot.Core.ResourceAccess.Contracts.Services;
 
 namespace ChefBot.Core.Tests;
 

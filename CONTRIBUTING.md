@@ -42,14 +42,14 @@ dotnet test --solution ChefBot.slnx               # the same tests through dotne
 
 | Project | Holds | May depend on |
 |---|---|---|
-| `ChefBot.Core` | Everything below the API, in layers (see below). Only `Contracts/` and `CoreRegistration` are public | ASP.NET Core, Npgsql EF Core, Wolverine's EF Core and PostgreSQL storage |
+| `ChefBot.Core` | Everything below the API, in layers (see below). Only `Managers/Contracts/` and `CoreRegistration` are public | ASP.NET Core, Npgsql EF Core, Wolverine's EF Core and PostgreSQL storage |
 | `ChefBot.Api` | The clients of the core: Wolverine HTTP endpoints (`Endpoints/`), message handlers and the timer that queues the scheduled jobs (`Messaging/`), sign-in, HTTPS (`Https/`, with its own request and response records, since HTTPS belongs to the host rather than the core), startup wiring; serves the web page | `ChefBot.Core`'s public contracts |
 | `ChefBot.Web` | The web page: Svelte 5 components built with Vite into `ChefBot.Api/wwwroot` | The HTTP API |
 
 `ChefBot.Core` is split by what changes for different reasons. Calls only go down; nothing calls sideways:
 
 ```
-Clients (Api endpoints and message handlers)     see only Contracts/
+Clients (Api endpoints and message handlers)     see only Managers/Contracts/
    ▼
 Managers/          one per area of use: orchestrate a use case, own the transaction, publish messages
    ▼          ▼
@@ -60,14 +60,22 @@ Engines/  ─►  ResourceAccess/   engines do the work (verbs); accessors read 
 Utilities/   the ingredient catalog, text and units, clock, settings options, password hashing: any layer
 ```
 
+Each layer keeps what its callers use in its own `Contracts/` folder: `Contracts/Services/` holds the interfaces
+that are its entry points, and `Contracts/Messages/` the plain records and enums passed through them. Only the
+managers' contracts are public; the engines' and accessors' are internal.
+
 | Folder | Holds | Rules |
 |---|---|---|
-| `Contracts/Services/` | The public manager interfaces: `IPlanManager`, `IPantryManager`, `IRecipeManager`, `IAccountManager`, `IMaintenanceManager` | Clients depend on these and nothing else in Core |
-| `Contracts/Messages/` | The managers' requests and responses (these are the HTTP JSON bodies), the commands and events sent through the message bus, and the enums they use | Plain records. Changing one changes the API |
-| `Contracts/` | `ChefBotException` and the exceptions built on it (`NotFoundException`, `RuleViolationException`, ...), which the API turns into problem responses; `ContractJsonContext` | |
+| `Managers/Contracts/Services/` | The public manager interfaces: `IPlanManager`, `IPantryManager`, `IRecipeManager`, `IAccountManager`, `IMaintenanceManager` | Clients depend on these and nothing else in Core |
+| `Managers/Contracts/Messages/` | The managers' requests and responses (these are the HTTP JSON bodies), the commands and events sent through the message bus, and the enums they use | Plain records. Changing one changes the API |
+| `Managers/Contracts/` | `ChefBotException` and the exceptions built on it (`NotFoundException`, `RuleViolationException`, ...), which the API turns into problem responses; `ContractJsonContext` | |
 | `Managers/` | The manager classes and `Mapping.cs` (data contracts to messages) | Call engines and accessors, never another manager. Commit once through `IMessageAccess.CommitAsync`, which also sends what they published |
-| `Engines/` | `PlanningEngine`, `ShoppingEngine`, `SuggestionEngine`, `TransformationEngine` (recipe files, Mealie recipes, typed-in recipes and pantry items), `ValidationEngine`, `SecurityEngine`, `NotificationEngine`, the records they return, and the calculations several of them use (`MealRequirements`, `PantrySnapshot`, `PantryFreshness`, `WeekScorer`). Those calculations are plain functions and value types, not engines, so using one doesn't make one engine call another | Never call a manager or another engine. Only `ValidationEngine` reads through accessors, for rules that depend on what is stored; the others take everything as arguments and can be tested without a database |
-| `ResourceAccess/` | The accessor interfaces (`IRecipeAccess`, `IPlanAccess`, ..., `IMessageAccess`, the Wolverine outbox that publishes messages and commits) and implementations, the plain data contracts they pass (`Contracts/`), and the EF Core entities and `ChefBotDbContext` (`Persistence/`) | Return copies, never tracked entities. Never call each other. The entities don't leave this folder. The database accessors read through the change tracker, so a row saved earlier in the same request is seen before the commit. Backups are the entities serialized as JSON, so renaming an entity property changes the backup format: keep old names readable |
+| `Engines/` | `PlanningEngine`, `ShoppingEngine`, `SuggestionEngine`, `TransformationEngine` (recipe files, Mealie recipes, typed-in recipes and pantry items), `ValidationEngine`, `SecurityEngine`, `NotificationEngine`, the recipe file formats (`Transformation/`), and the calculations several of them use (`MealRequirements`, `PantrySnapshot`, `PantryFreshness`, `WeekScorer`). Those calculations are plain functions and value types, not engines, so using one doesn't make one engine call another | Never call a manager or another engine. Only `ValidationEngine` reads through accessors, for rules that depend on what is stored; the others take everything as arguments and can be tested without a database |
+| `Engines/Contracts/Services/` | `IRecipeFileFormat`, which each kind of recipe file implements | |
+| `Engines/Contracts/Messages/` | The records engines take and return: `PlanRequest`, `PlanDraft`, `ShoppingDraft`, `Suggestions`, `ImportChanges`, `RequiredIngredient`, ... | Plain records |
+| `ResourceAccess/Contracts/Services/` | The accessor interfaces: `IRecipeAccess`, `IPlanAccess`, ..., `IMessageAccess` (the Wolverine outbox that publishes messages and commits) | |
+| `ResourceAccess/Contracts/Messages/` | The plain data contracts the accessors take and return (`Recipe`, `MealPlan`, `PantryItem`, ...) | Plain data, no EF Core |
+| `ResourceAccess/` | The accessor implementations, and the EF Core entities and `ChefBotDbContext` (`Persistence/`) | Return copies, never tracked entities. Never call each other. The entities don't leave this folder. The database accessors read through the change tracker, so a row saved earlier in the same request is seen before the commit. Backups are the entities serialized as JSON, so renaming an entity property changes the backup format: keep old names readable |
 | `Utilities/` | `IngredientCatalog`, `TextNormalizer`, `Units`, `WeekLayout`, `DailyTime`, the settings options, `PlanWriteLock` | Depend on no layer |
 
 `tests/ChefBot.Core.Tests/ArchitectureTests.cs` checks these rules, so a call in the wrong direction fails the
@@ -88,11 +96,11 @@ Rules of thumb:
   through `PlanManager`, which ends each change by placing the leftover lunches and rebuilding the shopping list,
   so they can't drift. Plan changes run one at a time (`PlanWriteLock`), which is enough because ChefBot runs as
   a single instance per database.
-- Recipe file imports are pluggable. To read a new kind of file, implement `IRecipeFileFormat` in
-  `ChefBot.Core/Engines/Transformation/` and register it in `CoreRegistration.cs`; `TransformationEngine` picks
+- Recipe file imports are pluggable. To read a new kind of file, implement `IRecipeFileFormat` (from
+  `Engines/Contracts/Services/`) in `ChefBot.Core/Engines/Transformation/` and register it in `CoreRegistration.cs`; `TransformationEngine` picks
   it by file name ending and the web page's file picker lists it automatically.
 - Something new to store: add the entity in `ResourceAccess/Persistence/`, the data contract in
-  `ResourceAccess/Contracts/`, map them in `EntityMapping.cs`, and add it to `BackupAccess` so backups include it.
+  `ResourceAccess/Contracts/Messages/`, map them in `EntityMapping.cs`, and add it to `BackupAccess` so backups include it.
 
 ## Tests
 
@@ -120,14 +128,15 @@ groundwork for Native AOT.
 
 **JSON.** Every JSON body, message and file is read and written through a source-generated `JsonSerializerContext`:
 
-- `ContractJsonContext` (`ChefBot.Core/Contracts/ContractJsonContext.cs`) covers the records in `Contracts/Messages/`.
+- `ContractJsonContext` (`ChefBot.Core/Managers/Contracts/ContractJsonContext.cs`) covers the records in
+  `Managers/Contracts/Messages/`.
   The API uses it for request and response bodies, and the message bus uses it for the commands and events it stores.
 - `ApiJsonContext` (`ChefBot.Api/ApiJsonContext.cs`) covers the bodies defined in the API project.
 - Each accessor that reads a file or talks to another service has its own private context next to its JSON types:
   backups, Mealie, the webhook, the sample recipes and the ingredient catalog.
 
 A new request, response, command or event needs a `[JsonSerializable]` line in its context. Records used inside a
-listed one are included automatically. `JsonShapeTests` fails when something in `Contracts/Messages/` is missing.
+listed one are included automatically. `JsonShapeTests` fails when something in `Managers/Contracts/Messages/` is missing.
 It also checks that every shape reads JSON the way reflection does. Two things behave differently from reflection:
 
 - When a type has `init` properties, the generator sets all of them, so a field the JSON leaves out loses its

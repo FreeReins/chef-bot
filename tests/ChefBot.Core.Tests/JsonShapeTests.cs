@@ -4,11 +4,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
-using ChefBot.Core.Contracts;
-using ChefBot.Core.Contracts.Messages;
 using ChefBot.Core.Engines;
+using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.ResourceAccess;
-using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ChefBot.Core.Tests;
@@ -22,7 +21,7 @@ public class JsonShapeTests
     private static readonly Assembly Core = typeof(CoreRegistration).Assembly;
 
     private static IEnumerable<Type> ContractTypes() =>
-        Core.GetExportedTypes().Where(type => type.Namespace == "ChefBot.Core.Contracts.Messages" && !(type.IsAbstract && type.IsSealed));
+        Core.GetExportedTypes().Where(type => type.Namespace == "ChefBot.Core.Managers.Contracts.Messages" && !(type.IsAbstract && type.IsSealed));
 
     [Test]
     public async Task Every_request_response_command_and_event_has_a_build_time_shape()

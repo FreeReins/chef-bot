@@ -17,3 +17,9 @@ dotnet_diagnostic.SA1402.severity = error
 dotnet_diagnostic.SA1649.severity = error
 # Says XML comment checks are off in projects without documentation files; nothing to fix.
 dotnet_diagnostic.SA0001.severity = none
+
+# Unused usings are warnings, so the build reports them and `dotnet format` removes them.
+dotnet_diagnostic.IDE0005.severity = warning
+# A file's namespace matches its folder (the project's root namespace plus the folder path).
+dotnet_style_namespace_match_folder = true
+dotnet_diagnostic.IDE0130.severity = warning

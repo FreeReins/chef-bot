@@ -1,6 +1,6 @@
 using ChefBot.Api;
 using ChefBot.Core;
-using ChefBot.Core.Contracts;
+using ChefBot.Core.Managers.Contracts;
 using JasperFx;
 using Wolverine;
 using Wolverine.Http;

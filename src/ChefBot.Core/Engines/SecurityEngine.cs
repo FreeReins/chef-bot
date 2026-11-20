@@ -1,7 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
-using ChefBot.Core.Contracts.Messages;
-using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.Engines.Contracts.Messages;
+using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 
 namespace ChefBot.Core.Engines;
 

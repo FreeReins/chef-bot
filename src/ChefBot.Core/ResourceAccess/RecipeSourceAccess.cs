@@ -3,8 +3,9 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
-using ChefBot.Core.Contracts;
-using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Services;
 using Microsoft.Extensions.Logging;
 
 namespace ChefBot.Core.ResourceAccess;

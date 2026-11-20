@@ -1,5 +1,6 @@
 using System.Reflection;
-using ChefBot.Core.Contracts.Services;
+using ChefBot.Core.Managers.Contracts.Services;
+using ChefBot.Core.ResourceAccess.Contracts.Services;
 
 namespace ChefBot.Core.Tests;
 
@@ -17,12 +18,12 @@ public class ArchitectureTests
 
     private static bool IsManager(Type type) =>
         type.Namespace == "ChefBot.Core.Managers" && type.Name.EndsWith("Manager", StringComparison.Ordinal)
-        || type.Namespace == "ChefBot.Core.Contracts.Services";
+        || type.Namespace == "ChefBot.Core.Managers.Contracts.Services";
 
     private static bool IsEngine(Type type) => type.Namespace?.StartsWith("ChefBot.Core.Engines", StringComparison.Ordinal) == true
         && type.Name.EndsWith("Engine", StringComparison.Ordinal);
 
-    private static bool IsAccessor(Type type) => type.Namespace == "ChefBot.Core.ResourceAccess" && type.IsInterface;
+    private static bool IsAccessor(Type type) => type.Namespace == "ChefBot.Core.ResourceAccess.Contracts.Services" && type.IsInterface;
 
     private static IEnumerable<(Type Owner, Type Dependency)> Dependencies(IEnumerable<Type> owners) =>
         owners
@@ -72,7 +73,7 @@ public class ArchitectureTests
     public async Task Only_managers_commit_and_publish_messages()
     {
         var others = Dependencies(Core.GetTypes().Where(type => type.Namespace != "ChefBot.Core.Managers"))
-            .Where(pair => pair.Dependency == typeof(ResourceAccess.IMessageAccess))
+            .Where(pair => pair.Dependency == typeof(IMessageAccess))
             .ToList();
 
         await Assert.That(Describe(others)).IsEqualTo(string.Empty);
@@ -93,7 +94,7 @@ public class ArchitectureTests
     {
         var exposed = Core.GetExportedTypes()
             .Where(type => type != typeof(CoreRegistration)
-                && type.Namespace?.StartsWith("ChefBot.Core.Contracts", StringComparison.Ordinal) != true)
+                && type.Namespace?.StartsWith("ChefBot.Core.Managers.Contracts", StringComparison.Ordinal) != true)
             .Select(type => type.FullName)
             .ToList();
 
@@ -104,7 +105,7 @@ public class ArchitectureTests
     public async Task Every_manager_interface_has_one_implementation()
     {
         var unimplemented = typeof(IPlanManager).Assembly.GetTypes()
-            .Where(type => type.IsInterface && type.Namespace == "ChefBot.Core.Contracts.Services")
+            .Where(type => type.IsInterface && type.Namespace == "ChefBot.Core.Managers.Contracts.Services")
             .Where(service => In("Managers").Count(type => type.IsClass && service.IsAssignableFrom(type)) != 1)
             .Select(service => service.Name)
             .ToList();

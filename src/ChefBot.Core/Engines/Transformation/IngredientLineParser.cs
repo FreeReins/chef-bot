@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines.Transformation;

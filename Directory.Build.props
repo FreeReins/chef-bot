@@ -4,6 +4,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Lets the build report the IDE rules set in .editorconfig (IDE0005, IDE0130). -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <!-- CS1591: not every public member needs an XML comment. -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>

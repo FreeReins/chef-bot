@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using ChefBot.Core.Contracts;
+using ChefBot.Core.Managers.Contracts;
 
 namespace ChefBot.Core.Engines.Transformation;
 

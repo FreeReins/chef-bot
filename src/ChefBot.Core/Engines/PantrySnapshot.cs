@@ -1,4 +1,4 @@
-using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines;

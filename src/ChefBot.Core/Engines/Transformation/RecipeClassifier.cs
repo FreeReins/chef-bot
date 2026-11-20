@@ -1,4 +1,4 @@
-using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines.Transformation;

@@ -1,5 +1,5 @@
-using ChefBot.Core.Contracts.Messages;
 using ChefBot.Core.Engines;
+using ChefBot.Core.Managers.Contracts.Messages;
 
 namespace ChefBot.Core.Tests;
 

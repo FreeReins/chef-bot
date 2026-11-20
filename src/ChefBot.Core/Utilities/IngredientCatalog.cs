@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using ChefBot.Core.Contracts;
-using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.Managers.Contracts.Messages;
 
 namespace ChefBot.Core.Utilities;
 

@@ -22,12 +22,14 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 ## Rules the code doesn't make obvious
 
 - `ChefBot.Core` is layered; CONTRIBUTING.md's "Where things go" has the map. Calls only go down: Api endpoints
-  and handlers call one manager (`Contracts/Services/I*Manager`); managers call engines (`Engines/`) and resource
-  accessors (`ResourceAccess/`); only `ValidationEngine` among the engines calls accessors. Nothing calls
+  and handlers call one manager (`Managers/Contracts/Services/I*Manager`); managers call engines (`Engines/`) and
+  resource accessors (`ResourceAccess/`); only `ValidationEngine` among the engines calls accessors. Nothing calls
   sideways: no manager calls a manager, no engine calls an engine. `ArchitectureTests` enforces this.
-- Everything in Core is `internal` except `Contracts/` and `CoreRegistration`. Requests, responses, commands and
-  events are records in `Contracts/Messages/`; they are the HTTP JSON, so keep their shapes stable.
-- Accessors take and return the plain data contracts in `ResourceAccess/Contracts/`, never EF entities, and
+- Each layer has `Contracts/Services/` for its interfaces and `Contracts/Messages/` for the records passed through
+  them. Everything in Core is `internal` except `Managers/Contracts/` and `CoreRegistration`. Requests, responses,
+  commands and events are records in `Managers/Contracts/Messages/`; they are the HTTP JSON, so keep their shapes
+  stable.
+- Accessors take and return the plain data contracts in `ResourceAccess/Contracts/Messages/`, never EF entities, and
   changes only count once passed back to a `Save` method. Managers commit once through `IMessageAccess.CommitAsync`.
 - Managers react to each other through messages, not calls: publish with `IMessageAccess.PublishAsync` (sent only
   when the commit succeeds), and handle it in `src/ChefBot.Api/Messaging/<Message>Handler.cs` by calling the
@@ -47,7 +49,8 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 - **Logic in `ChefBot.Core`**: add TUnit tests beside the existing ones in `tests/ChefBot.Core.Tests/`: engines
   directly, managers with the `Fake*` accessors through `TestCore` (`new TestCore().PlanManager()`). Assertions are awaited:
   `await Assert.That(actual).IsEqualTo(expected);`.
-- **A public type** (in practice, anything in `Contracts/`): give it an XML `<summary>` saying what it is for.
+- **A public type** (in practice, anything in `Managers/Contracts/`): give it an XML `<summary>` saying what it is
+  for.
 - **A user-facing message**: write a plain sentence that says what happened and what to do next.
 - **A setting people should change**: add it to `deploy/podman/chefbot.env.example`.
 - **A volume or port**: update the units in `deploy/podman/` and add a note to `README.md`.
@@ -60,8 +63,8 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 ## Reading the code cheaply
 
 - `README.md` is for people running ChefBot. Skip it unless you are editing it.
-- In Core, start from the manager interface in `src/ChefBot.Core/Contracts/Services/`: it lists every operation of
-  its area. Open the manager, then only the engines and accessors it uses.
+- In Core, start from the manager interface in `src/ChefBot.Core/Managers/Contracts/Services/`: it lists every
+  operation of its area. Open the manager, then only the engines and accessors it uses.
 - The web page is one component per screen: `src/ChefBot.Web/src/tabs/<Tab>.svelte` (Recipes.svelte,
   Meals.svelte, ...), `screens/` for setup and sign-in, `settings/<Section>Panel.svelte`. Open only the one
   you need.
@@ -77,6 +80,9 @@ One top-level type per file, named after the type (`PlanStatus.cs`, `IPlanAccess
 belongs to. This includes small records, enums and test fakes. Nested types stay inside their parent. A comment
 about several types goes on each of them or in CONTRIBUTING.md, not loose in a file. The build fails otherwise
 (StyleCop SA1402 and SA1649, set to errors in `.editorconfig`).
+
+A file's namespace matches its folder (IDE0130), and unused usings are warnings (IDE0005). The Claude Code hook in
+`.claude/hooks/dotnet-format.sh` removes unused usings after each edit and reports a namespace that doesn't match.
 
 ## Improving this file
 

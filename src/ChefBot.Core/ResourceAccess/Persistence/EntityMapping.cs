@@ -1,4 +1,4 @@
-using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChefBot.Core.ResourceAccess.Persistence;

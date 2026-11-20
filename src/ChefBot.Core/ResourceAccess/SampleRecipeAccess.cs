@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Services;
 
 namespace ChefBot.Core.ResourceAccess;
 

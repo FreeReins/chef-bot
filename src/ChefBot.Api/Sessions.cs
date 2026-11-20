@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
-using ChefBot.Core.Contracts;
-using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.Managers.Contracts.Messages;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 

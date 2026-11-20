@@ -3,7 +3,6 @@
     <!-- TUnit tests are an executable: run them with `dotnet run`. -->
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="TUnit" />

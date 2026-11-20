@@ -1,4 +1,4 @@
-using ChefBot.Core.Contracts;
+using ChefBot.Core.Managers.Contracts;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 

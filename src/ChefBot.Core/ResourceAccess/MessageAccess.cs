@@ -1,3 +1,4 @@
+using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Persistence;
 using Wolverine.EntityFrameworkCore;
 

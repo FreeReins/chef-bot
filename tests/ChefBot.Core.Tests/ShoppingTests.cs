@@ -1,6 +1,7 @@
-using ChefBot.Core.Contracts.Messages;
 using ChefBot.Core.Engines;
-using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.Engines.Contracts.Messages;
+using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 
 namespace ChefBot.Core.Tests;
 

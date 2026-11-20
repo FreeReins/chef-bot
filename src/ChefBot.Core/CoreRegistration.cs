@@ -1,10 +1,12 @@
 using System.Net.Sockets;
-using ChefBot.Core.Contracts;
-using ChefBot.Core.Contracts.Services;
 using ChefBot.Core.Engines;
+using ChefBot.Core.Engines.Contracts.Services;
 using ChefBot.Core.Engines.Transformation;
 using ChefBot.Core.Managers;
+using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.Managers.Contracts.Services;
 using ChefBot.Core.ResourceAccess;
+using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Persistence;
 using ChefBot.Core.Utilities;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +22,7 @@ using Wolverine.Postgresql;
 namespace ChefBot.Core;
 
 /// <summary>
-/// Wires up everything behind the manager interfaces in <see cref="Contracts.Services"/>: managers, engines,
+/// Wires up everything behind the manager interfaces in <see cref="Managers.Contracts.Services"/>: managers, engines,
 /// resource accessors and utilities, the PostgreSQL database and the message bus's storage in it.
 /// </summary>
 public static class CoreRegistration

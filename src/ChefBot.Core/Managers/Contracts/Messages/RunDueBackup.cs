@@ -1,0 +1,4 @@
+namespace ChefBot.Core.Managers.Contracts.Messages;
+
+/// <summary>Command, every few minutes: run the daily backup if its time has come.</summary>
+public sealed record RunDueBackup;

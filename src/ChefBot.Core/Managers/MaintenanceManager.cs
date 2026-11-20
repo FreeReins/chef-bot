@@ -1,9 +1,9 @@
-using ChefBot.Core.Contracts;
-using ChefBot.Core.Contracts.Messages;
-using ChefBot.Core.Contracts.Services;
 using ChefBot.Core.Engines;
-using ChefBot.Core.ResourceAccess;
-using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.Managers.Contracts.Services;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Managers;

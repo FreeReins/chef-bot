@@ -1,11 +1,10 @@
 using ChefBot.Api.Https;
 using ChefBot.Api.Messaging;
 using ChefBot.Core;
-using ChefBot.Core.Contracts.Services;
+using ChefBot.Core.Managers.Contracts.Services;
 using JasperFx;
 using JasperFx.CodeGeneration;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Wolverine;

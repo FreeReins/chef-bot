@@ -1,5 +1,5 @@
-using ChefBot.Core.Contracts.Messages;
-using ChefBot.Core.Contracts.Services;
+using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.Managers.Contracts.Services;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine.Http;
 
