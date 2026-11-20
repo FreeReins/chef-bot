@@ -2,6 +2,8 @@ using ChefBot.Api.Https;
 using ChefBot.Api.Messaging;
 using ChefBot.Core;
 using ChefBot.Core.Contracts.Services;
+using JasperFx;
+using JasperFx.CodeGeneration;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -32,6 +34,30 @@ public static class ServiceRegistration
         wolverine.CodeGeneration.AlwaysUseServiceLocationFor<IRecipeManager>();
         wolverine.CodeGeneration.AlwaysUseServiceLocationFor<IAccountManager>();
         wolverine.CodeGeneration.AlwaysUseServiceLocationFor<IMaintenanceManager>();
+    }
+
+    /// <summary>
+    /// Where the code that calls endpoints and handlers comes from. Debug builds generate and compile it at startup
+    /// (WolverineFx.RuntimeCompilation, Debug only), so a changed endpoint or handler needs no extra step. Release
+    /// builds only load the code that <c>dotnet run -- codegen write</c> wrote into Internal/Generated before the
+    /// build, which the container build does; they never compile while running, so they ship without Roslyn, and
+    /// startup stops with an error naming any endpoint or handler whose code is missing.
+    /// </summary>
+    public static void UseChefBotGeneratedCode(this IServiceCollection services)
+    {
+#if DEBUG
+        const TypeLoadMode mode = TypeLoadMode.Dynamic;
+#else
+        const TypeLoadMode mode = TypeLoadMode.Static;
+#endif
+        services.CritterStackDefaults(defaults =>
+        {
+            foreach (var profile in new[] { defaults.Development, defaults.Production })
+            {
+                profile.GeneratedCodeMode = mode;
+                profile.AssertAllPreGeneratedTypesExist = mode == TypeLoadMode.Static;
+            }
+        });
     }
 
     /// <summary>

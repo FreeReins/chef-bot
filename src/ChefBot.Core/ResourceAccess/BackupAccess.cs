@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ChefBot.Core.ResourceAccess.Contracts;
 using ChefBot.Core.ResourceAccess.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,11 +13,9 @@ namespace ChefBot.Core.ResourceAccess;
 /// or versions. They include password hashes: treat them as private. The message bus's own
 /// tables are not included.
 /// </summary>
-internal sealed class BackupAccess(ChefBotDbContext db, string folder) : IBackupAccess
+internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) : IBackupAccess
 {
     private const string Pattern = "chefbot-backup-*.json.gz";
-
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public async Task<StoredBackup> CreateAsync(string name, CancellationToken cancellationToken)
     {
@@ -49,7 +48,7 @@ internal sealed class BackupAccess(ChefBotDbContext db, string folder) : IBackup
         await using (var file = File.Create(path))
         await using (var zip = new GZipStream(file, CompressionLevel.Optimal))
         {
-            await JsonSerializer.SerializeAsync(zip, contents, Json, cancellationToken);
+            await JsonSerializer.SerializeAsync(zip, contents, BackupJson.Default.BackupContents, cancellationToken);
         }
 
         return Describe(new FileInfo(path));
@@ -70,7 +69,7 @@ internal sealed class BackupAccess(ChefBotDbContext db, string folder) : IBackup
         await using (var file = File.OpenRead(Path.Combine(folder, name)))
         await using (var zip = new GZipStream(file, CompressionMode.Decompress))
         {
-            contents = await JsonSerializer.DeserializeAsync<BackupContents>(zip, Json, cancellationToken)
+            contents = await JsonSerializer.DeserializeAsync(zip, BackupJson.Default.BackupContents, cancellationToken)
                 ?? throw new InvalidDataException("The backup file is empty.");
         }
 
@@ -139,4 +138,9 @@ internal sealed class BackupAccess(ChefBotDbContext db, string folder) : IBackup
         /// <summary>Empty in backups made before the weekly schedule remembered what it staged.</summary>
         public List<ScheduleStateEntity> Schedule { get; set; } = [];
     }
+
+    /// <summary>The backup file's JSON shape, made at build time.</summary>
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+    [JsonSerializable(typeof(BackupContents))]
+    private sealed partial class BackupJson : JsonSerializerContext;
 }

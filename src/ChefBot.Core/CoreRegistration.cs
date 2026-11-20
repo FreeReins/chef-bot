@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using ChefBot.Core.Contracts;
 using ChefBot.Core.Contracts.Services;
 using ChefBot.Core.Engines;
 using ChefBot.Core.Engines.Transformation;
@@ -89,9 +90,11 @@ public static class CoreRegistration
     /// <summary>
     /// Keeps the message bus's messages in PostgreSQL, in the <see cref="MessagingSchema"/> schema, so commands and
     /// events published by the managers are saved in the same transaction as their data and survive a restart.
+    /// Their JSON comes from <see cref="ContractJsonContext"/>, made at build time.
     /// </summary>
     public static void UseChefBotMessageStorage(this WolverineOptions wolverine, IConfiguration configuration)
     {
+        wolverine.UseSystemTextJsonForSerialization(json => json.TypeInfoResolverChain.Insert(0, ContractJsonContext.Default));
         wolverine.PersistMessagesWithPostgresql(ConnectionString(configuration), MessagingSchema);
         wolverine.UseEntityFrameworkCoreTransactions();
         wolverine.Policies.UseDurableLocalQueues();

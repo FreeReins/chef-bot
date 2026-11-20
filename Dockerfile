@@ -12,16 +12,23 @@ RUN npm run build
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /source
 
-# Restore first so this layer is reused until a project file changes.
+# Restore first so this layer is reused until a project file changes. Debug's packages are fetched too, for the
+# code generation step below; Release is restored last because a build uses whichever restore ran last.
 COPY Directory.Build.props Directory.Packages.props ChefBot.slnx global.json ./
 COPY src/ChefBot.Core/ChefBot.Core.csproj src/ChefBot.Core/
 COPY src/ChefBot.Api/ChefBot.Api.csproj src/ChefBot.Api/
 COPY tests/ChefBot.Core.Tests/ChefBot.Core.Tests.csproj tests/ChefBot.Core.Tests/
-RUN dotnet restore ChefBot.slnx
+RUN dotnet restore ChefBot.slnx -p:Configuration=Debug && dotnet restore ChefBot.slnx -p:Configuration=Release
 
 COPY . .
 # Before the build, so the page is part of the app's static files when it is published.
 COPY --from=web /source/src/ChefBot.Api/wwwroot/ src/ChefBot.Api/wwwroot/
+# Wolverine's code for calling the endpoints and handlers is generated from this source and compiled into the Release
+# build, which never compiles code while running and ships without Roslyn (see CONTRIBUTING.md). This starts a Debug
+# build only far enough to write the code; it doesn't connect to the database.
+RUN rm -rf src/ChefBot.Api/Internal/Generated \
+    && dotnet run --project src/ChefBot.Api -- codegen write \
+    && dotnet restore ChefBot.slnx -p:Configuration=Release
 RUN dotnet build ChefBot.slnx --configuration Release --no-restore
 
 # podman build --target test .

@@ -3,8 +3,16 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="WolverineFx" />
     <PackageReference Include="WolverineFx.Http" />
-    <PackageReference Include="WolverineFx.RuntimeCompilation" />
     <ProjectReference Include="../ChefBot.Core/ChefBot.Core.csproj" />
+  </ItemGroup>
+  <!--
+    Wolverine's generated code (ServiceRegistration.UseChefBotGeneratedCode). Debug builds compile it at startup with
+    Roslyn and ignore Internal/Generated, so stale files there can't break them. Release builds compile the files
+    the codegen write command puts there (see CONTRIBUTING.md), and leave Roslyn out. The parentheses in the conditions are required.
+  -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+    <Compile Remove="Internal/Generated/**" />
   </ItemGroup>
   <ItemGroup>
     <!-- Editable data files live in /config at the repository root and ship next to the app. -->

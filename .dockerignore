@@ -17,3 +17,5 @@ AGENTS.md
 # The web page's packages and build output: the image installs and builds its own.
 **/node_modules/
 src/ChefBot.Api/wwwroot/
+# Wolverine's generated code: the image generates its own from the source.
+src/ChefBot.Api/Internal/Generated/

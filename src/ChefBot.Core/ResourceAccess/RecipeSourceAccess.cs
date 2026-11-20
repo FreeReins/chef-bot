@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using ChefBot.Core.Contracts;
 using ChefBot.Core.ResourceAccess.Contracts;
 using Microsoft.Extensions.Logging;
@@ -9,18 +10,13 @@ using Microsoft.Extensions.Logging;
 namespace ChefBot.Core.ResourceAccess;
 
 /// <summary>Reads recipes from Mealie's REST API. ChefBot only ever reads from Mealie.</summary>
-internal sealed class RecipeSourceAccess(HttpClient http, ILogger<RecipeSourceAccess> logger) : IRecipeSourceAccess
+internal sealed partial class RecipeSourceAccess(HttpClient http, ILogger<RecipeSourceAccess> logger) : IRecipeSourceAccess
 {
     private const int PageSize = 100;
     private const int MaxParallelRequests = 6;
 
     /// <summary>Above this share of unreadable recipes the import is abandoned instead of saved half-done.</summary>
     private const double MaxFailureShare = 0.2;
-
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
-    {
-        NumberHandling = JsonNumberHandling.AllowReadingFromString,
-    };
 
     public async Task<RecipeSourceResult> FetchAllAsync(MealieSettings connection, CancellationToken cancellationToken)
     {
@@ -40,7 +36,7 @@ internal sealed class RecipeSourceAccess(HttpClient http, ILogger<RecipeSourceAc
         {
             try
             {
-                var detail = await GetAsync<MealieRecipe>(mealie, $"api/recipes/{Uri.EscapeDataString(slug)}", token);
+                var detail = await GetAsync(mealie, $"api/recipes/{Uri.EscapeDataString(slug)}", MealieJson.Default.MealieRecipe, token);
                 if (Map(detail) is { } recipe)
                 {
                     recipes.Add(recipe);
@@ -67,7 +63,7 @@ internal sealed class RecipeSourceAccess(HttpClient http, ILogger<RecipeSourceAc
         var slugs = new List<string>();
         for (var page = 1; ; page++)
         {
-            var result = await GetAsync<MealiePage>(mealie, $"api/recipes?page={page}&perPage={PageSize}", cancellationToken);
+            var result = await GetAsync(mealie, $"api/recipes?page={page}&perPage={PageSize}", MealieJson.Default.MealiePage, cancellationToken);
             var items = result.Items ?? [];
             slugs.AddRange(items.Select(item => item.Slug).OfType<string>().Where(slug => slug.Length > 0));
             if (items.Count == 0 || page >= result.PageCount)
@@ -77,7 +73,7 @@ internal sealed class RecipeSourceAccess(HttpClient http, ILogger<RecipeSourceAc
         }
     }
 
-    private async Task<T> GetAsync<T>(Server mealie, string path, CancellationToken cancellationToken)
+    private async Task<T> GetAsync<T>(Server mealie, string path, JsonTypeInfo<T> shape, CancellationToken cancellationToken)
         where T : class
     {
         try
@@ -91,7 +87,7 @@ internal sealed class RecipeSourceAccess(HttpClient http, ILogger<RecipeSourceAc
             }
 
             await using var body = await response.Content.ReadAsStreamAsync(cancellationToken);
-            return await JsonSerializer.DeserializeAsync<T>(body, Json, cancellationToken)
+            return await JsonSerializer.DeserializeAsync(body, shape, cancellationToken)
                 ?? throw new RecipeSourceException($"Mealie sent an empty answer for {path}.");
         }
         catch (HttpRequestException exception)
@@ -200,4 +196,10 @@ internal sealed class RecipeSourceAccess(HttpClient http, ILogger<RecipeSourceAc
     {
         public string? Name { get; set; }
     }
+
+    /// <summary>The JSON shapes ChefBot reads from Mealie, made at build time. Mealie sometimes sends numbers as strings.</summary>
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, NumberHandling = JsonNumberHandling.AllowReadingFromString)]
+    [JsonSerializable(typeof(MealiePage))]
+    [JsonSerializable(typeof(MealieRecipe))]
+    private sealed partial class MealieJson : JsonSerializerContext;
 }

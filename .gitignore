@@ -429,3 +429,6 @@ FodyWeavers.xsd
 results/
 .waza-cache/
 evals/agents-md/context/with/AGENTS.md
+
+# Wolverine's generated code (dotnet run -- codegen write): written from the source before each Release build
+src/ChefBot.Api/Internal/Generated/

@@ -52,6 +52,10 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 - **A setting people should change**: add it to `deploy/podman/chefbot.env.example`.
 - **A volume or port**: update the units in `deploy/podman/` and add a note to `README.md`.
 - **The HTTP API**: update the API section of `README.md`.
+- **A JSON body, message or file type**: list it in its source-generated `JsonSerializerContext`. CONTRIBUTING.md's
+  "Code made at build time" says which context, and `JsonShapeTests` checks it.
+- **An endpoint or handler**: Debug builds need nothing extra. Release builds need regenerated Wolverine code; see
+  that same section.
 
 ## Reading the code cheaply
 

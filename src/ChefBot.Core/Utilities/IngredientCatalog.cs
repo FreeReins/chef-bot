@@ -1,18 +1,22 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using ChefBot.Core.Contracts;
 using ChefBot.Core.Contracts.Messages;
 
 namespace ChefBot.Core.Utilities;
 
-/// <summary>What ChefBot knows about one ingredient. Entries are loaded from config/ingredients.json.</summary>
+/// <summary>
+/// What ChefBot knows about one ingredient. Entries are loaded from config/ingredients.json. The lists turn a missing
+/// or null value into an empty list: the build-time JSON reader passes null for a field the file leaves out.
+/// </summary>
 internal sealed record CatalogEntry
 {
     /// <summary>The shared name every alias maps to, for example "green onion".</summary>
     public required string Name { get; init; }
 
     /// <summary>Other names for the same ingredient, for example "scallion".</summary>
-    public IReadOnlyList<string> Aliases { get; init; } = [];
+    public IReadOnlyList<string> Aliases { get; init => field = value ?? []; } = [];
 
     public IngredientGroup Group { get; init; } = IngredientGroup.Other;
 
@@ -20,7 +24,7 @@ internal sealed record CatalogEntry
     public int? ShelfLifeDays { get; init; }
 
     /// <summary>Months (1-12) it is in season locally. Empty means it is never scored for season.</summary>
-    public IReadOnlyList<int> SeasonMonths { get; init; } = [];
+    public IReadOnlyList<int> SeasonMonths { get; init => field = value ?? []; } = [];
 
     /// <summary>True for things assumed to be on hand, which never go on a shopping list.</summary>
     public bool PantryStaple { get; init; }
@@ -68,7 +72,7 @@ internal static class IngredientRefExtensions
 /// Recognizes ingredients in messy recipe text and maps them to one shared name,
 /// so recipes can be compared with each other, with the seasons and with the pantry.
 /// </summary>
-internal sealed class IngredientCatalog
+internal sealed partial class IngredientCatalog
 {
     /// <summary>Words that mean the text is not the fresh item, as in "canned tomatoes" or "pumpkin seeds".</summary>
     private static readonly HashSet<string> ProcessedWords = new(StringComparer.Ordinal)
@@ -120,15 +124,9 @@ internal sealed class IngredientCatalog
     /// <summary>Loads a catalog from JSON shaped like <c>{ "ingredients": [ { "name": "kale", ... } ] }</c>.</summary>
     public static IngredientCatalog FromJson(string json)
     {
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
-        {
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true,
-        };
-
         try
         {
-            var file = JsonSerializer.Deserialize<CatalogFile>(json, options);
+            var file = JsonSerializer.Deserialize(json, CatalogJson.Default.CatalogFile);
             return new IngredientCatalog(file?.Ingredients ?? []);
         }
         catch (JsonException exception)
@@ -209,6 +207,11 @@ internal sealed class IngredientCatalog
 
     private sealed record CatalogFile
     {
-        public List<CatalogEntry> Ingredients { get; init; } = [];
+        public List<CatalogEntry> Ingredients { get; init => field = value ?? []; } = [];
     }
+
+    /// <summary>The catalog file's JSON shape, made at build time. The file is edited by hand, so comments and trailing commas are allowed.</summary>
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, ReadCommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true)]
+    [JsonSerializable(typeof(CatalogFile))]
+    private sealed partial class CatalogJson : JsonSerializerContext;
 }

@@ -112,6 +112,42 @@ message bus starts and creates its own tables in the `wolverine` schema. Before 
 a table, switch to EF Core migrations: add `Microsoft.EntityFrameworkCore.Design`, run
 `dotnet ef migrations add Initial`, and replace `EnsureCreatedAsync` with `MigrateAsync` in `CoreRegistration.cs`.
 
+## Code made at build time
+
+ChefBot doesn't use reflection-based JSON or compile code while running. That keeps startup quick and is the
+groundwork for Native AOT.
+
+**JSON.** Every JSON body, message and file is read and written through a source-generated `JsonSerializerContext`:
+
+- `ContractJsonContext` (`ChefBot.Core/Contracts/ContractJson.cs`) covers the records in `Contracts/Messages/`.
+  The API uses it for request and response bodies, and the message bus uses it for the commands and events it stores.
+- `ApiJsonContext` (`ChefBot.Api/ApiJson.cs`) covers the bodies defined in the API project.
+- Each accessor that reads a file or talks to another service has its own private context next to its JSON types:
+  backups, Mealie, the webhook, the sample recipes and the ingredient catalog.
+
+A new request, response, command or event needs a `[JsonSerializable]` line in its context. Records used inside a
+listed one are included automatically. `JsonShapeTests` fails when something in `Contracts/Messages/` is missing.
+It also checks that every shape reads JSON the way reflection does. Two things behave differently from reflection:
+
+- When a type has `init` properties, the generator sets all of them, so a field the JSON leaves out loses its
+  `= ...` default and becomes null or zero. Prefer positional records. For a list that may be missing, write
+  `{ get; init => field = value ?? []; } = [];`, as `CatalogEntry` does.
+- The values in `Notification.Data` must be types listed on `NotificationAccess.WebhookJson`.
+
+**Wolverine's generated code.** Wolverine generates the code that calls each endpoint and handler. Debug builds
+generate and compile it at startup with Roslyn, so changing an endpoint or handler needs no extra step. Release
+builds compile in code written beforehand to `src/ChefBot.Api/Internal/Generated/` and leave Roslyn out. That
+folder isn't in git, and the image build writes it from the source. To run a Release build on your own machine:
+
+```sh
+rm -rf src/ChefBot.Api/Internal/Generated           # codegen write never deletes files for removed endpoints
+dotnet run --project src/ChefBot.Api -- codegen write   # starts the app far enough to write the code; no database needed
+dotnet build ChefBot.slnx -c Release
+```
+
+If a Release build is missing the code for an endpoint or handler, it stops at startup with an error that names
+it. Run the commands above again to fix it.
+
 ## The web page
 
 `src/ChefBot.Web` is a [Svelte 5](https://svelte.dev) page, written in plain JavaScript and built with Vite.

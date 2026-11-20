@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ChefBot.Core.ResourceAccess.Contracts;
 using ChefBot.Core.ResourceAccess.Persistence;
 using Microsoft.Extensions.Logging;
@@ -11,7 +12,7 @@ namespace ChefBot.Core.ResourceAccess;
 /// Posts notifications to a webhook as JSON:
 /// <c>{ "type": "slow_cooker", "title": "...", "message": "...", "sentAt": "...", "data": { ... } }</c>.
 /// </summary>
-internal sealed class NotificationAccess(HttpClient http, TimeProvider clock, ILogger<NotificationAccess> logger) : INotificationAccess
+internal sealed partial class NotificationAccess(HttpClient http, TimeProvider clock, ILogger<NotificationAccess> logger) : INotificationAccess
 {
     public async Task<Delivery> SendAsync(string webhookUrl, Notification notification, CancellationToken cancellationToken)
     {
@@ -20,18 +21,11 @@ internal sealed class NotificationAccess(HttpClient http, TimeProvider clock, IL
             return new Delivery(false, "The webhook address isn't valid.");
         }
 
-        var payload = new
-        {
-            type = notification.Type,
-            title = notification.Title,
-            message = notification.Message,
-            sentAt = clock.GetUtcNow(),
-            data = notification.Data,
-        };
+        var payload = new WebhookPayload(notification.Type, notification.Title, notification.Message, clock.GetUtcNow(), notification.Data);
 
         try
         {
-            using var response = await http.PostAsJsonAsync(webhook, payload, cancellationToken);
+            using var response = await http.PostAsJsonAsync(webhook, payload, WebhookJson.Default.WebhookPayload, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 return new Delivery(true);
@@ -46,10 +40,29 @@ internal sealed class NotificationAccess(HttpClient http, TimeProvider clock, IL
             return new Delivery(false, $"The webhook couldn't be reached: {exception.Message}");
         }
     }
+
+    /// <summary>What the webhook receives.</summary>
+    internal sealed record WebhookPayload(string Type, string Title, string Message, DateTimeOffset SentAt, IReadOnlyDictionary<string, object?> Data);
+
+    /// <summary>
+    /// The webhook's JSON shape, made at build time. <see cref="Notification.Data"/> holds plain values, so each kind
+    /// of value <see cref="Engines.NotificationEngine"/> puts in it is listed here; a new kind needs a line too.
+    /// </summary>
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+    [JsonSerializable(typeof(WebhookPayload))]
+    [JsonSerializable(typeof(string))]
+    [JsonSerializable(typeof(bool))]
+    [JsonSerializable(typeof(int))]
+    [JsonSerializable(typeof(Guid))]
+    [JsonSerializable(typeof(DateOnly))]
+    [JsonSerializable(typeof(List<string>))]
+    [JsonSerializable(typeof(Dictionary<string, object?>))]
+    [JsonSerializable(typeof(List<Dictionary<string, object?>>))]
+    internal sealed partial class WebhookJson : JsonSerializerContext;
 }
 
 /// <summary>The starter recipes offered by the setup wizard, read once from config/sample-recipes.json.</summary>
-internal sealed class SampleRecipeAccess(string path) : ISampleRecipeAccess
+internal sealed partial class SampleRecipeAccess(string path) : ISampleRecipeAccess
 {
     private readonly Lazy<IReadOnlyList<RecipeText>> _all = new(() => Load(path));
 
@@ -62,9 +75,13 @@ internal sealed class SampleRecipeAccess(string path) : ISampleRecipeAccess
             return [];
         }
 
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        return JsonSerializer.Deserialize<List<RecipeText>>(File.ReadAllText(path), options) ?? [];
+        return JsonSerializer.Deserialize(File.ReadAllText(path), SampleJson.Default.ListRecipeText) ?? [];
     }
+
+    /// <summary>The sample recipe file's JSON shape, made at build time.</summary>
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+    [JsonSerializable(typeof(List<RecipeText>))]
+    private sealed partial class SampleJson : JsonSerializerContext;
 }
 
 /// <summary>
