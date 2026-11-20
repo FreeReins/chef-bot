@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddChefBot(builder.Configuration);
 builder.Services.AddChefBotSignIn(builder.Configuration);
+builder.Logging.AddChefBotLogViewer();
 
 // HTTP always; HTTPS too when Https:Mode is SelfSigned or Certificate.
 var certificates = builder.Services.AddChefBotHttps(builder.Configuration);

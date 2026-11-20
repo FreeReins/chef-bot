@@ -63,7 +63,7 @@ Day to day:
 ```sh
 systemctl --user status chefbot          # is it running?
 systemctl --user restart chefbot         # after editing chefbot.env
-journalctl --user -u chefbot -f          # app logs (chefbot-db for the database)
+journalctl --user -u chefbot -f          # app logs (chefbot-db for the database); recent ones are also under Settings, Logs
 systemctl --user stop chefbot-pod        # stop the app and the database
 ```
 
@@ -307,6 +307,7 @@ try each call. Both need you to be signed in.
 | `GET` `PUT /api/system/notifications`, `POST .../test`, `POST .../send-today` | Reminder settings, and sending now (admin) |
 | `GET` `PUT` `POST /api/system/backups` | Backup settings and list, or back up now (admin) |
 | `GET` `DELETE /api/system/backups/{name}`, `POST .../{name}/restore` | Download, delete or restore a backup (admin) |
+| `GET /api/system/logs` | The last 1000 log entries since startup; `?after={sequence}` returns only newer ones (admin) |
 
 Everything except the session, setup-account, sign-in, invite and reset endpoints needs a signed-in session cookie.
 Endpoints marked *admin* answer `403` with the detail "Only an admin can do that." for other accounts.

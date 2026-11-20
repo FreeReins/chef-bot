@@ -1,4 +1,5 @@
 using ChefBot.Api.Https;
+using ChefBot.Api.Logging;
 using ChefBot.Api.Messaging;
 using ChefBot.Core;
 using ChefBot.Core.Managers.Contracts.Services;
@@ -20,6 +21,17 @@ public static class ServiceRegistration
         services.AddSingleton<ImportStatusTracker>();
         services.AddHostedService<MaintenanceTimer>();
         return services;
+    }
+
+    /// <summary>
+    /// Keeps the recent log entries in memory as well as writing them to the console, so admins can read them under
+    /// Settings, Logs. The Logging:LogLevel filters apply to both.
+    /// </summary>
+    public static ILoggingBuilder AddChefBotLogViewer(this ILoggingBuilder logging)
+    {
+        logging.Services.AddSingleton<LogBuffer>();
+        logging.Services.AddSingleton<ILoggerProvider, LogBufferProvider>();
+        return logging;
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using System.Text;
 using ChefBot.Api.Https;
+using ChefBot.Api.Logging;
 using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Services;
@@ -9,7 +10,7 @@ using Wolverine.Http;
 
 namespace ChefBot.Api.Endpoints;
 
-/// <summary>System-wide settings: sign-in rules and HTTPS.</summary>
+/// <summary>System-wide settings: sign-in rules and HTTPS, and the server's recent log.</summary>
 public static class SystemEndpoints
 {
     [Authorize(Policy = Sessions.AdminPolicy)]
@@ -34,6 +35,13 @@ public static class SystemEndpoints
 
         return accounts.UpdateSecurityAsync(request, cancellationToken);
     }
+
+    /// <summary>The log entries written since startup (the last <see cref="LogBuffer.Capacity"/>), oldest first. Pass
+    /// <paramref name="after"/> to get only the entries newer than that sequence number.</summary>
+    [Authorize(Policy = Sessions.AdminPolicy)]
+    [WolverineGet("/api/system/logs")]
+    public static LogsResponse GetLogs([FromServices] LogBuffer logs, long? after) =>
+        new(logs.Since(after ?? 0), LogBuffer.Capacity);
 
     /// <summary>How HTTPS is set up, for the setup wizard and the Settings tab.</summary>
     [WolverineGet("/api/system/https")]

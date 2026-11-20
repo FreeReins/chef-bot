@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ChefBot.Api.Https;
+using ChefBot.Api.Logging;
 using ChefBot.Api.Messaging;
 
 namespace ChefBot.Api;
@@ -15,6 +16,7 @@ namespace ChefBot.Api;
 [JsonSerializable(typeof(ImportStatus))]
 [JsonSerializable(typeof(NewCertificateRequest))]
 [JsonSerializable(typeof(HttpsStatusResponse))]
+[JsonSerializable(typeof(LogsResponse))]
 // Endpoints that answer with a file or a 202 return IResult, which the OpenAPI document describes as an empty object.
 [JsonSerializable(typeof(IResult))]
 public sealed partial class ApiJsonContext : JsonSerializerContext;
