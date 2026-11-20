@@ -1,7 +1,5 @@
-using ChefBot.Core.Ingredients;
-using ChefBot.Core.Pantry;
-using ChefBot.Core.Planning;
-using ChefBot.Core.Swaps;
+using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Engines;
 
 namespace ChefBot.Core.Tests;
 
@@ -35,9 +33,9 @@ public class PantryAndSwapTests
     {
         var older = TestData.Stocked("cabbage", 0.25m, "head", TestData.Sunday.AddDays(2));
         var newer = TestData.Stocked("cabbage", 1m, "head", TestData.Sunday.AddDays(10));
-        var tacos = PlannedMeal.ForRecipe(TestData.Tacos, MealSlot.Dinner, TestData.Sunday, portions: 4);
+        var tacos = TestData.Meal(TestData.Tacos, MealSlot.Dinner, TestData.Sunday, portions: 4);
 
-        var finished = PantryUsage.Deduct([newer, older], MealRequirements.For([tacos]));
+        var finished = TestData.Shopping.DeductCooked([newer, older], tacos);
 
         // The recipe needs half a head: all of the older quarter, then a quarter of the newer one.
         await Assert.That(finished.Count).IsEqualTo(1);
@@ -52,11 +50,10 @@ public class PantryAndSwapTests
             TestData.Stocked("cabbage", 1m, "head", TestData.Sunday.AddDays(1)),
             TestData.Stocked("cilantro", 1m, "bunch"));
 
-        var ranked = new AlternativeFinder(TestData.Catalog, TestData.Options)
-            .Rank([TestData.Caprese, TestData.Soup, TestData.Tacos], pantry, month: 11, limit: 2);
+        var ranked = TestData.Suggestions.Rank([TestData.Caprese, TestData.Soup, TestData.Tacos], pantry, month: 11, limit: 2);
 
         await Assert.That(ranked.Count).IsEqualTo(2);
-        await Assert.That(ranked[0].Name).IsEqualTo(TestData.Tacos.Name);
+        await Assert.That(ranked[0].Recipe.Name).IsEqualTo(TestData.Tacos.Name);
         await Assert.That(ranked[0].ExpiringSoon.Contains("cabbage")).IsTrue();
         await Assert.That(ranked[0].OnHand.Contains("cilantro")).IsTrue();
         await Assert.That(ranked[0].ToBuy.Contains("cod")).IsTrue();
@@ -73,17 +70,17 @@ public class PantryAndSwapTests
             TestData.Stocked("kale", 1m, "bunch"),
             TestData.Stocked("cilantro", 1m, "bunch"));
 
-        var meals = new CreativeMealGenerator(TestData.Catalog).Generate(pantry, count: 5, new Random(7));
+        var meals = TestData.Suggestions.Ideas(pantry, count: 5, new Random(7));
 
         // One grain and one protein with two vegetables gives exactly two different plates.
         await Assert.That(meals.Count).IsEqualTo(2);
         foreach (var meal in meals)
         {
-            await Assert.That(meal.Components.Count).IsEqualTo(3);
-            await Assert.That(meal.Components[0].Group).IsEqualTo(IngredientGroup.Protein);
-            await Assert.That(meal.Components[1].Group).IsEqualTo(IngredientGroup.Vegetable);
-            await Assert.That(meal.Components[2].Name).IsEqualTo("brown rice");
-            await Assert.That(meal.Components.All(component => component.OnHand)).IsTrue();
+            await Assert.That(meal.Parts.Count).IsEqualTo(3);
+            await Assert.That(meal.Parts[0].Group).IsEqualTo(IngredientGroup.Protein);
+            await Assert.That(meal.Parts[1].Group).IsEqualTo(IngredientGroup.Vegetable);
+            await Assert.That(meal.Parts[2].Name).IsEqualTo("brown rice");
+            await Assert.That(meal.Parts.All(part => part.OnHand)).IsTrue();
             await Assert.That(meal.Title.Contains("brown rice", StringComparison.OrdinalIgnoreCase)).IsTrue();
         }
     }
@@ -91,9 +88,9 @@ public class PantryAndSwapTests
     [Test]
     public async Task Creative_meals_still_work_with_an_empty_pantry()
     {
-        var meals = new CreativeMealGenerator(TestData.Catalog).Generate(PantrySnapshot.Empty, count: 2, new Random(1));
+        var meals = TestData.Suggestions.Ideas(PantrySnapshot.Empty, count: 2, new Random(1));
 
         await Assert.That(meals.Count).IsEqualTo(2);
-        await Assert.That(meals.SelectMany(meal => meal.Components).Any(component => component.OnHand)).IsFalse();
+        await Assert.That(meals.SelectMany(meal => meal.Parts).Any(part => part.OnHand)).IsFalse();
     }
 }

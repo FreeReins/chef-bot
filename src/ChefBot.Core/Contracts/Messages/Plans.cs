@@ -4,6 +4,7 @@ namespace ChefBot.Core.Contracts.Messages;
 
 // Requests, responses, commands and events of IPlanManager: weekly plans, their meals and their shopping lists.
 
+/// <summary>Whether a plan is still a proposal or the one being shopped and cooked from.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<PlanStatus>))]
 public enum PlanStatus
 {
@@ -14,6 +15,7 @@ public enum PlanStatus
     Confirmed,
 }
 
+/// <summary>Which part of the day or week a planned meal fills.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<MealSlot>))]
 public enum MealSlot
 {
@@ -24,6 +26,7 @@ public enum MealSlot
     Sweet,
 }
 
+/// <summary>Whether a planned meal is still to come, was cooked, or was skipped.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<MealStatus>))]
 public enum MealStatus
 {

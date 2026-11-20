@@ -18,6 +18,7 @@ public enum LinkPurpose
 /// <summary>The details someone enters to create an account.</summary>
 public sealed record NewAccount(string Username, string DisplayName, string Password);
 
+/// <summary>Sign in with a username and password.</summary>
 public sealed record SignInRequest(string Username, string Password);
 
 /// <summary>Create an account from an invite link.</summary>
@@ -61,6 +62,7 @@ public sealed record AccountSession(UserResponse User, SessionInfo Session);
 /// <param name="MealieConfigured">True when importing from Mealie is possible.</param>
 public sealed record SessionResponse(bool SetupRequired, UserResponse? User, bool MealieConfigured);
 
+/// <summary>The sign-in rules, as saved.</summary>
 public sealed record SecurityResponse(int MaxFailedSignIns, int LockoutMinutes, bool RequireHttps);
 
 /// <summary>A freshly created link. The token is only available now: it is stored as a hash.</summary>

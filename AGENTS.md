@@ -21,16 +21,22 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 
 ## Rules the code doesn't make obvious
 
-- `ChefBot.Core` holds both the logic and its storage and outside-system code (`Persistence/`, `Mealie/`,
-  `Notifications/WebhookNotificationSender.cs`). Planning, shopping and swap logic (`WeekPlanner`,
-  `ShoppingListBuilder`, `AlternativeFinder`, `CreativeMealGenerator`) take inputs as arguments and never
-  read or save.
-- Services load, call that logic, and save once. Endpoints and handlers bind the request, call one service and
-  map the result.
-- Ingredient needs come only from `MealRequirements`. Anything that changes a plan goes through `PlanRefresher`,
-  so leftovers and the shopping list stay in step.
+- `ChefBot.Core` is layered; CONTRIBUTING.md's "Where things go" has the map. Calls only go down: Api endpoints
+  and handlers call one manager (`Contracts/Services/I*Manager`); managers call engines (`Engines/`) and resource
+  accessors (`ResourceAccess/`); only `ValidationEngine` among the engines calls accessors. Nothing calls
+  sideways: no manager calls a manager, no engine calls an engine. `ArchitectureTests` enforces this.
+- Everything in Core is `internal` except `Contracts/` and `CoreRegistration`. Requests, responses, commands and
+  events are records in `Contracts/Messages/`; they are the HTTP JSON, so keep their shapes stable.
+- Accessors take and return the plain data contracts in `ResourceAccess/Contracts/`, never EF entities, and
+  changes only count once passed back to a `Save` method. Managers commit once through `IUnitOfWork`.
+- Managers react to each other through messages, not calls: publish with `IUnitOfWork.PublishAsync` (sent only
+  when the commit succeeds), and handle it in `src/ChefBot.Api/Messaging/Handlers.cs` by calling the other
+  manager. Keep handlers simple: log expected failures, don't add retry logic.
+- Ingredient needs come only from `MealRequirements`. Anything that changes a plan goes through `PlanManager`,
+  which ends with `ReconcileAsync` so leftovers and the shopping list stay in step.
+- Admin-only endpoints use `[Authorize(Policy = Sessions.AdminPolicy)]`; managers don't check roles.
 - The schema is created with `EnsureCreated` and is never upgraded. After changing an entity, tell the user to
-  run `./dev.sh reset`; don't add migrations unless asked.
+  run `./dev.sh reset`; don't add migrations unless asked. A new stored entity also needs adding to `BackupAccess`.
 - The web page is Svelte 5 in plain JavaScript (no TypeScript). Its state (`app`) and the actions shared
   between screens live in `src/ChefBot.Web/src/lib/app.svelte.js`; a form's own submit stays in its component.
   Wrap anything that calls the API in `run()` so failures show as a message.
@@ -38,9 +44,10 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 
 ## When you change...
 
-- **Logic in `ChefBot.Core`**: add TUnit tests beside the existing ones in `tests/ChefBot.Core.Tests/`.
-  Assertions are awaited: `await Assert.That(actual).IsEqualTo(expected);`.
-- **A public type**: give it an XML `<summary>` saying what it is for.
+- **Logic in `ChefBot.Core`**: add TUnit tests beside the existing ones in `tests/ChefBot.Core.Tests/`: engines
+  directly, managers with the fakes in `Fakes.cs` (`new TestCore().PlanManager()`). Assertions are awaited:
+  `await Assert.That(actual).IsEqualTo(expected);`.
+- **A public type** (in practice, anything in `Contracts/`): give it an XML `<summary>` saying what it is for.
 - **A user-facing message**: write a plain sentence that says what happened and what to do next.
 - **A setting people should change**: add it to `deploy/podman/chefbot.env.example`.
 - **A volume or port**: update the units in `deploy/podman/` and add a note to `README.md`.
@@ -49,6 +56,8 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 ## Reading the code cheaply
 
 - `README.md` is for people running ChefBot. Skip it unless you are editing it.
+- In Core, start from the manager interface in `src/ChefBot.Core/Contracts/Services/`: it lists every operation of
+  its area. Open the manager, then only the engines and accessors it uses.
 - The web page is one component per screen: `src/ChefBot.Web/src/tabs/<Tab>.svelte` (Recipes.svelte,
   Meals.svelte, ...), `screens/` for setup and sign-in, `settings/<Section>Panel.svelte`. Open only the one
   you need.

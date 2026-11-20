@@ -1,18 +1,18 @@
-using ChefBot.Core.Pantry;
-using ChefBot.Core.Planning;
-using ChefBot.Core.Shopping;
+using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Engines;
+using ChefBot.Core.ResourceAccess.Contracts;
 
 namespace ChefBot.Core.Tests;
 
 public class ShoppingTests
 {
     /// <summary>Three dinners sized to cook each recipe exactly once.</summary>
-    private static MealPlan PlanOf(params Recipes.Recipe[] recipes)
+    private static MealPlan PlanOf(params Recipe[] recipes)
     {
         var plan = new MealPlan { WeekStart = TestData.Sunday };
         for (var index = 0; index < recipes.Length; index++)
         {
-            plan.Meals.Add(PlannedMeal.ForRecipe(recipes[index], MealSlot.Dinner, TestData.Sunday.AddDays(index * 2), portions: 4));
+            plan.Meals.Add(TestData.Meal(recipes[index], MealSlot.Dinner, TestData.Sunday.AddDays(index * 2), portions: 4));
         }
 
         return plan;
@@ -23,7 +23,7 @@ public class ShoppingTests
     [Test]
     public async Task Totals_an_ingredient_shared_by_two_meals()
     {
-        var draft = TestData.ShoppingBuilder().Build(PlanOf(TestData.Tacos, TestData.Bowls), PantrySnapshot.Empty);
+        var draft = TestData.Shopping.BuildList(PlanOf(TestData.Tacos, TestData.Bowls), PantrySnapshot.Empty);
         var cabbage = Find(draft, "cabbage");
         var cilantro = Find(draft, "cilantro");
 
@@ -39,7 +39,7 @@ public class ShoppingTests
         var plan = PlanOf(TestData.Tacos);
         plan.Meals[0].Portions = 6; // one and a half batches of a recipe that serves four
 
-        var draft = TestData.ShoppingBuilder().Build(plan, PantrySnapshot.Empty);
+        var draft = TestData.Shopping.BuildList(plan, PantrySnapshot.Empty);
 
         await Assert.That(Find(draft, "cabbage")?.Quantity == 0.75m).IsTrue();
         await Assert.That(Find(draft, "tortilla")?.Quantity == 12m).IsTrue();
@@ -48,7 +48,7 @@ public class ShoppingTests
     [Test]
     public async Task Leaves_staples_off_the_list()
     {
-        var draft = TestData.ShoppingBuilder().Build(PlanOf(TestData.Stew), PantrySnapshot.Empty);
+        var draft = TestData.Shopping.BuildList(PlanOf(TestData.Stew), PantrySnapshot.Empty);
 
         await Assert.That(Find(draft, "salt") is null).IsTrue();
         await Assert.That(draft.AssumedStaples.Contains("salt")).IsTrue();
@@ -57,7 +57,7 @@ public class ShoppingTests
     [Test]
     public async Task Keeps_the_exact_cut_of_meat_on_the_list()
     {
-        var draft = TestData.ShoppingBuilder().Build(PlanOf(TestData.Tacos, TestData.Bowls), PantrySnapshot.Empty);
+        var draft = TestData.Shopping.BuildList(PlanOf(TestData.Tacos, TestData.Bowls), PantrySnapshot.Empty);
 
         await Assert.That(Find(draft, "cod")?.DisplayName).IsEqualTo("cod");
         await Assert.That(Find(draft, "chicken thigh")?.DisplayName).IsEqualTo("chicken thigh");
@@ -67,7 +67,7 @@ public class ShoppingTests
     public async Task Buys_only_what_the_pantry_is_short_of()
     {
         var pantry = TestData.PantryOf(TestData.Stocked("cabbage", 0.5m, "head"));
-        var draft = TestData.ShoppingBuilder().Build(PlanOf(TestData.Tacos, TestData.Bowls), pantry);
+        var draft = TestData.Shopping.BuildList(PlanOf(TestData.Tacos, TestData.Bowls), pantry);
 
         await Assert.That(Find(draft, "cabbage")?.Quantity == 0.5m).IsTrue();
     }
@@ -76,7 +76,7 @@ public class ShoppingTests
     public async Task Enough_in_the_pantry_means_nothing_to_buy()
     {
         var pantry = TestData.PantryOf(TestData.Stocked("cabbage", 2m, "head"));
-        var draft = TestData.ShoppingBuilder().Build(PlanOf(TestData.Tacos, TestData.Bowls), pantry);
+        var draft = TestData.Shopping.BuildList(PlanOf(TestData.Tacos, TestData.Bowls), pantry);
 
         await Assert.That(Find(draft, "cabbage") is null).IsTrue();
         await Assert.That(draft.CoveredByPantry.Contains("cabbage")).IsTrue();
@@ -86,7 +86,7 @@ public class ShoppingTests
     public async Task An_untracked_amount_in_the_pantry_counts_as_enough()
     {
         var pantry = TestData.PantryOf(TestData.Stocked("cabbage"));
-        var draft = TestData.ShoppingBuilder().Build(PlanOf(TestData.Tacos), pantry);
+        var draft = TestData.Shopping.BuildList(PlanOf(TestData.Tacos), pantry);
 
         await Assert.That(Find(draft, "cabbage") is null).IsTrue();
     }
@@ -97,7 +97,7 @@ public class ShoppingTests
         var expired = TestData.Stocked("cabbage", 2m, "head");
         expired.ExpiresOn = TestData.Sunday.AddDays(-1);
 
-        var draft = TestData.ShoppingBuilder().Build(PlanOf(TestData.Tacos, TestData.Bowls), TestData.PantryOf(expired));
+        var draft = TestData.Shopping.BuildList(PlanOf(TestData.Tacos, TestData.Bowls), TestData.PantryOf(expired));
 
         await Assert.That(Find(draft, "cabbage")?.Quantity == 1m).IsTrue();
     }
@@ -111,7 +111,7 @@ public class ShoppingTests
             meal.Status = MealStatus.Cooked;
         }
 
-        var draft = TestData.ShoppingBuilder().Build(plan, PantrySnapshot.Empty);
+        var draft = TestData.Shopping.BuildList(plan, PantrySnapshot.Empty);
 
         await Assert.That(draft.Items.Count).IsEqualTo(0);
     }
@@ -120,7 +120,7 @@ public class ShoppingTests
     public async Task Groceries_only_optional_meals_need_are_marked_optional()
     {
         var plan = TestData.PlanWeek(TestData.Sunday).Plan;
-        var draft = TestData.ShoppingBuilder().Build(plan, PantrySnapshot.Empty);
+        var draft = TestData.Shopping.BuildList(plan, PantrySnapshot.Empty);
 
         // Oats are only used by the optional oatmeal breakfast.
         await Assert.That(Find(draft, "oats")?.IsOptional == true).IsTrue();
@@ -131,13 +131,13 @@ public class ShoppingTests
     public async Task Rebuilding_the_list_keeps_what_was_already_bought()
     {
         var plan = PlanOf(TestData.Tacos);
-        plan.ReplaceOpenShoppingItems(TestData.ShoppingBuilder().Build(plan, PantrySnapshot.Empty).Items);
+        TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, PantrySnapshot.Empty));
         var cod = plan.ShoppingItems.Single(item => item.Key == "cod");
         cod.IsPurchased = true;
 
         // The cod is now in the pantry, so the rebuilt list no longer asks for it.
         var pantry = TestData.PantryOf(TestData.Stocked("cod", 1m, "lb"));
-        plan.ReplaceOpenShoppingItems(TestData.ShoppingBuilder().Build(plan, pantry).Items);
+        TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, pantry));
 
         await Assert.That(plan.ShoppingItems.Count(item => item.Key == "cod")).IsEqualTo(1);
         await Assert.That(plan.ShoppingItems.Single(item => item.Key == "cod").IsPurchased).IsTrue();
@@ -149,10 +149,9 @@ public class ShoppingTests
         var plan = PlanOf(TestData.Tacos, TestData.Stew);
         var cabbage = TestData.Stocked("cabbage", 1m, "head");
         var apples = TestData.Stocked("apples", 4m);
-        plan.ReplaceOpenShoppingItems(TestData.ShoppingBuilder().Build(plan, TestData.PantryOf(cabbage, apples)).Items);
+        TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, TestData.PantryOf(cabbage, apples)));
 
-        var overview = new IngredientOverviewBuilder(TestData.Catalog, TestData.Options)
-            .Build(plan, [cabbage, apples], TestData.Sunday);
+        var overview = TestData.Shopping.BuildOverview(plan, [cabbage, apples], TestData.Sunday, TestData.Options.ExpiringSoonDays);
 
         IngredientStatus StatusOf(string name) => overview.Ingredients.First(line => line.Name == name).Status;
 

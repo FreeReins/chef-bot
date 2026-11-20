@@ -42,35 +42,75 @@ dotnet test --solution ChefBot.slnx               # the same tests through dotne
 
 | Project | Holds | May depend on |
 |---|---|---|
-| `ChefBot.Core` | Entities, planning and shopping logic, use-case services, interfaces for storage and outside systems, and their implementations: PostgreSQL (EF Core) in `Persistence/`, the Mealie reader in `Mealie/`, the webhook notifier in `Notifications/` | ASP.NET Core and the Npgsql EF Core provider |
-| `ChefBot.Api` | Wolverine HTTP endpoints, message handlers, the weekly schedule, startup wiring; serves the web page | `ChefBot.Core` |
+| `ChefBot.Core` | Everything below the API, in layers (see below). Only `Contracts/` and `CoreRegistration` are public | ASP.NET Core, Npgsql EF Core, Wolverine's EF Core and PostgreSQL storage |
+| `ChefBot.Api` | The clients of the core: Wolverine HTTP endpoints (`Endpoints/`), message handlers and the timer that queues the scheduled jobs (`Messaging/`), sign-in, HTTPS, startup wiring; serves the web page | `ChefBot.Core`'s public contracts |
 | `ChefBot.Web` | The web page: Svelte 5 components built with Vite into `ChefBot.Api/wwwroot` | The HTTP API |
+
+`ChefBot.Core` is split by what changes for different reasons. Calls only go down; nothing calls sideways:
+
+```
+Clients (Api endpoints and message handlers)     see only Contracts/
+   ▼
+Managers/          one per area of use: orchestrate a use case, own the transaction, publish messages
+   ▼          ▼
+Engines/  ─►  ResourceAccess/   engines do the work (verbs); accessors read and save
+                 ▼
+            PostgreSQL (EF Core), Mealie, the webhook, the backup folder, config/sample-recipes.json
+
+Utilities/   the ingredient catalog, text and units, clock, settings options, password hashing: any layer
+```
+
+| Folder | Holds | Rules |
+|---|---|---|
+| `Contracts/Services/` | The public manager interfaces: `IPlanManager`, `IPantryManager`, `IRecipeManager`, `IAccountManager`, `IMaintenanceManager` | Clients depend on these and nothing else in Core |
+| `Contracts/Messages/` | The managers' requests and responses (these are the HTTP JSON bodies), the commands and events sent through the message bus, and the enums they use | Plain records. Changing one changes the API |
+| `Contracts/Errors.cs` | `NotFoundException`, `RuleViolationException`, ... which the API turns into problem responses | |
+| `Managers/` | The manager classes and `Mapping.cs` (data contracts to messages) | Call engines and accessors, never another manager. Commit once through `IUnitOfWork`, which also sends what they published |
+| `Engines/` | `PlanningEngine`, `ShoppingEngine`, `SuggestionEngine`, `TransformationEngine` (recipe files, Mealie recipes, typed-in recipes and pantry items), `ValidationEngine`, `SecurityEngine`, `NotificationEngine`; `Shared.cs` holds the calculations several of them use (`MealRequirements`, `PantrySnapshot`, `WeekScorer`) | Never call a manager or another engine. Only `ValidationEngine` reads through accessors, for rules that depend on what is stored; the others take everything as arguments and can be tested without a database |
+| `ResourceAccess/` | The accessor interfaces (`Accessors.cs`) and implementations, the plain data contracts they pass (`Contracts/`), and the EF Core entities and `ChefBotDbContext` (`Persistence/`) | Return copies, never tracked entities. Never call each other. The entities don't leave this folder |
+| `Utilities/` | `IngredientCatalog`, `TextNormalizer`, `Units`, `WeekLayout`, `DailyTime`, the settings options, `PlanWriteLock` | Depend on no layer |
+
+`tests/ChefBot.Core.Tests/ArchitectureTests.cs` checks these rules, so a call in the wrong direction fails the
+tests.
 
 Rules of thumb:
 
-- Decisions belong in `ChefBot.Core` as plain classes that take their inputs as arguments and never touch
-  `Persistence/`, `Mealie/` or the webhook. `WeekPlanner`,
-  `ShoppingListBuilder`, `AlternativeFinder` and `CreativeMealGenerator` read nothing and save nothing,
-  which is why they can be tested without a database.
-- Services (`PlanningService`, `MealService`, ...) load, call the logic, and save once.
-- Endpoints and handlers stay thin: bind the request, call one service, map the result.
+- An endpoint or handler binds the request, calls one manager method and returns what it gives back. Admin-only
+  endpoints carry `[Authorize(Policy = Sessions.AdminPolicy)]`; nothing checks for admins inside the core.
+- A manager loads through accessors, hands the data to engines, saves through accessors and commits once.
+  Managers that need to react to each other do it with messages: one publishes an event or command through
+  `IUnitOfWork.PublishAsync`, and a handler in `ChefBot.Api/Messaging/` calls the other. For example,
+  `PantryManager` publishes `PantryChanged` and its handler calls `IPlanManager.RefreshOpenPlansAsync`.
+- Messages are kept in PostgreSQL (the `wolverine` schema) and only sent once the transaction that published
+  them commits. Handlers log expected problems, such as Mealie being down, rather than throwing; there is no
+  retry logic to keep in mind.
+- One way to do each thing. Ingredient needs come only from `MealRequirements`. Every change to a plan goes
+  through `PlanManager`, which ends each change by placing the leftover lunches and rebuilding the shopping list,
+  so they can't drift. Plan changes run one at a time (`PlanWriteLock`), which is enough because ChefBot runs as
+  a single instance per database.
 - Recipe file imports are pluggable. To read a new kind of file, implement `IRecipeFileFormat` in
-  `ChefBot.Core/Recipes/Files/` and register it in `ServiceRegistration.cs`; `RecipeFileReader` picks it by file
-  name ending and the web page's file picker lists it automatically.
-- One way to do each thing. Ingredient needs come from `MealRequirements`; anything that changes a plan
-  goes through `PlanRefresher` so leftovers and the shopping list can't drift.
+  `ChefBot.Core/Engines/Transformation/` and register it in `CoreRegistration.cs`; `TransformationEngine` picks
+  it by file name ending and the web page's file picker lists it automatically.
+- Something new to store: add the entity in `ResourceAccess/Persistence/`, the data contract in
+  `ResourceAccess/Contracts/`, map them in `EntityMapping.cs`, and add it to `BackupAccess` so backups include it.
 
 ## Tests
 
 Tests use [TUnit](https://tunit.dev). New logic in `ChefBot.Core` needs tests next to the existing ones.
 Assertions are awaited: `await Assert.That(actual).IsEqualTo(expected);`.
 
+- Engines are tested directly, with the small catalog and recipe library in `TestData.cs`.
+- Managers are tested with the in-memory accessors in `Fakes.cs` (`new TestCore().PlanManager()`), which hand
+  out copies the way the real ones do, and `FakeUnitOfWork`, which records what was published.
+- The test project can see Core's internal types (`InternalsVisibleTo`).
+
 ## Database changes
 
 The schema is created with `EnsureCreated` on first start, which is simple but cannot upgrade an existing
-database. Before the first release that changes a table, switch to EF Core migrations:
-add `Microsoft.EntityFrameworkCore.Design`, run `dotnet ef migrations add Initial`, and replace
-`EnsureCreatedAsync` with `MigrateAsync` in `DependencyInjection.cs`.
+database. It only creates tables in a database that has none, so `PrepareChefBotAsync` runs it before the
+message bus starts and creates its own tables in the `wolverine` schema. Before the first release that changes
+a table, switch to EF Core migrations: add `Microsoft.EntityFrameworkCore.Design`, run
+`dotnet ef migrations add Initial`, and replace `EnsureCreatedAsync` with `MigrateAsync` in `CoreRegistration.cs`.
 
 ## The web page
 

@@ -227,6 +227,20 @@ When Caddy, Traefik, nginx or similar handles HTTPS, let it talk to ChefBot over
 - **Leave "Always use HTTPS" off.** Redirecting is the proxy's job.
 - Point the proxy at port 8080. Port 8443 isn't used in this mode.
 
+### Upgrading
+
+The database isn't upgraded automatically yet, so a version that changes its tables needs a fresh database.
+The version that added the layered core and stored messages is one: it adds a `ScheduleState` table and the
+`wolverine` schema. Your data comes across in a backup:
+
+1. On the old version, open Settings, Backups and press *Back up now*. Download the backup too, to be safe.
+2. Stop ChefBot and delete its database volume, keeping the keys and backups volumes. With the Podman setup:
+   `systemctl --user stop chefbot chefbot-db && podman volume rm chefbot-db`. With compose:
+   `docker compose down && docker volume rm <project>_chefbot-db`.
+3. Start the new version and create a temporary first account in the setup wizard.
+4. Open Settings, Backups and restore the backup. Everything, including the accounts, is replaced by what the
+   backup holds, so sign in again with your old account.
+
 ## A week with ChefBot
 
 1. **Saturday morning** the schedule stages next week and posts a summary to your webhook.
@@ -282,6 +296,9 @@ The full description is served at `/openapi/v1.json`.
 | `GET` `DELETE /api/system/backups/{name}`, `POST .../{name}/restore` | Download, delete or restore a backup (admin) |
 
 Everything except the session, setup-account, sign-in, invite and reset endpoints needs a signed-in session cookie.
+Endpoints marked *admin* answer `403` with the detail "Only an admin can do that." for other accounts.
+Changing the pantry (`POST`, `PATCH` or `DELETE /api/pantry`) also updates the shopping lists of plans whose week
+hasn't ended, a moment later, as `POST /api/plans/{planId}/refresh` does.
 For scripts, sign in first and keep the cookie:
 
 ```sh
@@ -311,7 +328,7 @@ using `__` between levels (for example `Planner__Dinners=5`). With the Podman se
 | `Planner:DinnerPortions`, `LunchPortions`, `BreakfastPortions` | `2` | People eating each meal |
 | `Planner:ExpiringSoonDays` | `3` | Pantry food expiring this soon is planned first |
 | `Planner:AvoidRepeatDays` | `28` | Don't repeat a recipe planned this recently |
-| `Planner:ImportFromMealieBeforePlanning` | `false` | Refresh from Mealie whenever a plan is staged |
+| `Planner:ImportFromMealieBeforePlanning` | `false` | Refresh from Mealie before the weekly schedule stages a plan. Staging by hand uses the saved recipes |
 | `Planner:Weights` | see file | How strongly sharing, season, pantry use and variety count |
 | `Schedule:Enabled`, `Day`, `Time` | `true`, `Saturday`, `09:00` | When next week is staged automatically |
 | `Stores` | Hy-Vee, farmers market May to October | Default store and when in-season produce goes to the market |
@@ -413,22 +430,28 @@ the time, how many to keep, a maximum age in days, make a backup immediately, do
 ## How it is built
 
 ```
-src/ChefBot.Core             Planning, shopping, pantry, swap and account logic; PostgreSQL via EF Core,
-                             backups, the Mealie reader, the webhook sender.
-src/ChefBot.Api              Wolverine HTTP endpoints and message handlers, the schedule. Serves the web page.
+src/ChefBot.Core             The core, in layers: managers, engines, resource accessors and utilities, behind
+                             public contracts. PostgreSQL via EF Core, backups, Mealie, the webhook.
+src/ChefBot.Api              Wolverine HTTP endpoints and message handlers, sign-in, HTTPS. Serves the web page.
 src/ChefBot.Web              The web page: Svelte 5, built with Vite.
-tests/ChefBot.Core.Tests     TUnit tests for the logic.
+tests/ChefBot.Core.Tests     TUnit tests for the logic and the layering.
 config/                     The ingredient catalog and sample recipes.
 ```
 
-- **[Wolverine](https://wolverinefx.net)** serves the HTTP endpoints (`Endpoints/`) and runs background work
-  as messages (`Messaging/`): the Mealie import; `PlanStaged`, which sends the "plan ready" notification; the
-  weekly `WeeklyPlanDue`, which stages the plan and schedules itself for the following week; and
-  `MaintenanceTick`, which every 10 minutes sends the daily reminders and runs the daily backup when due.
+- **The core is layered by what changes for different reasons.** Five managers (plans, pantry, recipes,
+  accounts, maintenance) run each use case; engines do the planning, shopping, suggestion, validation, security
+  and notification work; resource accessors are the only code that reads or writes the database, Mealie, the
+  webhook or the backup folder. Calls only go down, and the API sees only the managers' interfaces.
+- **[Wolverine](https://wolverinefx.net)** serves the HTTP endpoints (`Endpoints/`) and carries messages between
+  managers (`Messaging/`): `PlanStaged` sends the "plan ready" notification, `PantryChanged` refreshes the open
+  plans' shopping lists, and the Mealie import runs in the background. Messages are stored in PostgreSQL, in the
+  `wolverine` schema, and are only sent once the change that caused them is saved, so a restart doesn't lose them.
+- **Every 10 minutes** a timer asks for the scheduled jobs: next week's plan, the daily reminders and the daily
+  backup. Each one runs only when its time has come and it hasn't run yet.
 - **The planner** scores whole weeks, not single recipes. It starts from several random weeks and improves
   each one swap at a time (`WeekSelector`), scoring with `WeekScorer`.
-- **Every change to a plan** goes through `PlanRefresher`, so leftover lunches and the shopping list always
-  match the meals and the pantry.
+- **Every change to a plan** goes through the plan manager, which ends each change by placing the leftover
+  lunches and rebuilding the shopping list, so they always match the meals and the pantry.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions.
 
@@ -441,13 +464,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions.
 - **Accounts share everything.** There is one household per installation: no per-person plans or pantries.
 - **Amounts are only compared within the same unit.** ChefBot does not convert cups to grams. When it can't
   compare, having some of an ingredient counts as having enough.
-- **The weekly schedule is held in memory.** It is re-created on every start, so a restart never loses it,
-  but a plan due while the app was stopped is not staged late. Daily reminders and backups do catch up:
-  they run at the next check (every 10 minutes) if their time has passed that day.
+- **Scheduled jobs catch up, within limits.** A weekly plan due while ChefBot was stopped is staged at the next
+  check (every 10 minutes) as long as its week hasn't started; each week is staged once, so a plan you clear
+  stays cleared. Daily reminders and backups run at the next check if their time has passed that day.
+- **One ChefBot per database.** Changes to a plan are made one at a time inside the app, so don't run two copies
+  against the same database.
 - **Notifications go one way.** ChefBot posts to a webhook; it has no API keys yet, so Home Assistant can't
   call ChefBot's API on its own.
 - **The database schema is created on first start** and is not upgraded automatically yet
-  (see CONTRIBUTING.md).
+  (see [Upgrading](#upgrading) and CONTRIBUTING.md).
 - **Store suggestions and seasons are guesses** from the catalog, not live store data.
 
 ## License

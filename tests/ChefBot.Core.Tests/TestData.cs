@@ -1,12 +1,12 @@
-using ChefBot.Core.Ingredients;
-using ChefBot.Core.Pantry;
-using ChefBot.Core.Planning;
-using ChefBot.Core.Recipes;
-using ChefBot.Core.Shopping;
+using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Engines;
+using ChefBot.Core.Engines.Transformation;
+using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Tests;
 
-/// <summary>A small catalog and recipe library shared by the tests.</summary>
+/// <summary>A small catalog and recipe library shared by the tests, and the engines built on them.</summary>
 internal static class TestData
 {
     /// <summary>A Sunday in November: cabbage, kale and carrots are in season, tomatoes and basil are not.</summary>
@@ -41,6 +41,25 @@ internal static class TestData
 
     public static readonly PlannerOptions Options = new();
 
+    public static readonly RecipeClassifier Classifier = new(new ClassifierOptions
+    {
+        BreakfastWords = ["breakfast"],
+        SweetWords = ["dessert"],
+        SlowCookerWords = ["slow cooker"],
+    });
+
+    // Registered in the same order as CoreRegistration: the specific Mealie backup before general JSON.
+    public static readonly TransformationEngine Transformation =
+        new(Catalog, Options, Classifier, [new MealieBackupFormat(Classifier), new JsonRecipeFormat(Classifier)]);
+
+    public static readonly PlanningEngine Planning = new(Catalog, Options, new WeeklyScheduleOptions());
+
+    public static readonly ShoppingEngine Shopping = new(Catalog, new StoreOptions { Default = "Store" });
+
+    public static readonly SuggestionEngine Suggestions = new(Catalog, Options);
+
+    public static readonly NotificationEngine Notifications = new();
+
     public static readonly Recipe Stew = NewRecipe("Slow Beef Stew", RecipeCourse.Main, true, "2 lb stew meat", "3 carrots", "1 tsp salt");
     public static readonly Recipe Tacos = NewRecipe("Slaw Fish Tacos", RecipeCourse.Main, false, "0.5 head cabbage", "1 bunch cilantro", "1 lb cod", "8 tortillas");
     public static readonly Recipe Bowls = NewRecipe("Chicken Cabbage Bowls", RecipeCourse.Main, false, "0.5 head cabbage", "0.5 bunch cilantro", "1 lb chicken thigh", "2 cups brown rice");
@@ -59,44 +78,51 @@ internal static class TestData
         NewRecipe("Baked Apples", RecipeCourse.Sweet, false, "4 apples"),
     ];
 
-    public static Recipe NewRecipe(string name, RecipeCourse course, bool slowCooker, params string[] ingredients)
+    public static Recipe NewRecipe(string name, RecipeCourse course, bool slowCooker, params string[] ingredients) => new()
     {
-        var recipe = new Recipe { Name = name, Course = course, IsSlowCooker = slowCooker, Servings = 4 };
-        recipe.Ingredients.AddRange(new RecipeIngredientBuilder(Catalog).FromLines(ingredients));
-        return recipe;
-    }
+        Name = name,
+        Course = course,
+        IsSlowCooker = slowCooker,
+        Servings = 4,
+        Ingredients = Transformation.FromLines(ingredients),
+    };
 
     public static PlanDraft PlanWeek(DateOnly weekStart, PantrySnapshot? pantry = null, IReadOnlyList<Recipe>? recipes = null) =>
-        new WeekPlanner(Catalog, Options).Plan(new PlanRequest(
+        Planning.Plan(new PlanRequest(
             weekStart, recipes ?? Library, new HashSet<Guid>(), pantry ?? PantrySnapshot.Empty, DateTimeOffset.UnixEpoch));
 
-    public static ShoppingListBuilder ShoppingBuilder() =>
-        new(Catalog, new StoreRouter(new StoreOptions { Default = "Store" }, Catalog));
+    /// <summary>A meal cooking <paramref name="recipe"/>.</summary>
+    public static PlannedMeal Meal(Recipe recipe, MealSlot slot, DateOnly? date, int portions) => new()
+    {
+        Slot = slot,
+        Date = date,
+        Recipe = recipe,
+        RecipeId = recipe.Id,
+        Title = recipe.Name,
+        Portions = portions,
+    };
 
     /// <summary>A pantry item bought on <see cref="Sunday"/>.</summary>
     public static PantryItem Stocked(string name, decimal? quantity = null, string unit = "", DateOnly? expiresOn = null) =>
-        new PantryItemFactory(Catalog).Create(Catalog.Identify(name), quantity, unit, Sunday, expiresOn);
+        Transformation.ToPantryItem(name, quantity, unit, Sunday, expiresOn);
 
     public static PantrySnapshot PantryOf(params PantryItem[] items) => new(items, Sunday, Options.ExpiringSoonDays);
 
     public static List<PlannedMeal> Dinners(MealPlan plan) =>
         plan.Meals.Where(meal => meal.Slot == MealSlot.Dinner).OrderBy(meal => meal.Date).ToList();
 
-    /// <summary>An in-memory stand-in for the stored settings.</summary>
-    public sealed class FakeSettings : Abstractions.ISettingsStore
+    /// <summary>The exception <paramref name="action"/> threw, or null when it didn't throw one of that type.</summary>
+    public static async Task<TException?> Caught<TException>(Func<Task> action)
+        where TException : Exception
     {
-        private readonly Dictionary<Type, object> _rows = new();
-
-        public Task<TSettings> GetAsync<TSettings>(CancellationToken cancellationToken)
-            where TSettings : class, new()
+        try
         {
-            if (!_rows.TryGetValue(typeof(TSettings), out var row))
-            {
-                row = new TSettings();
-                _rows[typeof(TSettings)] = row;
-            }
-
-            return Task.FromResult((TSettings)row);
+            await action();
+            return null;
+        }
+        catch (TException exception)
+        {
+            return exception;
         }
     }
 

@@ -1,5 +1,6 @@
-using ChefBot.Core.Ingredients;
-using ChefBot.Core.Recipes;
+using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Engines.Transformation;
+using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Tests;
 

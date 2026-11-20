@@ -1,6 +1,8 @@
-using ChefBot.Core.Common;
-using ChefBot.Core.Planning;
-using ChefBot.Core.Recipes;
+using ChefBot.Core.Contracts;
+using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Engines;
+using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Tests;
 
@@ -90,8 +92,8 @@ public class WeekPlannerTests
     public async Task Avoids_recipes_planned_recently()
     {
         var recent = new HashSet<Guid> { TestData.Tacos.Id };
-        var draft = new WeekPlanner(TestData.Catalog, TestData.Options).Plan(new PlanRequest(
-            TestData.Sunday, TestData.Library, recent, Pantry.PantrySnapshot.Empty, DateTimeOffset.UnixEpoch));
+        var draft = TestData.Planning.Plan(new PlanRequest(
+            TestData.Sunday, TestData.Library, recent, PantrySnapshot.Empty, DateTimeOffset.UnixEpoch));
 
         await Assert.That(TestData.Dinners(draft.Plan).Any(dinner => dinner.RecipeId == TestData.Tacos.Id)).IsFalse();
     }
@@ -130,8 +132,8 @@ public class WeekPlannerTests
         var sunday = TestData.Dinners(plan)[0];
         var replacement = TestData.Library.First(recipe => recipe.Course == RecipeCourse.Main && plan.Meals.All(meal => meal.RecipeId != recipe.Id));
 
-        sunday.UseRecipe(replacement, TestData.Options.DinnerPortions);
-        plan.RefreshLeftoverLunches(TestData.Options);
+        TestData.Planning.UseRecipe(sunday, replacement);
+        TestData.Planning.PlaceLeftovers(plan);
 
         var monday = plan.Meals.Single(meal => meal.Slot == MealSlot.Lunch && meal.Date == TestData.Sunday.AddDays(1));
         await Assert.That(monday.RecipeId == replacement.Id).IsTrue();
@@ -146,7 +148,7 @@ public class WeekPlannerTests
         var thursday = TestData.Dinners(plan)[2];
 
         thursday.Status = MealStatus.Skipped;
-        plan.RefreshLeftoverLunches(TestData.Options);
+        TestData.Planning.PlaceLeftovers(plan);
 
         // Friday's lunch falls back to Tuesday's dinner, which is still within three days.
         var friday = plan.Meals.Single(meal => meal.Slot == MealSlot.Lunch && meal.Date == TestData.Sunday.AddDays(5));

@@ -77,6 +77,7 @@ public sealed record SampleRecipeResponse(
 /// <summary>The sample recipes to add, by name.</summary>
 public sealed record AddSamplesRequest(IReadOnlyList<string> Names);
 
+/// <summary>How many of the chosen sample recipes were added.</summary>
 public sealed record AddSamplesResponse(int Added);
 
 /// <summary>How to reach Mealie.</summary>

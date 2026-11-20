@@ -1,20 +1,12 @@
-using ChefBot.Core.Common;
-using ChefBot.Core.Recipes;
-using ChefBot.Core.Recipes.Files;
+using ChefBot.Core.Contracts;
+using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Engines.Transformation;
 
 namespace ChefBot.Core.Tests;
 
 public class RecipeFileTests
 {
-    private static readonly RecipeClassifier Classifier = new(new ClassifierOptions
-    {
-        BreakfastWords = ["breakfast"],
-        SweetWords = ["dessert"],
-        SlowCookerWords = ["slow cooker"],
-    });
-
-    // Registered in the same order as ServiceRegistration: the specific Mealie backup before general JSON.
-    private static readonly RecipeFileReader Reader = new([new MealieBackupFormat(Classifier), new JsonRecipeFormat(Classifier)]);
+    private static readonly TransformationEngine Reader = TestData.Transformation;
 
     private static string? ErrorFrom(Action read)
     {
@@ -32,7 +24,7 @@ public class RecipeFileTests
     [Test]
     public async Task Reads_chefbots_own_shape()
     {
-        var file = Reader.Read("dinners.json", """
+        var file = Reader.ReadFile("dinners.json", """
             [{ "name": "Chili", "course": "main", "isSlowCooker": true, "servings": 6,
                "ingredients": ["1 lb ground beef", "1 can beans"] }]
             """);
@@ -48,7 +40,7 @@ public class RecipeFileTests
     [Test]
     public async Task Reads_a_schema_org_recipe_from_a_json_ld_graph()
     {
-        var file = Reader.Read("Pancakes.JSON", """
+        var file = Reader.ReadFile("Pancakes.JSON", """
             { "@context": "https://schema.org", "@graph": [
                 { "@type": "WebPage", "name": "Not a recipe" },
                 { "@type": ["Recipe"], "name": "Pancakes", "recipeYield": "4 servings",
@@ -64,7 +56,7 @@ public class RecipeFileTests
     [Test]
     public async Task Reads_mealie_ingredient_objects_and_tags()
     {
-        var file = Reader.Read("mealie.json", """
+        var file = Reader.ReadFile("mealie.json", """
             { "name": "Pot Roast", "recipeServings": 8,
               "tags": [{ "name": "Slow Cooker" }],
               "recipeIngredient": [{ "display": "3 lb chuck roast" }, { "note": "4 carrots" }, { "note": "" }] }
@@ -79,7 +71,7 @@ public class RecipeFileTests
     [Test]
     public async Task Counts_entries_without_a_name_or_ingredients_as_skipped()
     {
-        var file = Reader.Read("mixed.json", """
+        var file = Reader.ReadFile("mixed.json", """
             { "recipes": [
                 { "name": "Toast", "ingredients": ["2 slices bread"] },
                 { "name": "Nothing in it", "ingredients": [] },
@@ -93,9 +85,9 @@ public class RecipeFileTests
     [Test]
     public async Task Explains_files_it_cannot_read()
     {
-        await Assert.That(ErrorFrom(() => Reader.Read("recipes.json", "not json"))).Contains("isn't a JSON recipe file");
-        await Assert.That(ErrorFrom(() => Reader.Read("recipes.json", "[]"))).Contains("No recipes were found");
-        await Assert.That(ErrorFrom(() => Reader.Read("recipes.csv", "name"))).Contains("can't import .csv files yet");
+        await Assert.That(ErrorFrom(() => Reader.ReadFile("recipes.json", "not json"))).Contains("isn't a JSON recipe file");
+        await Assert.That(ErrorFrom(() => Reader.ReadFile("recipes.json", "[]"))).Contains("No recipes were found");
+        await Assert.That(ErrorFrom(() => Reader.ReadFile("recipes.csv", "name"))).Contains("can't import .csv files yet");
     }
 
     private const string MealieBackup = """
@@ -124,7 +116,7 @@ public class RecipeFileTests
     [Test]
     public async Task Reads_a_mealie_backup_database()
     {
-        var file = Reader.Read("database.json", MealieBackup);
+        var file = Reader.ReadFile("database.json", MealieBackup);
 
         await Assert.That(file.Recipes.Count).IsEqualTo(2);
         await Assert.That(file.Skipped).IsEqualTo(1);

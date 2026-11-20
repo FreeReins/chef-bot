@@ -1,7 +1,8 @@
-using ChefBot.Core.Backups;
-using ChefBot.Core.Common;
-using ChefBot.Core.Notifications;
-using ChefBot.Core.Planning;
+using ChefBot.Core.Contracts;
+using ChefBot.Core.Contracts.Messages;
+using ChefBot.Core.Engines;
+using ChefBot.Core.ResourceAccess.Contracts;
+using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Tests;
 
@@ -9,15 +10,15 @@ public class ReminderAndBackupTests
 {
     private static readonly DateOnly Tuesday = TestData.Sunday.AddDays(2);
 
-    private static IReadOnlyList<string> TypesOn(MealPlan? plan, DateOnly day, params Pantry.PantryItem[] pantry) =>
-        ReminderBuilder.Daily(plan, pantry, day, expiringSoonDays: 3).Select(reminder => reminder.Type).ToList();
+    private static IReadOnlyList<string> TypesOn(MealPlan? plan, DateOnly day, params PantryItem[] pantry) =>
+        TestData.Notifications.Daily(plan, pantry, day, expiringSoonDays: 3).Select(reminder => reminder.Type).ToList();
 
     [Test]
     public async Task The_slow_cooker_reminder_goes_out_on_the_morning_of_the_meal()
     {
         var plan = TestData.PlanWeek(TestData.Sunday).Plan;
 
-        var tuesday = ReminderBuilder.Daily(plan, [], Tuesday, 3).Single(reminder => reminder.Type == NotificationTypes.SlowCooker);
+        var tuesday = TestData.Notifications.Daily(plan, [], Tuesday, 3).Single(reminder => reminder.Type == NotificationTypes.SlowCooker);
 
         await Assert.That(tuesday.Message.Contains(TestData.Stew.Name)).IsTrue();
         await Assert.That(TypesOn(plan, TestData.Sunday.AddDays(4)).Contains(NotificationTypes.SlowCooker)).IsFalse();
@@ -37,7 +38,7 @@ public class ReminderAndBackupTests
     {
         var plan = TestData.PlanWeek(TestData.Sunday).Plan;
 
-        var today = ReminderBuilder.Daily(plan, [], Tuesday, 3).Single(reminder => reminder.Type == NotificationTypes.MealsToday);
+        var today = TestData.Notifications.Daily(plan, [], Tuesday, 3).Single(reminder => reminder.Type == NotificationTypes.MealsToday);
 
         await Assert.That(today.Message.IndexOf("Breakfast", StringComparison.Ordinal) < today.Message.IndexOf("Dinner", StringComparison.Ordinal)).IsTrue();
         await Assert.That(today.Message.Contains("Leftovers")).IsTrue();
@@ -50,7 +51,7 @@ public class ReminderAndBackupTests
         var tomatoes = TestData.Stocked("tomatoes", 4, expiresOn: TestData.Sunday.AddDays(2));
         var quinoa = TestData.Stocked("quinoa", 2, "cup");
 
-        var reminder = ReminderBuilder.Daily(plan, [tomatoes, quinoa], TestData.Sunday, 3)
+        var reminder = TestData.Notifications.Daily(plan, [tomatoes, quinoa], TestData.Sunday, 3)
             .Single(item => item.Type == NotificationTypes.ExpiringFood);
 
         // Quinoa keeps for a year, so only the tomatoes are mentioned; no November meal uses them.
@@ -65,7 +66,7 @@ public class ReminderAndBackupTests
         var plan = TestData.PlanWeek(TestData.Sunday).Plan;
         var saturday = TestData.Sunday.AddDays(-1);
 
-        var reminder = ReminderBuilder.Daily(plan, [], saturday, 3).Single();
+        var reminder = TestData.Notifications.Daily(plan, [], saturday, 3).Single();
 
         await Assert.That(reminder.Type).IsEqualTo(NotificationTypes.Shopping);
         await Assert.That(reminder.Title.Contains("confirming")).IsTrue();
@@ -76,8 +77,8 @@ public class ReminderAndBackupTests
     public async Task A_confirmed_plan_only_nags_while_groceries_are_left()
     {
         var plan = TestData.PlanWeek(TestData.Sunday).Plan;
-        plan.Confirm();
-        plan.ReplaceOpenShoppingItems(TestData.ShoppingBuilder().Build(plan, Pantry.PantrySnapshot.Empty).Items);
+        plan.Status = PlanStatus.Confirmed;
+        TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, PantrySnapshot.Empty));
         var saturday = TestData.Sunday.AddDays(-1);
 
         await Assert.That(TypesOn(plan, saturday).Contains(NotificationTypes.Shopping)).IsTrue();
@@ -97,7 +98,7 @@ public class ReminderAndBackupTests
     {
         var plan = TestData.PlanWeek(TestData.Sunday).Plan;
 
-        var ready = ReminderBuilder.PlanReady(plan, "schedule");
+        var ready = TestData.Notifications.PlanReady(plan, "schedule");
 
         await Assert.That(ready.Type).IsEqualTo(NotificationTypes.PlanReady);
         await Assert.That(ready.Data["trigger"] as string).IsEqualTo("schedule");
@@ -110,9 +111,9 @@ public class ReminderAndBackupTests
     {
         var settings = new NotificationSettings { SlowCooker = false };
 
-        await Assert.That(settings.IsWanted(NotificationTypes.SlowCooker)).IsFalse();
-        await Assert.That(settings.IsWanted(NotificationTypes.PlanReady)).IsTrue();
-        await Assert.That(settings.IsWanted(NotificationTypes.Test)).IsTrue();
+        await Assert.That(TestData.Notifications.IsWanted(settings, NotificationTypes.SlowCooker)).IsFalse();
+        await Assert.That(TestData.Notifications.IsWanted(settings, NotificationTypes.PlanReady)).IsTrue();
+        await Assert.That(TestData.Notifications.IsWanted(settings, NotificationTypes.Test)).IsTrue();
     }
 
     [Test]
@@ -149,9 +150,9 @@ public class ReminderAndBackupTests
     public async Task Retention_keeps_the_newest_backups()
     {
         var now = new DateTimeOffset(2026, 11, 20, 3, 0, 0, TimeSpan.Zero);
-        var files = Enumerable.Range(0, 5).Select(age => new BackupFile($"backup-{age}", now.AddDays(-age), 100)).ToList();
+        var files = Enumerable.Range(0, 5).Select(age => new StoredBackup($"backup-{age}", now.AddDays(-age), 100)).ToList();
 
-        var expired = BackupRetention.Expired(files, new BackupSettings { KeepCount = 3, KeepDays = 0 }, now);
+        var expired = TestData.Notifications.ExpiredBackups(files, new BackupSettings { KeepCount = 3, KeepDays = 0 }, now);
 
         await Assert.That(string.Join(",", expired.Select(file => file.Name))).IsEqualTo("backup-3,backup-4");
     }
@@ -160,11 +161,11 @@ public class ReminderAndBackupTests
     public async Task Retention_removes_backups_past_their_age_but_never_the_newest()
     {
         var now = new DateTimeOffset(2026, 11, 20, 3, 0, 0, TimeSpan.Zero);
-        var files = new[] { 10, 20, 40 }.Select(age => new BackupFile($"backup-{age}", now.AddDays(-age), 100)).ToList();
+        var files = new[] { 10, 20, 40 }.Select(age => new StoredBackup($"backup-{age}", now.AddDays(-age), 100)).ToList();
 
-        var byAge = BackupRetention.Expired(files, new BackupSettings { KeepCount = 0, KeepDays = 15 }, now);
-        var keepAll = BackupRetention.Expired(files, new BackupSettings { KeepCount = 0, KeepDays = 0 }, now);
-        var allTooOld = BackupRetention.Expired(files, new BackupSettings { KeepCount = 0, KeepDays = 5 }, now);
+        var byAge = TestData.Notifications.ExpiredBackups(files, new BackupSettings { KeepCount = 0, KeepDays = 15 }, now);
+        var keepAll = TestData.Notifications.ExpiredBackups(files, new BackupSettings { KeepCount = 0, KeepDays = 0 }, now);
+        var allTooOld = TestData.Notifications.ExpiredBackups(files, new BackupSettings { KeepCount = 0, KeepDays = 5 }, now);
 
         await Assert.That(string.Join(",", byAge.Select(file => file.Name))).IsEqualTo("backup-20,backup-40");
         await Assert.That(keepAll.Count).IsEqualTo(0);
@@ -178,7 +179,7 @@ public class ReminderAndBackupTests
         var pantry = TestData.PantryOf(TestData.Stocked("tomatoes", 6), TestData.Stocked("basil", 2, "bunch"));
         var request = new PlanRequest(TestData.Sunday, TestData.Library, new HashSet<Guid>(), pantry, DateTimeOffset.UnixEpoch, PantryBoost: 4);
 
-        var titles = TestData.Dinners(new WeekPlanner(TestData.Catalog, TestData.Options).Plan(request).Plan).Select(dinner => dinner.Title).ToList();
+        var titles = TestData.Dinners(TestData.Planning.Plan(request).Plan).Select(dinner => dinner.Title).ToList();
 
         // ...but with them bought, both tomato-and-basil meals are planned.
         await Assert.That(titles.Contains(TestData.Caprese.Name)).IsTrue();
