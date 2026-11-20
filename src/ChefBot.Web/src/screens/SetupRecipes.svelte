@@ -1,83 +1,35 @@
 <!-- Setup step three: fill the recipe library by importing (files, Mealie) and/or from the samples.
      One choice is open at a time so the page stays short; the bar at the bottom always shows how to finish. -->
 <script>
-  import { app, run, enterApp, importFile, importFromMealie, saveMealie, describeMealieImport } from '../lib/app.svelte.js';
+  import { app, run, enterApp } from '../lib/app.svelte.js';
+  import { go } from '../lib/addresses.js';
   import Chip from '../components/Chip.svelte';
   import SetupProgress from '../components/SetupProgress.svelte';
   import SamplePicker from '../components/SamplePicker.svelte';
+  import FileImport from '../components/FileImport.svelte';
+  import MealieConnect from '../components/MealieConnect.svelte';
 
   let open = $state(null); // 'import' | 'samples' | null
-  let files = $state([]);  // one row per file chosen: { name, busy, result?, error? }
-  let dragging = $state(false);
-  let editingMealie = $state(false);
+  let fromFiles = $state(0);
   let samplesAdded = $state(0);
 
-  const mealie = $derived(app.mealie);
-  const mealieRun = $derived(app.mealieImport);
-  const connected = $derived(mealie?.isConfigured && !editingMealie);
-  const accept = $derived(app.fileFormats.flatMap((format) => format.extensions).join(','));
-  const importedFromFiles = $derived(files.reduce((total, row) => total + (row.result?.added ?? 0), 0));
-  const importedFromMealie = $derived(mealieRun?.state === 'Succeeded' ? mealieRun.result.added + mealieRun.result.updated : 0);
-  const imported = $derived(importedFromFiles + importedFromMealie);
+  const latest = $derived(app.mealieImport);
+  const fromMealie = $derived(latest?.state === 'Succeeded' ? latest.result.added + latest.result.updated : 0);
+  const imported = $derived(fromFiles + fromMealie);
+  const count = $derived(app.recipes.length);
 
   function toggle(choice, event) {
     event.preventDefault();
     open = open === choice ? null : choice;
   }
 
-  async function importFiles(list) {
-    for (const file of list) {
-      const row = { name: file.name, busy: true };
-      files.push(row);
-      const index = files.length - 1;
-      try {
-        files[index].result = await importFile(file);
-      } catch (error) {
-        files[index].error = error.message;
-      }
-      files[index].busy = false;
-    }
-  }
-
-  function chooseFiles(event) {
-    importFiles([...event.currentTarget.files]);
-    event.currentTarget.value = ''; // so the same file can be chosen again
-  }
-
-  function drop(event) {
-    event.preventDefault();
-    dragging = false;
-    importFiles([...event.dataTransfer.files]);
-  }
-
-  function describeFile({ added, alreadyInLibrary, skipped }) {
-    const parts = [`${added} added`];
-    if (alreadyInLibrary) parts.push(`${alreadyInLibrary} already in your recipes`);
-    if (skipped) parts.push(`${skipped} skipped (no name or ingredients)`);
-    return parts.join(', ');
-  }
-
-  function connectMealie(event) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    run(async () => {
-      await saveMealie(data.get('url'), data.get('apiToken'));
-      if (!app.mealie.isConfigured) {
-        app.error = 'Mealie needs both an address and an API token. Fill in both, then connect again.';
-        return;
-      }
-      editingMealie = false;
-      await importFromMealie();
-    });
-  }
-
   function finish() {
     run(async () => {
-      const count = app.recipes.length;
+      const total = count;
       await enterApp();
-      app.tab = count ? 'recipes' : 'meals';
-      app.notes = [count
-        ? `Setup is done and you have ${count} recipes. Stage a week when you are ready.`
+      await go(total ? '/recipes' : '/meals');
+      app.notes = [total
+        ? `Setup is done and you have ${total} recipes. Stage a week when you are ready.`
         : 'Setup is done. Add recipes on the Recipes tab, then stage a week.'];
     });
   }
@@ -91,98 +43,64 @@
   <div class="choices">
     <details class="choice" open={open === 'import'}>
       <summary onclick={(event) => toggle('import', event)}>
-        <span class="choice-title">
+        <span class="title">
           <strong>Import my recipes</strong>
           <span class="muted">From a recipe file or your Mealie server</span>
         </span>
         {#if imported}<Chip tone="good">{imported} imported</Chip>{/if}
       </summary>
-
-      <div class="choice-body two-up">
+      <div class="body two-up">
         <div class="source">
           <h3>From a file</h3>
-          <p class="muted">
-            {app.fileFormats.map((format) => `${format.name} (${format.extensions.join(', ')})`).join('; ')}.
-            Import as many files as you like. Recipes you already have are skipped.
-          </p>
-          <label class="drop" class:dragging
-                 ondragover={(event) => { event.preventDefault(); dragging = true; }}
-                 ondragleave={() => (dragging = false)} ondrop={drop}>
-            <input type="file" multiple {accept} onchange={chooseFiles}>
-            <span><strong>Choose files</strong> or drop them here</span>
-          </label>
-          {#if files.length}
-            <ul class="plain file-results" aria-live="polite">
-              {#each files as row, index (index)}
-                <li>
-                  <span class="clip">{row.name}</span>
-                  {#if row.busy}<span class="muted">Importing…</span>
-                  {:else if row.error}<span class="bad-text">{row.error}</span>
-                  {:else}<span class="muted">{describeFile(row.result)}</span>{/if}
-                </li>
-              {/each}
-            </ul>
-          {/if}
+          <FileImport bind:added={fromFiles} />
         </div>
-
         <div class="source">
           <h3>From Mealie</h3>
-          {#if connected}
-            <p class="muted"><Chip tone="good">Connected</Chip> <span class="clip">{mealie.url}</span>
-              <button type="button" class="link" onclick={() => (editingMealie = true)}>Change</button></p>
-            {#if mealieRun?.state === 'Running'}
-              <p class="muted" aria-live="polite"><span class="spinner"></span> Importing from Mealie…</p>
-            {:else if mealieRun?.state === 'Succeeded'}
-              <p class="muted" aria-live="polite">{describeMealieImport(mealieRun.result)}</p>
-            {:else if mealieRun?.state === 'Failed'}
-              <p class="bad-text" role="alert">{mealieRun.message}</p>
-            {/if}
-            <div class="row-actions">
-              <button type="button" class={mealieRun?.state === 'Succeeded' ? '' : 'primary'} disabled={mealieRun?.state === 'Running'}
-                      onclick={importFromMealie}>
-                {mealieRun?.state === 'Succeeded' ? 'Import again' : 'Import from Mealie'}
-              </button>
-            </div>
-          {:else}
-            <p class="muted">Connect once and ChefBot copies your recipes, so planning keeps working when Mealie is down.</p>
-            <form class="stack" onsubmit={connectMealie}>
-              <label>Mealie address
-                <input name="url" type="url" required value={mealie?.url ?? ''} placeholder="http://mealie.local:9000">
-              </label>
-              <label>API token (in Mealie: your profile, then API Tokens)
-                <input name="apiToken" type="password" autocomplete="off" required={!mealie?.hasApiToken}
-                       placeholder={mealie?.hasApiToken ? 'Saved. Leave empty to keep it.' : 'Paste a token from Mealie'}>
-              </label>
-              <div class="row-actions">
-                <button type="submit" class="primary">Connect and import</button>
-                {#if editingMealie}<button type="button" onclick={() => (editingMealie = false)}>Cancel</button>{/if}
-              </div>
-            </form>
-          {/if}
+          <MealieConnect />
         </div>
       </div>
     </details>
 
     <details class="choice" open={open === 'samples'}>
       <summary onclick={(event) => toggle('samples', event)}>
-        <span class="choice-title">
+        <span class="title">
           <strong>Start with sample recipes</strong>
           <span class="muted">{app.samples.length} ready-made recipes, so you can try planning straight away</span>
         </span>
         {#if samplesAdded}<Chip tone="good">{samplesAdded} added</Chip>{/if}
       </summary>
-      <div class="choice-body">
+      <div class="body">
         <SamplePicker onadded={(added) => { samplesAdded += added; }} />
       </div>
     </details>
   </div>
 
-  <div class="setup-bar">
+  <div class="finish">
     <span class="muted">
-      {app.recipes.length === 0 ? 'No recipes yet. You can add some later.' : `${app.recipes.length} ${app.recipes.length === 1 ? 'recipe' : 'recipes'} in your library`}
+      {count === 0 ? 'No recipes yet. You can add some later.' : `${count} ${count === 1 ? 'recipe' : 'recipes'} in your library`}
     </span>
-    <button type="button" class={app.recipes.length ? 'primary' : ''} onclick={finish}>
-      {app.recipes.length ? 'Finish setup' : 'Skip for now'}
+    <button type="button" class={count ? 'primary' : ''} onclick={finish}>
+      {count ? 'Finish setup' : 'Skip for now'}
     </button>
   </div>
 </section>
+
+<style>
+  .choices { display: grid; gap: .6rem; margin-top: 1rem; }
+  .choice { background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; }
+  .choice[open] { border-color: var(--accent); }
+  summary { display: flex; gap: .75rem; align-items: center; justify-content: space-between; padding: .8rem 1rem; cursor: pointer; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "▸"; color: var(--muted); transition: transform .15s; }
+  .choice[open] summary::after { transform: rotate(90deg); }
+  summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: .5rem; }
+  .title { display: grid; flex: 1; min-width: 0; }
+  .body { padding: .8rem 1rem 1rem; border-top: 1px solid var(--line); }
+  .two-up { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+  .source { display: grid; gap: .5rem; align-content: start; }
+  /* Stays in view above the page footer, so finishing never needs a scroll. */
+  .finish { position: sticky; bottom: calc(3rem + env(safe-area-inset-bottom)); display: flex; gap: 1rem; align-items: center;
+    justify-content: space-between; margin-top: 1rem; padding: .6rem 1rem; background: var(--panel); border: 1px solid var(--line);
+    border-radius: .5rem; box-shadow: 0 2px 10px rgb(0 0 0 / .08); }
+  @media (prefers-reduced-motion: reduce) { summary::after { transition: none; } }
+</style>

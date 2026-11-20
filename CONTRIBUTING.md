@@ -80,9 +80,14 @@ has none.
 
 - `src/lib/app.svelte.js` holds everything the page shows (`app`) and every action that loads or changes it.
   Components read `app` and call those actions; Svelte redraws what changed.
+- Every view has its own address (`/recipes/{id}`, `/settings/mealie`, ...) so it can be bookmarked. The list
+  is at the top of `src/lib/addresses.js`. Move between views with plain `<a href>` links or `go(path)` from
+  there, not by setting `app.tab`; the server answers any path that isn't a file or `/api` with `index.html`.
 - `src/App.svelte` is the header, tabs and footer. Each screen is a component: `screens/` for setup and
-  sign-in, `tabs/` for the tabs, `settings/` for the Settings sections.
-- `src/styles.css` is the one stylesheet.
+  sign-in, `tabs/` for the tabs, `settings/` for the Settings sections, and `components/` for pieces used in
+  more than one place (the sample picker, file import, Mealie connection, setup progress bar).
+- `src/styles.css` holds the colours and the shared building blocks: buttons, cards, rows, chips, forms and
+  lists. Styles only one component uses go in that component's `<style>` block, where Svelte scopes them.
 - `./dev.sh web` builds the page once into `src/ChefBot.Api/wwwroot`, which is build output and not in git.
   Use it before a plain `dotnet run`, and to check that the page still builds.
 

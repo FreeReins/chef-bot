@@ -12,7 +12,7 @@
 <article class="card" class:done={meal.status !== 'Planned'}>
   <div class="row">
     <div>
-      <h3>{meal.title}</h3>
+      <h3>{#if meal.recipeId}<a href="/recipes/{meal.recipeId}" class="quiet">{meal.title}</a>{:else}{meal.title}{/if}</h3>
       <div class="chips">
         {#if meal.day}<Chip>{meal.day} {shortDate(meal.date)}</Chip>{:else}<Chip>Any day</Chip>{/if}
         {#if meal.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
@@ -31,3 +31,8 @@
     <SwapPanel {meal} options={app.swap.options} />
   {/if}
 </article>
+
+<style>
+  .quiet { color: inherit; text-decoration: none; }
+  .quiet:hover { text-decoration: underline; }
+</style>

@@ -116,3 +116,8 @@
     {/if}
   </section>
 </div>
+
+<style>
+  .link-box { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+  .link-box input { flex: 1 1 16rem; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; }
+</style>

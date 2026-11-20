@@ -1,6 +1,8 @@
 // Everything the page shows, and the actions that change it. Components read `app` and call these functions;
 // Svelte redraws whatever reads a property of `app` when it changes, so nothing here asks for a redraw.
 import { api } from './api.js';
+// addresses.js imports this module too. That is safe: neither uses the other's exports until a function runs.
+import { showAddress, listenForAddresses } from './addresses.js';
 
 const query = new URLSearchParams(location.search);
 
@@ -18,7 +20,8 @@ export const app = $state({
   fileFormats: [],     // RecipeFileFormatResponse[]: the kinds of recipe file that can be imported
   mealieImport: null,  // the latest Mealie import this page started: { state, result?, message? }
   people: { users: [], links: [], newLink: null },
-  tab: 'meals',
+  tab: 'meals',        // the open tab; the address bar says which (see addresses.js)
+  recipeId: null,      // the recipe shown on its own page, from /recipes/{id}
   settingsSection: 'login', // which Settings sidebar item is open
   plan: null,          // PlanResponse, or null when nothing is staged yet
   ingredients: null,   // IngredientsResponse for the plan
@@ -49,11 +52,6 @@ export async function run(action) {
 export function clearMessages() {
   app.notes = [];
   app.error = null;
-}
-
-export function showTab(tab) {
-  app.tab = tab;
-  clearMessages();
 }
 
 // ---------- plan ----------
@@ -170,19 +168,19 @@ export async function importFile(file) {
   return result;
 }
 
+/** Loads the kinds of recipe file that can be imported, once. */
+export async function loadFileFormats() {
+  if (app.fileFormats.length === 0) app.fileFormats = await api('GET', '/api/recipes/import/formats');
+}
+
 /** Setup step three: choose how to fill the recipe library. */
 export async function openSetupRecipes() {
-  const [samples, fileFormats] = await Promise.all([api('GET', '/api/setup/samples'), api('GET', '/api/recipes/import/formats')]);
-  Object.assign(app, { samples, fileFormats, mealieImport: null });
+  const [samples] = await Promise.all([api('GET', '/api/setup/samples'), loadFileFormats()]);
+  Object.assign(app, { samples, mealieImport: null });
   await loadRecipes();
   app.screen = 'setup-recipes';
 }
 
-/** Opens the sample recipe picker on its own page, from the Recipes tab. */
-export async function openSamples() {
-  app.samples = await api('GET', '/api/setup/samples');
-  app.screen = 'setup-samples';
-}
 
 // ---------- settings ----------
 
@@ -237,7 +235,7 @@ export async function enterApp() {
     app.linkToken = null;
   }
   await Promise.all([loadRecipes(), loadPlan(), loadSystem(), isAdmin() ? loadPeople() : null]);
-  app.screen = 'app';
+  await showAddress();
 }
 
 export function signOut() {
@@ -252,6 +250,7 @@ export function signOut() {
 
 /** Works out which screen to show first: setup, the app, an invite or reset link, or sign-in. */
 export async function start() {
+  listenForAddresses();
   app.session = await api('GET', '/api/session');
   if (app.session.setupRequired) {
     app.screen = 'setup-account';

@@ -22,3 +22,9 @@
     {/if}
   </span>
 </div>
+
+<style>
+  .slot { display: grid; grid-template-columns: 5.5rem 1fr auto; gap: .5rem; align-items: baseline; padding: .25rem 0; border-top: 1px solid var(--line); }
+  .slot:first-of-type { border-top: 0; }
+  .label { color: var(--muted); font-size: .85rem; }
+</style>

@@ -1,7 +1,7 @@
 <!-- ChefBot's page: first-run setup, sign-in, then reviewing a staged plan, swapping meals, shopping,
      the pantry and (for admins) inviting people. State and actions live in lib/app.svelte.js. -->
 <script>
-  import { app, isAdmin, isConfirmed, run, start, showTab, stage, planAction, clearPlan, regenerate, signOut } from './lib/app.svelte.js';
+  import { app, isAdmin, isConfirmed, run, start, stage, planAction, clearPlan, regenerate, signOut } from './lib/app.svelte.js';
   import { shortDate } from './lib/format.js';
   import SetupAccount from './screens/SetupAccount.svelte';
   import SetupHttps from './screens/SetupHttps.svelte';
@@ -37,8 +37,18 @@
   const Other = $derived(OTHER_TABS[app.tab]);
   const PlanTab = $derived(PLAN_TABS[app.tab]);
 
+  // The browser tab's title names the view, so bookmarks and history read well.
+  const title = $derived.by(() => {
+    if (app.screen === 'setup-samples') return 'Sample recipes';
+    if (!inApp) return null;
+    if (app.recipeId) return app.recipes.find((recipe) => recipe.id === app.recipeId)?.name ?? 'Recipe';
+    return TABS.find((tab) => tab.key === app.tab)?.label;
+  });
+
   run(start);
 </script>
+
+<svelte:head><title>{title ? `${title} · ChefBot` : 'ChefBot'}</title></svelte:head>
 
 <header class="top">
   <div>
@@ -80,11 +90,11 @@
 </div>
 
 {#if inApp}
-  <div class="tabs" role="tablist" aria-label="Views">
+  <nav class="tabs" aria-label="Views">
     {#each tabs as tab (tab.key)}
-      <button role="tab" aria-selected={String(app.tab === tab.key)} onclick={() => showTab(tab.key)}>{tab.label}</button>
+      <a href="/{tab.key}" aria-current={app.tab === tab.key ? 'page' : undefined}>{tab.label}</a>
     {/each}
-  </div>
+  </nav>
 {/if}
 
 <main id="view">
@@ -125,3 +135,22 @@
     </li>
   </ul>
 </footer>
+
+<style>
+  .top { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-start; }
+  .tabs { display: flex; gap: .25rem; margin: 1.25rem 0 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tabs a { border-bottom: 3px solid transparent; color: var(--muted); padding: .6rem .9rem; text-decoration: none; white-space: nowrap; }
+  .tabs a:hover { color: var(--ink); }
+  .tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+  /* Pinned to the bottom of the window; the body's bottom padding in styles.css keeps content clear of it. */
+  .site-footer { position: fixed; inset: auto 0 0 0; z-index: 10; background: var(--bg); border-top: 1px solid var(--line);
+    padding: .45rem 1rem calc(.45rem + env(safe-area-inset-bottom)); }
+  .footer-links { list-style: none; margin: 0 auto; padding: 0; max-width: 62rem; display: flex; justify-content: center;
+    align-items: center; flex-wrap: wrap; }
+  .footer-links li { display: flex; align-items: center; }
+  .footer-links li + li:not([hidden])::before { content: "|"; color: var(--line); padding: 0 .6rem; }
+  .footer-links a { display: inline-flex; padding: .3rem; border-radius: .4rem; color: var(--muted); }
+  .footer-links a:hover { color: var(--ink); background: var(--chip); }
+  .footer-links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>

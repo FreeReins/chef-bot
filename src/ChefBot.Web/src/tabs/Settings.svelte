@@ -1,7 +1,8 @@
 <!-- A sidebar of sections, one section shown at a time. -->
 <script>
   import { tick } from 'svelte';
-  import { app, isAdmin, clearMessages } from '../lib/app.svelte.js';
+  import { app, isAdmin } from '../lib/app.svelte.js';
+  import { followLink } from '../lib/addresses.js';
   import LoginPanel from '../settings/LoginPanel.svelte';
   import HttpsPanel from '../settings/HttpsPanel.svelte';
   import MealiePanel from '../settings/MealiePanel.svelte';
@@ -22,9 +23,9 @@
 
   let body = $state();
 
-  async function open(section) {
-    app.settingsSection = section.key;
-    clearMessages();
+  // Each section has its own address, /settings/{key}. Following one moves focus to the section it opens.
+  async function open(event) {
+    if (!followLink(event)) return;
     await tick();
     body?.focus();
   }
@@ -33,7 +34,7 @@
 <div class="settings">
   <nav class="side-nav" aria-label="Settings">
     {#each sections as section (section.key)}
-      <button type="button" aria-current={section === current ? 'page' : undefined} onclick={() => open(section)}>{section.label}</button>
+      <a href="/settings/{section.key}" aria-current={section === current ? 'page' : undefined} onclick={open}>{section.label}</a>
     {/each}
   </nav>
   <div class="settings-body" id="settings-body" tabindex="-1" bind:this={body}>
@@ -41,3 +42,22 @@
     <current.panel />
   </div>
 </div>
+
+<style>
+  /* A sidebar of sections, one section shown at a time. On narrow screens the sidebar becomes a row. */
+  .settings { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 1.75rem; align-items: start; margin-top: 1.25rem; }
+  .side-nav { display: grid; gap: .15rem; position: sticky; top: 1rem; }
+  .side-nav a { border-left: 3px solid transparent; border-radius: 0 .4rem .4rem 0; color: var(--muted); text-decoration: none;
+    padding: .5rem .8rem; }
+  .side-nav a:hover { color: var(--ink); background: var(--chip); }
+  .side-nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .side-nav a[aria-current="page"] { color: var(--ink); border-left-color: var(--accent); background: var(--panel); font-weight: 600; }
+  .settings-body { max-width: 40rem; outline: none; }
+  .settings-body > h2:first-child { margin-top: 0; }
+  @media (max-width: 40rem) {
+    .settings { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+    .side-nav { display: flex; overflow-x: auto; position: static; border-bottom: 1px solid var(--line); }
+    .side-nav a { border-left: 0; border-bottom: 3px solid transparent; border-radius: 0; white-space: nowrap; }
+    .side-nav a[aria-current="page"] { border-bottom-color: var(--accent); background: none; }
+  }
+</style>

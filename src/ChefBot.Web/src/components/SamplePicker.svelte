@@ -77,3 +77,18 @@
     </button>
   </div>
 {/if}
+
+<style>
+  /* Course tabs over a two-column list. */
+  .picker-head { align-items: center; margin-bottom: .5rem; }
+  .segmented { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .segmented button { font-size: .85rem; padding: .25rem .65rem; border-radius: 1rem; }
+  .segmented button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .count { opacity: .75; font-size: .8em; }
+  .sample-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 1.25rem; }
+  .sample { display: flex; gap: .55rem; align-items: flex-start; padding: .4rem 0; border-top: 1px solid var(--line); color: var(--ink); font-size: .95rem; }
+  .sample input { margin-top: .3rem; }
+  .sample.added { opacity: .6; }
+  .sample-text { min-width: 0; flex: 1; }
+  .sample-text .clip { font-size: .8rem; }
+</style>

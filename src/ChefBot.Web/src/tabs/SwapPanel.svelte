@@ -49,3 +49,8 @@
     </div>
   {/each}
 </div>
+
+<style>
+  .swap { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed var(--line); }
+  .option { padding: .5rem 0; border-top: 1px solid var(--line); }
+</style>

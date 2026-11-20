@@ -18,3 +18,13 @@
     {/each}
   </ol>
 </nav>
+
+<style>
+  .progress { margin-bottom: 1rem; }
+  .steps { color: var(--muted); font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 .25rem; }
+  ol { list-style: none; margin: .35rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+  li { display: grid; gap: .3rem; font-size: .8rem; color: var(--muted); }
+  .segment { height: .4rem; border-radius: 1rem; background: var(--line); }
+  li.done .segment, li.current .segment { background: var(--accent); }
+  li.current { color: var(--ink); font-weight: 600; }
+</style>
