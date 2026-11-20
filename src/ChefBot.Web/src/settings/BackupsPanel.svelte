@@ -65,7 +65,7 @@
       <li class="row">
         <div><strong>{new Date(file.createdAt).toLocaleString()}</strong> <span class="muted">{size(file.sizeBytes)}</span></div>
         <div class="row-actions">
-          <a href="/api/system/backups/{file.name}" download={file.name}>Download</a>
+          <a class="button small" href="/api/system/backups/{file.name}" download={file.name}>Download</a>
           <button class="small" onclick={() => restore(file)}>Restore</button>
           <button class="small" onclick={() => remove(file)}>Delete</button>
         </div>
