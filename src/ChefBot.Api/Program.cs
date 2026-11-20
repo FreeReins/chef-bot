@@ -50,6 +50,14 @@ app.UseStaticFiles(webPage);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapOpenApi().RequireAuthorization();
+// A Swagger page at /docs for trying the API. The page itself is open, but it reads /openapi/v1.json with the
+// browser's sign-in cookie, so it only lists the API once you are signed in.
+app.UseSwaggerUI(swagger =>
+{
+    swagger.RoutePrefix = "docs";
+    swagger.DocumentTitle = "ChefBot API";
+    swagger.SwaggerEndpoint("/openapi/v1.json", "ChefBot API");
+});
 app.MapGet("/health", () => Results.Ok(new HealthResponse("ok"))).ExcludeFromDescription();
 
 // Every API endpoint needs a signed-in user unless it is marked [AllowAnonymous].

@@ -261,7 +261,8 @@ Two buttons at the top change the whole plan:
 ## API
 
 The web page is a thin client over a JSON API, so anything it does can be automated.
-The full description is served at `/openapi/v1.json`.
+The full description is served at `/openapi/v1.json`, and `/docs` shows it as a Swagger page where you can
+try each call. Both need you to be signed in.
 
 | Method and path | What it does |
 |---|---|

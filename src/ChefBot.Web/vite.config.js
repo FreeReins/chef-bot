@@ -17,6 +17,6 @@ export default defineConfig({
     host: 'localhost',
     port,
     strictPort: true,
-    proxy: Object.fromEntries(['/api', '/openapi', '/health'].map((path) => [path, { target: api }])),
+    proxy: Object.fromEntries(['/api', '/openapi', '/docs', '/health'].map((path) => [path, { target: api }])),
   },
 });

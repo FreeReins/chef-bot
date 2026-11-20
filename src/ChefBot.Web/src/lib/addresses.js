@@ -39,14 +39,14 @@ export async function showAddress() {
 
 /**
  * Follows a click on a link to another view inside the page without reloading it. Returns true when it did;
- * ctrl-, shift- and middle-clicks, downloads and API links are left to the browser so they open a new tab.
+ * ctrl-, shift- and middle-clicks, downloads, API links and the /docs page are left to the browser so they open a new tab.
  */
 export function followLink(event) {
   const link = event.target.closest?.('a[href]');
   if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
   const url = new URL(link.href, location.href);
   if (url.origin !== location.origin || link.target || link.hasAttribute('download')
-      || /^\/(api|openapi|health)(\/|$)/.test(url.pathname)) return false;
+      || /^\/(api|openapi|docs|health)(\/|$)/.test(url.pathname)) return false;
   event.preventDefault();
   go(url.pathname + url.search);
   return true;
