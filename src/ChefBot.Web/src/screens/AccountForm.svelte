@@ -3,8 +3,8 @@
   import { run } from '../lib/app.svelte.js';
   import SetupProgress from '../components/SetupProgress.svelte';
 
-  /** step: the setup step number, or null outside setup. submit receives { displayName, username, password }. */
-  let { step = null, title, intro, button, submit } = $props();
+  /** setup: true in the setup wizard, which shows its progress bar. submit receives { displayName, username, password }. */
+  let { setup = false, title, intro, button, submit } = $props();
 
   function onsubmit(event) {
     event.preventDefault();
@@ -18,7 +18,7 @@
 </script>
 
 <section class="gate">
-  {#if step}<SetupProgress current={step} />{/if}
+  {#if setup}<SetupProgress />{/if}
   <h2>{title}</h2>
   <p class="muted">{intro}</p>
   <form class="stack card" {onsubmit}>

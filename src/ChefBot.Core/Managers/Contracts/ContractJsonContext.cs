@@ -24,6 +24,9 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(PlanStaged))]
 [JsonSerializable(typeof(CheckWeeklySchedule))]
 [JsonSerializable(typeof(StageScheduledWeek))]
+[JsonSerializable(typeof(ShoppingStoreRequest))]
+[JsonSerializable(typeof(GroceryStoresResponse))]
+[JsonSerializable(typeof(SaveGroceryStoresRequest))]
 // Pantry
 [JsonSerializable(typeof(NewPantryItem))]
 [JsonSerializable(typeof(UpdatePantryItemRequest))]

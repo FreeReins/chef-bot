@@ -1,0 +1,57 @@
+{
+  "stores": [
+    {"name": "Walmart", "kind": "Supermarket", "description": "Supercenters nationwide"},
+    {"name": "Target", "kind": "Supermarket", "description": "Nationwide, groceries alongside everything else"},
+    {"name": "Kroger", "kind": "Supermarket", "description": "Nationwide, also as Fry's, King Soopers, Ralphs, Dillons and others"},
+    {"name": "Albertsons", "kind": "Supermarket", "description": "West and South, also as Vons, Jewel-Osco, Acme and others"},
+    {"name": "Safeway", "kind": "Supermarket", "description": "West, Mountain West and Mid-Atlantic"},
+    {"name": "Publix", "kind": "Supermarket", "description": "Southeast"},
+    {"name": "H-E-B", "kind": "Supermarket", "description": "Texas"},
+    {"name": "Hy-Vee", "kind": "Supermarket", "description": "Midwest"},
+    {"name": "Meijer", "kind": "Supermarket", "description": "Midwest supercenters"},
+    {"name": "Food Lion", "kind": "Supermarket", "description": "Southeast and Mid-Atlantic"},
+    {"name": "Harris Teeter", "kind": "Supermarket", "description": "Southeast and Mid-Atlantic"},
+    {"name": "Giant Eagle", "kind": "Supermarket", "description": "Pennsylvania, Ohio and nearby"},
+    {"name": "Wegmans", "kind": "Supermarket", "description": "Northeast and Mid-Atlantic"},
+    {"name": "ShopRite", "kind": "Supermarket", "description": "Northeast"},
+    {"name": "Stop & Shop", "kind": "Supermarket", "description": "New England, New York and New Jersey"},
+
+    {"name": "Aldi", "kind": "Discount", "description": "Discount grocer nationwide"},
+    {"name": "Lidl", "kind": "Discount", "description": "Discount grocer, East Coast"},
+    {"name": "Grocery Outlet", "kind": "Discount", "description": "Discount grocer, West Coast"},
+    {"name": "WinCo Foods", "kind": "Discount", "description": "Discount grocer, West"},
+
+    {"name": "Costco", "kind": "WarehouseClub", "description": "Bulk meat, eggs and dairy",
+      "items": ["chicken", "beef", "salmon", "shrimp", "egg", "yogurt", "cheese", "tortilla", "oats", "maple syrup"]},
+    {"name": "Sam's Club", "kind": "WarehouseClub", "description": "Bulk meat, eggs and dairy",
+      "items": ["chicken", "beef", "salmon", "shrimp", "egg", "yogurt", "cheese", "tortilla", "oats", "maple syrup"]},
+    {"name": "BJ's Wholesale Club", "kind": "WarehouseClub", "description": "Bulk meat, eggs and dairy, East Coast",
+      "items": ["chicken", "beef", "salmon", "shrimp", "egg", "yogurt", "cheese", "tortilla", "oats", "maple syrup"]},
+
+    {"name": "Whole Foods Market", "kind": "NaturalFoods", "description": "Natural and organic, nationwide"},
+    {"name": "Sprouts Farmers Market", "kind": "NaturalFoods", "description": "Natural foods and produce"},
+    {"name": "Trader Joe's", "kind": "NaturalFoods", "description": "Own-brand groceries, nationwide"},
+
+    {"name": "World Fresh Market", "kind": "Specialty", "description": "International market",
+      "items": ["bok choy", "tomatillo", "napa cabbage", "daikon", "plantain", "lemongrass", "paneer", "gochujang", "fish sauce", "miso", "tamarind", "curry paste", "harissa", "sumac"]},
+    {"name": "H Mart", "kind": "Specialty", "description": "Korean and pan-Asian, nationwide",
+      "items": ["bok choy", "napa cabbage", "daikon", "lemongrass", "gochujang", "fish sauce", "miso", "curry paste", "tofu"]},
+    {"name": "99 Ranch Market", "kind": "Specialty", "description": "Chinese and pan-Asian, West Coast and Texas",
+      "items": ["bok choy", "napa cabbage", "daikon", "lemongrass", "fish sauce", "miso", "curry paste", "tofu"]},
+    {"name": "Asian market", "kind": "Specialty", "description": "Any local Asian grocery",
+      "items": ["bok choy", "napa cabbage", "daikon", "lemongrass", "gochujang", "fish sauce", "miso", "curry paste", "tofu"]},
+    {"name": "Latin market", "kind": "Specialty", "description": "Any local Mexican or Latin American grocery",
+      "items": ["tomatillo", "plantain", "jalapeno", "tortilla", "black bean"]},
+    {"name": "Indian market", "kind": "Specialty", "description": "Any local South Asian grocery",
+      "items": ["paneer", "lentil", "chickpea", "tamarind"]},
+    {"name": "Middle Eastern market", "kind": "Specialty", "description": "Any local Middle Eastern grocery",
+      "items": ["harissa", "sumac", "feta", "bulgur"]},
+    {"name": "Butcher", "kind": "Specialty", "description": "Meat counter or butcher shop",
+      "items": ["beef", "pork", "sausage", "bacon", "ham"]},
+    {"name": "Fish market", "kind": "Specialty", "description": "Fishmonger or seafood counter",
+      "items": ["salmon", "shrimp", "tuna", "white fish"]},
+
+    {"name": "Farmers market", "kind": "FarmersMarket", "description": "In-season produce, May to October",
+      "seasonalProduce": true, "months": [5, 6, 7, 8, 9, 10]}
+  ]
+}

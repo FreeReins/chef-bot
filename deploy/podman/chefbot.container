@@ -21,8 +21,9 @@ Volume=chefbot-keys.volume:/app/keys
 # and use this line in place of the one below:
 #   Volume=%h/chefbot-backups:/app/backups:Z
 Volume=chefbot-backups.volume:/app/backups
-# To use your own ingredient list or starter recipes, mount them over the built-in ones:
+# To use your own ingredient list, starter recipes or list of known stores, mount them over the built-in ones:
 #   Volume=%h/.config/chefbot/ingredients.json:/app/config/ingredients.json:ro,Z
+#   Volume=%h/.config/chefbot/stores.json:/app/config/stores.json:ro,Z
 
 [Service]
 Restart=always

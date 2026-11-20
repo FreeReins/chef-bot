@@ -60,7 +60,7 @@ internal static class Mapping
 
     public static IngredientsResponse ToResponse(this IngredientOverview overview, DateOnly today, int expiringSoonDays, IngredientCatalog catalog) => new(
         overview.Ingredients.Select(line => new IngredientLine(
-            line.Name, line.Status, line.Quantity, line.Unit, line.Store, line.ExpiresOn, line.IsOptional, line.UsedIn, line.ShoppingItemId)).ToList(),
+            line.Name, line.Status, line.Quantity, line.Unit, line.Store, line.Group, line.ExpiresOn, line.IsOptional, line.UsedIn, line.ShoppingItemId)).ToList(),
         overview.Pantry.Select(line => new PantryUseResponse(line.Item.ToResponse(today, expiringSoonDays, catalog), line.UsedByPlan)).ToList());
 
     public static PantryItemResponse ToResponse(this PantryItem item, DateOnly today, int expiringSoonDays, IngredientCatalog catalog) => new(
@@ -108,6 +108,32 @@ internal static class Mapping
         settings.Shopping,
         settings.DailyTime,
         settings.LastDailyRunOn);
+
+    public static GroceryStoreDetails ToResponse(this GroceryStore store) =>
+        new(store.Name, store.IsMain, [.. store.Items], store.SeasonalProduce, [.. store.Months]);
+
+    public static KnownGroceryStore ToResponse(this KnownStore store) =>
+        new(store.Name, store.Kind, store.Description, store.Items, store.SeasonalProduce, store.Months);
+
+    /// <summary>
+    /// The stores to save for a checked request, in its order. A store keeps its id when one with the same name is
+    /// already saved. Item names are tidied the way ingredient names are, and months only count for seasonal stores.
+    /// </summary>
+    public static List<GroceryStore> ToStores(this IReadOnlyList<GroceryStoreDetails> details, IReadOnlyList<GroceryStore> current) =>
+        details.Select((store, index) =>
+        {
+            var name = store.Name.Trim();
+            return new GroceryStore
+            {
+                Id = current.FirstOrDefault(saved => string.Equals(saved.Name, name, StringComparison.OrdinalIgnoreCase))?.Id ?? Guid.CreateVersion7(),
+                Name = name,
+                IsMain = store.IsMain,
+                Position = index,
+                Items = (store.Items ?? []).Select(TextNormalizer.Normalize).Where(item => item.Length > 0).Distinct().ToList(),
+                SeasonalProduce = store.SeasonalProduce,
+                Months = store.SeasonalProduce ? (store.Months ?? []).Distinct().Order().ToList() : [],
+            };
+        }).ToList();
 
     public static BackupFile ToResponse(this StoredBackup file) => new(file.Name, file.CreatedAt, file.SizeBytes);
 

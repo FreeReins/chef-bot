@@ -6,6 +6,7 @@
   import SetupAccount from './screens/SetupAccount.svelte';
   import SetupHttps from './screens/SetupHttps.svelte';
   import SetupRecipes from './screens/SetupRecipes.svelte';
+  import SetupStores from './screens/SetupStores.svelte';
   import SetupSamples from './screens/SetupSamples.svelte';
   import SignIn from './screens/SignIn.svelte';
   import Join from './screens/Join.svelte';
@@ -26,7 +27,7 @@
     { key: 'settings', label: 'Settings' },
   ];
   const GATES = { 'setup-account': SetupAccount, 'setup-https': SetupHttps, 'setup-recipes': SetupRecipes,
-    'setup-samples': SetupSamples,
+    'setup-stores': SetupStores, 'setup-samples': SetupSamples,
     'sign-in': SignIn, join: Join, reset: Reset };
   const PLAN_TABS = { meals: Meals, schedule: Schedule, ingredients: Ingredients };
   const OTHER_TABS = { recipes: Recipes, people: People, settings: Settings };

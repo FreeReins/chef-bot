@@ -88,4 +88,13 @@ public static class PlanEndpoints
     public static Task<PlanResponse> PurchaseAll(
         PurchaseAllRequest request, Guid planId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
         plans.PurchaseAllAsync(planId, request, cancellationToken);
+
+    /// <summary>
+    /// Buys this item's ingredient at another store from now on: <c>{"store": "Costco"}</c>, or <c>{"store": ""}</c> for
+    /// no particular store. Every open shopping list is rebuilt to match.
+    /// </summary>
+    [WolverinePost("/api/plans/{planId}/shopping/{itemId}/store")]
+    public static Task<PlanResponse> SetStore(
+        ShoppingStoreRequest request, Guid planId, Guid itemId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.SetShoppingStoreAsync(planId, itemId, request, cancellationToken);
 }

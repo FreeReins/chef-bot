@@ -1,6 +1,7 @@
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChefBot.Core.ResourceAccess;
 
@@ -87,6 +88,32 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
 
     public Task SaveScheduleAsync(ScheduleState state, CancellationToken cancellationToken) =>
         SaveRowAsync(new ScheduleStateEntity { LastStagedWeek = state.LastStagedWeek }, cancellationToken);
+
+    public async Task<List<GroceryStore>> ListStoresAsync(CancellationToken cancellationToken) =>
+        (await db.GroceryStores.ToListAsync(cancellationToken))
+            .OrderBy(store => store.Position)
+            .Select(store => store.ToContract())
+            .ToList();
+
+    public async Task SaveStoresAsync(IReadOnlyList<GroceryStore> stores, CancellationToken cancellationToken)
+    {
+        var tracked = await db.GroceryStores.ToDictionaryAsync(store => store.Id, cancellationToken);
+        var wanted = stores.Select(store => store.ToEntity()).ToList();
+        var wantedIds = wanted.Select(store => store.Id).ToHashSet();
+
+        db.GroceryStores.RemoveRange(tracked.Values.Where(store => !wantedIds.Contains(store.Id)));
+        foreach (var fresh in wanted)
+        {
+            if (tracked.TryGetValue(fresh.Id, out var row))
+            {
+                db.CopyInto(row, fresh);
+            }
+            else
+            {
+                db.GroceryStores.Add(fresh);
+            }
+        }
+    }
 
     /// <summary>The single row of a settings table, if one has been saved (or added earlier in this request).</summary>
     /// <remarks>Every settings row has Id 1; looking it up by key also finds a row added but not yet saved.</remarks>

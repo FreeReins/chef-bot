@@ -36,6 +36,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
             Backups = await db.Set<BackupSettingsEntity>().AsNoTracking().ToListAsync(cancellationToken),
             Mealie = await db.Set<MealieSettingsEntity>().AsNoTracking().ToListAsync(cancellationToken),
             Schedule = await db.Set<ScheduleStateEntity>().AsNoTracking().ToListAsync(cancellationToken),
+            GroceryStores = await db.GroceryStores.AsNoTracking().ToListAsync(cancellationToken),
         };
 
         // A planned meal points at its recipe by id; the recipe itself is written once, under Recipes.
@@ -94,6 +95,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         await db.Set<BackupSettingsEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.Set<MealieSettingsEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.Set<ScheduleStateEntity>().ExecuteDeleteAsync(cancellationToken);
+        await db.GroceryStores.ExecuteDeleteAsync(cancellationToken);
 
         db.ChangeTracker.Clear();
         db.AddRange(contents.Recipes);
@@ -105,6 +107,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         db.AddRange(contents.Backups);
         db.AddRange(contents.Mealie);
         db.AddRange(contents.Schedule);
+        db.AddRange(contents.GroceryStores);
 
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -138,6 +141,9 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
 
         /// <summary>Empty in backups made before the weekly schedule remembered what it staged.</summary>
         public List<ScheduleStateEntity> Schedule { get; set; } = [];
+
+        /// <summary>Empty in backups made before stores could be chosen in the web page.</summary>
+        public List<GroceryStoreEntity> GroceryStores { get; set; } = [];
     }
 
     /// <summary>The backup file's JSON shape, made at build time.</summary>

@@ -8,4 +8,8 @@
     <PackageReference Include="TUnit" />
     <ProjectReference Include="../../src/ChefBot.Core/ChefBot.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The shipped data files, so tests can check they agree with each other. -->
+    <Content Include="../../config/*.json" Link="config/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

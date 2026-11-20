@@ -16,6 +16,10 @@ internal sealed class ValidationEngine(IPlanAccess plans, IRecipeAccess recipes,
 {
     public const int MinimumPasswordLength = 8;
 
+    private const int MaxStores = 50;
+
+    private const int MaxStoreName = 60;
+
     private static readonly Regex ValidUsername = new("^[a-z0-9._-]{3,32}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex ValidBackupName = new(@"^chefbot-backup-\d{8}-\d{6}\.json\.gz$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -233,6 +237,65 @@ internal sealed class ValidationEngine(IPlanAccess plans, IRecipeAccess recipes,
             throw new RuleViolationException("You can't remove your own account.");
         }
     }
+
+    // ---------- stores ----------
+
+    /// <summary>
+    /// Checks a new list of stores: each has a name of its own, at most one is the main store, and a seasonal store
+    /// says which months it is open.
+    /// </summary>
+    public static IReadOnlyList<GroceryStoreDetails> GroceryStores(IReadOnlyList<GroceryStoreDetails>? stores)
+    {
+        var list = stores ?? [];
+        if (list.Count > MaxStores)
+        {
+            throw new RuleViolationException($"Keep to {MaxStores} stores or fewer.");
+        }
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var store in list)
+        {
+            var name = store.Name?.Trim() ?? string.Empty;
+            if (name.Length == 0)
+            {
+                throw new RuleViolationException("Every store needs a name.");
+            }
+
+            if (name.Length > MaxStoreName)
+            {
+                throw new RuleViolationException($"Keep store names to {MaxStoreName} characters or fewer.");
+            }
+
+            if (!names.Add(name))
+            {
+                throw new RuleViolationException($"There are two stores called {name}. Give each store its own name.");
+            }
+
+            if ((store.Months ?? []).Any(month => month is < 1 or > 12))
+            {
+                throw new RuleViolationException($"{name} has a month that isn't between 1 and 12.");
+            }
+
+            if (store.SeasonalProduce && (store.Months ?? []).Count == 0)
+            {
+                throw new RuleViolationException($"Choose the months {name} is open, or stop sending in-season produce there.");
+            }
+        }
+
+        if (list.Count(store => store.IsMain) > 1)
+        {
+            throw new RuleViolationException("Only one store can be the main store. Choose one and untick the others.");
+        }
+
+        return list;
+    }
+
+    /// <summary>The household's store with this name, or null for an empty name, meaning no particular store.</summary>
+    public static GroceryStore? StoreNamed(IReadOnlyList<GroceryStore> stores, string? name) =>
+        string.IsNullOrWhiteSpace(name)
+            ? null
+            : stores.FirstOrDefault(store => string.Equals(store.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
+              ?? throw new NotFoundException($"There is no store called {name.Trim()}. Add it on the Settings tab first.");
 
     // ---------- settings ----------
 

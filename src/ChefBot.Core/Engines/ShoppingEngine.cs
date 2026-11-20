@@ -9,10 +9,13 @@ namespace ChefBot.Core.Engines;
 /// Works out shopping and stock: the shopping list for the meals still to be cooked, the ingredients view, and
 /// what cooking a meal takes out of the pantry. Reads and saves nothing.
 /// </summary>
-internal sealed class ShoppingEngine(IngredientCatalog catalog, StoreOptions stores)
+internal sealed class ShoppingEngine(IngredientCatalog catalog)
 {
-    /// <summary>Totals each ingredient, leaves out staples, subtracts usable pantry stock and suggests a store.</summary>
-    public ShoppingDraft BuildList(MealPlan plan, PantrySnapshot pantry)
+    /// <summary>
+    /// Totals each ingredient, leaves out staples, subtracts usable pantry stock and picks a store from
+    /// <paramref name="stores"/>. With no stores every item's store is empty.
+    /// </summary>
+    public ShoppingDraft BuildList(MealPlan plan, PantrySnapshot pantry, IReadOnlyList<GroceryStore> stores)
     {
         var staples = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         var covered = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -51,7 +54,7 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog, StoreOptions sto
                 DisplayName = ingredient.DisplayName,
                 Quantity = toBuy,
                 Unit = group.Key.Unit,
-                Store = StoreFor(ingredient.CatalogName, plan.WeekStart.Month),
+                Store = StoreFor(ingredient, plan.WeekStart.Month, stores),
                 IsOptional = group.All(requirement => requirement.IsOptional),
             });
         }
@@ -71,19 +74,41 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog, StoreOptions sto
         plan.ShoppingItems.AddRange(draft.Items);
     }
 
-    /// <summary>A first guess at which store an ingredient comes from.</summary>
-    public string StoreFor(string? catalogName, int month)
+    /// <summary>
+    /// Where to buy an ingredient: the first store that lists it, else a seasonal store for in-season produce during
+    /// its months, else the main store. Empty when none of those apply.
+    /// </summary>
+    public string StoreFor(IIngredientRef ingredient, int month, IReadOnlyList<GroceryStore> stores)
     {
-        var entry = catalog.Get(catalogName);
-        if (!string.IsNullOrWhiteSpace(entry?.Store))
+        if (stores.FirstOrDefault(store => store.Sells(ingredient.CatalogName, ingredient.Key)) is { } listed)
         {
-            return entry.Store;
+            return listed.Name;
         }
 
-        var marketIsOpen = stores.FarmersMarket.Length > 0 && stores.FarmersMarketMonths.Contains(month);
-        return marketIsOpen && entry is { IsFreshProduce: true } && entry.IsInSeason(month) == true
-            ? stores.FarmersMarket
-            : stores.Default;
+        var entry = catalog.Get(ingredient.CatalogName);
+        if (entry is { IsFreshProduce: true } && entry.IsInSeason(month) == true
+            && stores.FirstOrDefault(store => store.SeasonalProduce && store.Months.Contains(month)) is { } market)
+        {
+            return market.Name;
+        }
+
+        return stores.FirstOrDefault(store => store.IsMain)?.Name ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Sends an ingredient to <paramref name="target"/> from now on: takes it off every store's items, then adds it to
+    /// the target's. A null target leaves it to the seasonal and main stores. Changes <paramref name="stores"/> in place.
+    /// </summary>
+    public static void SendTo(IReadOnlyList<GroceryStore> stores, IIngredientRef ingredient, GroceryStore? target)
+    {
+        foreach (var store in stores)
+        {
+            store.Items.RemoveAll(item =>
+                string.Equals(item, ingredient.Key, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(item, ingredient.CatalogName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        target?.Items.Add(ingredient.CatalogName ?? ingredient.Key);
     }
 
     /// <summary>The ingredients view: what each meal needs, where it comes from, and what the pantry holds.</summary>
@@ -157,11 +182,13 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog, StoreOptions sto
         var usedIn = uses.Select(use => use.UsedIn).Distinct().ToList();
         var optional = uses.All(use => use.IsOptional);
 
+        var entry = catalog.Get(ingredient.CatalogName);
+
         OverviewLine Line(string name, IngredientStatus status, decimal? quantity = null, string unit = "",
             string? store = null, DateOnly? expiresOn = null, Guid? shoppingItemId = null) =>
-            new(name, status, quantity, unit, store, expiresOn, optional, usedIn, shoppingItemId);
+            new(name, status, quantity, unit, store, entry?.Group ?? IngredientGroup.Other, expiresOn, optional, usedIn, shoppingItemId);
 
-        if (catalog.Get(ingredient.CatalogName)?.PantryStaple == true)
+        if (entry?.PantryStaple == true)
         {
             yield return Line(ingredient.DisplayName, IngredientStatus.Staple);
             yield break;

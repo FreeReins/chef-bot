@@ -7,7 +7,7 @@ import { showAddress, listenForAddresses } from './addresses.js';
 const query = new URLSearchParams(location.search);
 
 export const app = $state({
-  screen: 'loading',   // loading | setup-account | setup-https | setup-recipes | setup-samples | sign-in | join | reset | app
+  screen: 'loading',   // loading | setup-account | setup-https | setup-recipes | setup-stores | setup-samples | sign-in | join | reset | app
   session: null,       // SessionResponse: { setupRequired, user, mealieConfigured }
   linkToken: query.get('invite') ?? query.get('reset'),
   link: null,          // LinkDetails for linkToken: { purpose, username, expiresAt }
@@ -17,6 +17,8 @@ export const app = $state({
   notifications: null, // NotificationSettings (admins only)
   backups: null,       // BackupsResponse (admins only)
   samples: [],         // sample recipes offered by the setup wizard
+  stores: null,        // GroceryStoresResponse: { stores, known, ingredients }
+  storeDraft: null,    // the stores chosen in setup but not saved yet
   fileFormats: [],     // RecipeFileFormatResponse[]: the kinds of recipe file that can be imported
   mealieImport: null,  // the latest Mealie import this page started: { state, result?, message? }
   people: { users: [], links: [], newLink: null },
@@ -173,14 +175,76 @@ export async function loadFileFormats() {
   if (app.fileFormats.length === 0) app.fileFormats = await api('GET', '/api/recipes/import/formats');
 }
 
-/** Setup step three: choose how to fill the recipe library. */
-export async function openSetupRecipes() {
-  const [samples] = await Promise.all([api('GET', '/api/setup/samples'), loadFileFormats()]);
-  Object.assign(app, { samples, mealieImport: null });
-  await loadRecipes();
+// ---------- setup ----------
+
+/** The setup wizard's steps in order, with their labels. */
+const SETUP_STEPS = [
+  { screen: 'setup-account', label: 'Your account' },
+  { screen: 'setup-https', label: 'Secure connection' },
+  { screen: 'setup-recipes', label: 'Recipes' },
+  { screen: 'setup-stores', label: 'Stores (optional)' },
+];
+
+/**
+ * The steps this server shows. The secure connection step is left out once HTTPS is known to be off; that is only
+ * known after the account exists, so the first step counts it.
+ */
+export const setupSteps = () => SETUP_STEPS.filter((step) => step.screen !== 'setup-https' || app.https?.enabled !== false);
+
+/**
+ * Shows a setup step, loading what it needs first. Every step after the first needs the account, so until it
+ * exists only the first can be shown.
+ */
+export function openSetupStep(screen) {
+  return run(async () => {
+    if (screen !== 'setup-account' && !app.session?.user) return;
+    if (screen === 'setup-recipes') await openSetupRecipes();
+    else if (screen === 'setup-stores') await openSetupStores();
+    else app.screen = screen;
+  });
+}
+
+/** Moves to the next setup step (1) or the previous one (-1). */
+export function moveSetup(offset) {
+  const steps = setupSteps();
+  const next = steps[steps.findIndex((step) => step.screen === app.screen) + offset];
+  return next ? openSetupStep(next.screen) : Promise.resolve();
+}
+
+/** Setup: choose how to fill the recipe library. A Mealie import already running keeps its progress. */
+async function openSetupRecipes() {
+  const [samples] = await Promise.all([api('GET', '/api/setup/samples'), loadFileFormats(), loadRecipes()]);
+  app.samples = samples;
   app.screen = 'setup-recipes';
 }
 
+/** Setup: choose the stores the shopping list is split between. Choices not saved yet are kept while moving between steps. */
+async function openSetupStores() {
+  await loadStores();
+  app.storeDraft ??= $state.snapshot(app.stores.stores);
+  app.screen = 'setup-stores';
+}
+
+// ---------- stores ----------
+
+/** Loads the household's stores, the known stores that can be added, and the ingredient names a store can list. */
+export async function loadStores() {
+  app.stores = await api('GET', '/api/stores');
+}
+
+/** Saves the household's stores. Open shopping lists are rebuilt to match, so the plan is reloaded too. */
+export async function saveStores(stores) {
+  app.stores = await api('PUT', '/api/stores', { stores });
+  await loadPlan();
+}
+
+/** Buys a shopping item's ingredient at another store from now on. An empty name means no particular store. */
+export function setShoppingStore(itemId, store) {
+  return run(async () => {
+    await applyPlan(await api('POST', `/api/plans/${app.plan.id}/shopping/${itemId}/store`, { store }));
+    await loadStores();
+  });
+}
 
 // ---------- settings ----------
 
@@ -234,7 +298,7 @@ export async function enterApp() {
     history.replaceState(null, '', location.pathname);
     app.linkToken = null;
   }
-  await Promise.all([loadRecipes(), loadPlan(), loadSystem(), isAdmin() ? loadPeople() : null]);
+  await Promise.all([loadRecipes(), loadPlan(), loadSystem(), loadStores(), isAdmin() ? loadPeople() : null]);
   await showAddress();
 }
 

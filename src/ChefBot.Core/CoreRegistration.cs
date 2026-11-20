@@ -41,7 +41,6 @@ public static class CoreRegistration
         // Settings and reference data: loaded once, never changed while running.
         services.AddSingleton(planner);
         services.AddSingleton(configuration.GetSection("Classifier").Get<ClassifierOptions>() ?? new ClassifierOptions());
-        services.AddSingleton(configuration.GetSection("Stores").Get<StoreOptions>() ?? new StoreOptions());
         services.AddSingleton(configuration.GetSection("Schedule").Get<WeeklyScheduleOptions>() ?? new WeeklyScheduleOptions());
         services.AddSingleton(IngredientCatalog.FromJson(File.ReadAllText(DataPath(configuration, "Data:IngredientCatalog", "config/ingredients.json"))));
         services.TryAddSingleton(TimeProvider.System);
@@ -50,7 +49,7 @@ public static class CoreRegistration
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<PlanWriteLock>();
 
-        // Resource access: PostgreSQL, Mealie, the webhook, the backup folder and the sample recipe file.
+        // Resource access: PostgreSQL, Mealie, the webhook, the backup folder, and the sample recipe and known store files.
         services.AddDbContext<ChefBotDbContext>(options => options.UseNpgsql(ConnectionString(configuration)));
         services.AddScoped<IRecipeAccess, RecipeAccess>();
         services.AddScoped<IPlanAccess, PlanAccess>();
@@ -61,6 +60,7 @@ public static class CoreRegistration
         var backupFolder = DataPath(configuration, "Data:Backups", "backups");
         services.AddScoped<IBackupAccess>(provider => new BackupAccess(provider.GetRequiredService<ChefBotDbContext>(), backupFolder));
         services.AddSingleton<ISampleRecipeAccess>(new SampleRecipeAccess(DataPath(configuration, "Data:SampleRecipes", "config/sample-recipes.json")));
+        services.AddSingleton<IKnownStoreAccess>(new KnownStoreAccess(DataPath(configuration, "Data:KnownStores", "config/stores.json")));
         // Mealie's address and token are saved settings, passed in with each import.
         services.AddHttpClient<IRecipeSourceAccess, RecipeSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<INotificationAccess, NotificationAccess>(client => client.Timeout = TimeSpan.FromSeconds(10));

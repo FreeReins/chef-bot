@@ -94,6 +94,17 @@ internal static class EntityMapping
         ExpiresOn = entity.ExpiresOn,
     };
 
+    public static GroceryStore ToContract(this GroceryStoreEntity entity) => new()
+    {
+        Id = entity.Id,
+        Name = entity.Name,
+        IsMain = entity.IsMain,
+        Position = entity.Position,
+        Items = [.. entity.Items],
+        SeasonalProduce = entity.SeasonalProduce,
+        Months = [.. entity.Months],
+    };
+
     public static UserAccount ToContract(this UserEntity entity) => new()
     {
         Id = entity.Id,
@@ -197,6 +208,17 @@ internal static class EntityMapping
         Unit = item.Unit,
         PurchasedOn = item.PurchasedOn,
         ExpiresOn = item.ExpiresOn,
+    };
+
+    public static GroceryStoreEntity ToEntity(this GroceryStore store) => new()
+    {
+        Id = store.Id,
+        Name = store.Name,
+        IsMain = store.IsMain,
+        Position = store.Position,
+        Items = [.. store.Items],
+        SeasonalProduce = store.SeasonalProduce,
+        Months = [.. store.Months],
     };
 
     public static UserEntity ToEntity(this UserAccount user) => new()

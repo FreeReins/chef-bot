@@ -1,11 +1,13 @@
 <script>
-  import { isConfirmed, planAction } from '../lib/app.svelte.js';
+  import { app, isConfirmed, planAction, setShoppingStore } from '../lib/app.svelte.js';
   import { amount, shortDate } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
 
   let { line } = $props();
 
   const canBuy = $derived(line.status === 'ToBuy' && isConfirmed() && line.shoppingItemId);
+  const stores = $derived(app.stores?.stores ?? []);
+  const canMove = $derived(line.status === 'ToBuy' && line.shoppingItemId && stores.length > 0);
 </script>
 
 <li class="row">
@@ -17,7 +19,20 @@
       {#each line.usedIn as meal}<Chip>{meal}</Chip>{/each}
     </div>
   </div>
-  {#if canBuy}
-    <button class="small" onclick={() => planAction(`shopping/${line.shoppingItemId}/purchase`, {})}>Bought</button>
-  {/if}
+  <div class="row-actions">
+    {#if canMove}
+      <select class="store" aria-label="Where to buy {line.name}" value={line.store ?? ''}
+              onchange={(event) => setShoppingStore(line.shoppingItemId, event.currentTarget.value)}>
+        {#each stores as store (store.name)}<option value={store.name}>{store.name}</option>{/each}
+        <option value="">No particular store</option>
+      </select>
+    {/if}
+    {#if canBuy}
+      <button class="small" onclick={() => planAction(`shopping/${line.shoppingItemId}/purchase`, {})}>Bought</button>
+    {/if}
+  </div>
 </li>
+
+<style>
+  .store { font-size: .85rem; padding: .1rem .35rem; max-width: 11rem; }
+</style>

@@ -6,6 +6,7 @@
   import LoginPanel from '../settings/LoginPanel.svelte';
   import HttpsPanel from '../settings/HttpsPanel.svelte';
   import MealiePanel from '../settings/MealiePanel.svelte';
+  import StoresPanel from '../settings/StoresPanel.svelte';
   import NotificationsPanel from '../settings/NotificationsPanel.svelte';
   import BackupsPanel from '../settings/BackupsPanel.svelte';
 
@@ -13,6 +14,7 @@
   const SECTIONS = [
     { key: 'login', label: 'Login', visible: () => true, panel: LoginPanel },
     { key: 'https', label: 'HTTPS', visible: () => true, panel: HttpsPanel, heading: 'Secure connection (HTTPS)' },
+    { key: 'stores', label: 'Stores', visible: () => isAdmin() && app.stores, panel: StoresPanel },
     { key: 'mealie', label: 'Mealie', visible: () => isAdmin() && app.mealie, panel: MealiePanel },
     { key: 'notifications', label: 'Notifications', visible: () => isAdmin() && app.notifications, panel: NotificationsPanel },
     { key: 'backups', label: 'Backups', visible: () => isAdmin() && app.backups, panel: BackupsPanel },

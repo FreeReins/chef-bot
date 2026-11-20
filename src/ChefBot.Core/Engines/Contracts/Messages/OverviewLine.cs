@@ -9,6 +9,7 @@ internal sealed record OverviewLine(
     decimal? Quantity,
     string Unit,
     string? Store,
+    IngredientGroup Group,
     DateOnly? ExpiresOn,
     bool IsOptional,
     IReadOnlyList<string> UsedIn,

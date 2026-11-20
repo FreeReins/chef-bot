@@ -55,7 +55,7 @@ Managers/          one per area of use: orchestrate a use case, own the transact
    ▼          ▼
 Engines/  ─►  ResourceAccess/   engines do the work (verbs); accessors read and save
                  ▼
-            PostgreSQL (EF Core), Mealie, the webhook, the backup folder, config/sample-recipes.json
+            PostgreSQL (EF Core), Mealie, the webhook, the backup folder, config/sample-recipes.json, config/stores.json
 
 Utilities/   the ingredient catalog, text and units, clock, settings options, password hashing: any layer
 ```
@@ -133,7 +133,7 @@ groundwork for Native AOT.
   The API uses it for request and response bodies, and the message bus uses it for the commands and events it stores.
 - `ApiJsonContext` (`ChefBot.Api/ApiJsonContext.cs`) covers the bodies defined in the API project.
 - Each accessor that reads a file or talks to another service has its own private context next to its JSON types:
-  backups, Mealie, the webhook, the sample recipes and the ingredient catalog.
+  backups, Mealie, the webhook, the sample recipes, the known stores and the ingredient catalog.
 
 A new request, response, command or event needs a `[JsonSerializable]` line in its context. Records used inside a
 listed one are included automatically. `JsonShapeTests` fails when something in `Managers/Contracts/Messages/` is missing.

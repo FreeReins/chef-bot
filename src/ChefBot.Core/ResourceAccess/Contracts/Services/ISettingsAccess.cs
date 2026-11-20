@@ -24,4 +24,10 @@ internal interface ISettingsAccess
     Task<ScheduleState> GetScheduleAsync(CancellationToken cancellationToken);
 
     Task SaveScheduleAsync(ScheduleState state, CancellationToken cancellationToken);
+
+    /// <summary>The household's stores in their saved order. Empty when none are set up.</summary>
+    Task<List<GroceryStore>> ListStoresAsync(CancellationToken cancellationToken);
+
+    /// <summary>Makes the saved stores exactly these, matched by id: others are removed.</summary>
+    Task SaveStoresAsync(IReadOnlyList<GroceryStore> stores, CancellationToken cancellationToken);
 }

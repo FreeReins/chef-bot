@@ -31,9 +31,6 @@ internal sealed record CatalogEntry
     /// </summary>
     public bool KeepSpecificName { get; init; }
 
-    /// <summary>The store that usually has it, when that isn't the default store.</summary>
-    public string? Store { get; init; }
-
     public bool IsFreshProduce => Group is IngredientGroup.Vegetable or IngredientGroup.Fruit or IngredientGroup.Herb;
 
     /// <summary>True, false, or null when the ingredient has no season.</summary>

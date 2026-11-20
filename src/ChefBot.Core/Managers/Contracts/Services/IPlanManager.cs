@@ -4,7 +4,8 @@ namespace ChefBot.Core.Managers.Contracts.Services;
 
 /// <summary>
 /// Plans weeks and keeps each plan, its leftover lunches and its shopping list in step. Every change to a plan
-/// goes through here: staging, confirming, swapping or cooking meals, and recording purchases.
+/// goes through here: staging, confirming, swapping or cooking meals, recording purchases, and choosing the stores
+/// the shopping list is split between.
 /// </summary>
 public interface IPlanManager
 {
@@ -54,6 +55,21 @@ public interface IPlanManager
 
     /// <summary>Marks everything still on the list as bought on the same day.</summary>
     Task<PlanResponse> PurchaseAllAsync(Guid planId, PurchaseAllRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sends a shopping item's ingredient to another store from now on, and rebuilds the shopping lists of every plan
+    /// whose week hasn't ended to match.
+    /// </summary>
+    Task<PlanResponse> SetShoppingStoreAsync(Guid planId, Guid itemId, ShoppingStoreRequest request, CancellationToken cancellationToken);
+
+    /// <summary>The household's stores, the known stores that can be added, and the ingredient names a store can list.</summary>
+    Task<GroceryStoresResponse> GetStoresAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Replaces the household's stores and rebuilds the shopping lists of every plan whose week hasn't ended.
+    /// With no stores, shopping lists are grouped by food group.
+    /// </summary>
+    Task<GroceryStoresResponse> SaveStoresAsync(SaveGroceryStoresRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Stages next week's plan when the weekly schedule's time has come, once per week. When the planner is set to

@@ -55,7 +55,7 @@ internal static class TestData
 
     public static readonly PlanningEngine Planning = new(Catalog, Options, new WeeklyScheduleOptions());
 
-    public static readonly ShoppingEngine Shopping = new(Catalog, new StoreOptions { Default = "Store" });
+    public static readonly ShoppingEngine Shopping = new(Catalog);
 
     public static readonly SuggestionEngine Suggestions = new(Catalog, Options);
 

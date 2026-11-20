@@ -15,7 +15,8 @@ It is a self-hosted web app: one container for the app, one for PostgreSQL.
   *Ingredients* shows everything the plan needs, where each item comes from (to buy, pantry, staple),
   which meals use it, and the pantry beside it.
 - **Builds the shopping list.** Quantities are totalled and scaled to portions, staples are left off,
-  pantry stock is subtracted, and each item gets a suggested store.
+  pantry stock is subtracted, and the list is split between the stores you shop at, or grouped by food group
+  if you haven't chosen any.
 - **Tracks the pantry.** Marking an item as bought puts it in the pantry with an expiration date, estimated
   from the ingredient's shelf life unless you enter the date on the package.
 - **Swaps meals after shopping.** For any meal, ChefBot suggests recipes ranked by how much of the pantry they
@@ -241,6 +242,10 @@ The version that added the layered core and stored messages is one: it adds a `S
 4. Open Settings, Backups and restore the backup. Everything, including the accounts, is replaced by what the
    backup holds, so sign in again with your old account.
 
+The version that added choosing stores is another: it adds a `GroceryStores` table. Backups from before it
+have no stores, so after restoring one, choose yours under Settings, Stores. Until you do, shopping lists are
+grouped by food group. The `Stores` setting is no longer read.
+
 ## A week with ChefBot
 
 1. **Saturday morning** the schedule stages next week and posts a summary to your webhook.
@@ -275,6 +280,8 @@ try each call. Both need you to be signed in.
 | `POST /api/plans/{planId}/meals/{mealId}/status` | `{"status": "Cooked"}`, `"Skipped"` or `"Planned"` |
 | `POST /api/plans/{planId}/shopping/{itemId}/purchase` | Mark bought. Body `{}` or `{"expiresOn": "2026-11-20", "quantity": 2}` |
 | `POST /api/plans/{planId}/shopping/purchase-all` | Mark everything bought. Body `{}` |
+| `POST /api/plans/{planId}/shopping/{itemId}/store` | Buy this ingredient at another store from now on: `{"store": "Costco"}`, or `{"store": ""}` for no particular store |
+| `GET /api/stores`, `PUT /api/stores` | The household's stores, the known stores and the ingredient names they can list. `PUT` replaces the stores (admin) |
 | `GET` `POST /api/pantry`, `PATCH` `DELETE /api/pantry/{id}` | Read and correct the pantry |
 | `GET` `POST /api/recipes`, `PUT` `DELETE /api/recipes/{id}` | Manage local recipes |
 | `POST /api/recipes/import/file` | Import a recipe file: `{"fileName": "recipes.json", "content": "..."}`. Names already in the library are skipped |
@@ -332,7 +339,6 @@ using `__` between levels (for example `Planner__Dinners=5`). With the Podman se
 | `Planner:ImportFromMealieBeforePlanning` | `false` | Refresh from Mealie before the weekly schedule stages a plan. Staging by hand uses the saved recipes |
 | `Planner:Weights` | see file | How strongly sharing, season, pantry use and variety count |
 | `Schedule:Enabled`, `Day`, `Time` | `true`, `Saturday`, `09:00` | When next week is staged automatically |
-| `Stores` | Hy-Vee, farmers market May to October | Default store and when in-season produce goes to the market |
 | `Classifier` | see file | Tag words that sort imported recipes into courses |
 | `Notifications:WebhookUrl` | empty | The starting webhook address, until one is saved on the Settings tab |
 | `Mealie:Url`, `Mealie:ApiToken` | empty | The starting Mealie connection, until one is saved on the Settings tab |
@@ -348,8 +354,7 @@ using `__` between levels (for example `Planner__Dinners=5`). With the Podman se
 ### The ingredient catalog
 
 `config/ingredients.json` is what makes planning work. Each entry gives an ingredient a shared name,
-aliases, a group (whole grain, protein, vegetable, ...), a shelf life, its local season and, optionally,
-a store:
+aliases, a group (whole grain, protein, vegetable, ...), a shelf life and its local season:
 
 ```json
 {"name": "cabbage", "group": "Vegetable", "shelfLifeDays": 14, "seasonMonths": [6, 7, 9, 10, 11, 12, 1, 2]}
@@ -358,6 +363,24 @@ a store:
 The seasons shipped here are a starting point for the Kansas City area and the shelf lives are rough
 estimates. Edit both to match what you see, then mount your copy over the built-in one
 (see the comments in [chefbot.container](deploy/podman/chefbot.container)).
+
+### Stores
+
+Stores are chosen in the last, optional step of setup, or later under Settings, Stores. Each item on the
+shopping list goes to the first store that lists its ingredient, then in-season produce goes to a seasonal
+market while it is open, and everything else goes to the main store. Items that match none of these, which is
+every item when no stores are chosen, are grouped by food group instead. On the Ingredients tab, the menu
+beside an item moves that ingredient to another store for this and later lists.
+
+`config/stores.json` holds the known stores offered as starting points: national and regional supermarkets,
+warehouse clubs with bulk meat and dairy, specialty markets with the ingredients they're good for, and a
+farmers market open May to October. Adding one copies it, so you can change its items or months afterwards.
+To offer different stores, edit the file and mount your copy over the built-in one
+(see the comments in [chefbot.container](deploy/podman/chefbot.container)).
+
+```json
+{"name": "Costco", "kind": "WarehouseClub", "description": "Bulk meat, eggs and dairy", "items": ["chicken", "egg"]}
+```
 
 ### Notifications and Home Assistant
 
@@ -474,7 +497,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions.
   call ChefBot's API on its own.
 - **The database schema is created on first start** and is not upgraded automatically yet
   (see [Upgrading](#upgrading) and CONTRIBUTING.md).
-- **Store suggestions and seasons are guesses** from the catalog, not live store data.
+- **Seasons are guesses** from the catalog, and stores only know what you tell them. Neither is live store data.
 
 ## License
 

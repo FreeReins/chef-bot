@@ -15,6 +15,8 @@ internal sealed class FakeSettings : ISettingsAccess
 
     public ScheduleState Schedule { get; set; } = new();
 
+    public List<GroceryStore> Stores { get; set; } = [];
+
     public Task<SecuritySettings> GetSecurityAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Security));
 
     public Task SaveSecurityAsync(SecuritySettings settings, CancellationToken cancellationToken) => Set(() => Security = Copies.Of(settings));
@@ -34,6 +36,12 @@ internal sealed class FakeSettings : ISettingsAccess
     public Task<ScheduleState> GetScheduleAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Schedule));
 
     public Task SaveScheduleAsync(ScheduleState state, CancellationToken cancellationToken) => Set(() => Schedule = Copies.Of(state));
+
+    public Task<List<GroceryStore>> ListStoresAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(Stores.Select(Copies.Of).OrderBy(store => store.Position).ToList());
+
+    public Task SaveStoresAsync(IReadOnlyList<GroceryStore> stores, CancellationToken cancellationToken) =>
+        Set(() => Stores = stores.Select(Copies.Of).ToList());
 
     private static Task Set(Action save)
     {

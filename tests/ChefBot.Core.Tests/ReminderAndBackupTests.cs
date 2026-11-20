@@ -79,7 +79,7 @@ public class ReminderAndBackupTests
     {
         var plan = TestData.PlanWeek(TestData.Sunday).Plan;
         plan.Status = PlanStatus.Confirmed;
-        TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, PantrySnapshot.Empty));
+        TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, PantrySnapshot.Empty, []));
         var saturday = TestData.Sunday.AddDays(-1);
 
         await Assert.That(TypesOn(plan, saturday).Contains(NotificationTypes.Shopping)).IsTrue();

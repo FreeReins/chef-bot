@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace ChefBot.Core.ResourceAccess.Persistence;
 
-/// <summary>The PostgreSQL database: recipes, weekly plans, the pantry, accounts and settings.</summary>
+/// <summary>The PostgreSQL database: recipes, weekly plans, the pantry, accounts, stores and settings.</summary>
 internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> options) : DbContext(options)
 {
     public DbSet<RecipeEntity> Recipes => Set<RecipeEntity>();
@@ -16,6 +16,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
     public DbSet<UserEntity> Users => Set<UserEntity>();
 
     public DbSet<AccessLinkEntity> AccessLinks => Set<AccessLinkEntity>();
+
+    public DbSet<GroceryStoreEntity> GroceryStores => Set<GroceryStoreEntity>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -73,6 +75,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
             link.ToTable("AccessLinks");
             link.HasIndex(l => l.TokenHash).IsUnique();
         });
+
+        modelBuilder.Entity<GroceryStoreEntity>().ToTable("GroceryStores");
 
         modelBuilder.Entity<SecuritySettingsEntity>().ToTable("SecuritySettings");
         modelBuilder.Entity<NotificationSettingsEntity>().ToTable("NotificationSettings");

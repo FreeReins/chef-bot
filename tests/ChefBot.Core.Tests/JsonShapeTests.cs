@@ -82,7 +82,7 @@ public class JsonShapeTests
     public async Task Every_kind_of_notification_reaches_the_webhook_as_before()
     {
         var plan = TestData.PlanWeek(TestData.Sunday).Plan;
-        TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, PantrySnapshot.Empty));
+        TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, PantrySnapshot.Empty, []));
         var tomatoes = TestData.Stocked("tomatoes", 4, expiresOn: TestData.Sunday.AddDays(4));
         var notifications = new List<Notification> { TestData.Notifications.PlanReady(plan, "schedule"), TestData.Notifications.Test() };
         notifications.AddRange(TestData.Notifications.Daily(plan, [tomatoes], TestData.Sunday.AddDays(-1), 3));
