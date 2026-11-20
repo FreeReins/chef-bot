@@ -13,6 +13,7 @@ internal sealed class RecipeManager(
     IRecipeAccess recipes,
     ISettingsAccess settings,
     IRecipeSourceAccess mealie,
+    IImageSourceAccess images,
     ISampleRecipeAccess samples,
     IMessageAccess messages,
     TransformationEngine transformation,
@@ -56,6 +57,67 @@ internal sealed class RecipeManager(
         recipe.Origin = RecipeOrigin.Local;
         await recipes.SaveAsync(recipe, cancellationToken);
         await messages.CommitAsync(cancellationToken);
+    }
+
+    public async Task<RecipeImageContent> GetImageAsync(Guid id, Guid imageId, CancellationToken cancellationToken)
+    {
+        var file = await recipes.GetImageFileAsync(id, imageId, cancellationToken)
+            ?? throw new NotFoundException($"There is no stored photo with id {imageId} on that recipe.");
+        return new RecipeImageContent(file.ContentType, file.Data);
+    }
+
+    public async Task<RecipeResponse> AddImageAsync(Guid id, AddRecipeImageRequest request, CancellationToken cancellationToken)
+    {
+        var recipe = await validation.RecipeAsync(id, cancellationToken);
+        ValidationEngine.RoomForImage(recipe);
+        var contentType = ValidationEngine.Image(request.Data);
+
+        recipe.Origin = RecipeOrigin.Local;
+        var image = TransformationEngine.AddUploadedImage(recipe, contentType, clock.GetUtcNow());
+        await recipes.SaveAsync(recipe, cancellationToken);
+        await recipes.SaveImageFileAsync(new RecipeImageFile(image.Id, contentType, request.Data!), cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+        return recipe.ToResponse();
+    }
+
+    public async Task<RecipeResponse> RemoveImageAsync(Guid id, Guid imageId, CancellationToken cancellationToken)
+    {
+        var recipe = await validation.RecipeAsync(id, cancellationToken);
+        ValidationEngine.ImageOn(recipe, imageId);
+
+        recipe.Origin = RecipeOrigin.Local;
+        TransformationEngine.RemoveImage(recipe, imageId, clock.GetUtcNow());
+        await recipes.SaveAsync(recipe, cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+        return recipe.ToResponse();
+    }
+
+    public async Task<IReadOnlyList<string>> FetchImagesAsync(FetchRecipeImages command, CancellationToken cancellationToken)
+    {
+        var recipe = await recipes.FindAsync(command.RecipeId, cancellationToken);
+        if (recipe is null)
+        {
+            return [];
+        }
+
+        var problems = new List<string>();
+        foreach (var image in TransformationEngine.PendingImages(recipe))
+        {
+            try
+            {
+                var data = await images.DownloadAsync(image.SourceUrl!, ValidationEngine.MaxImageBytes, cancellationToken);
+                image.ContentType = ValidationEngine.Image(data);
+                await recipes.SaveImageFileAsync(new RecipeImageFile(image.Id, image.ContentType, data), cancellationToken);
+            }
+            catch (Exception exception) when (exception is RecipeSourceException or RuleViolationException)
+            {
+                problems.Add($"A photo of {recipe.Name} from {image.SourceUrl} wasn't kept: {exception.Message}");
+            }
+        }
+
+        await recipes.SaveAsync(recipe, cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+        return problems;
     }
 
     public IReadOnlyList<RecipeFileFormatResponse> GetFileFormats() =>
@@ -134,6 +196,7 @@ internal sealed class RecipeManager(
                 foreach (var recipe in changes.Changed)
                 {
                     await recipes.SaveAsync(recipe, cancellationToken);
+                    await RequestImagesAsync(recipe);
                 }
 
                 finished = new RecipeImportFinished(true, changes.Result, null, command.StageWeekAfter);
@@ -161,9 +224,19 @@ internal sealed class RecipeManager(
             var recipe = new Recipe { Origin = RecipeOrigin.Local };
             transformation.ApplyText(text, recipe, clock.GetUtcNow());
             await recipes.SaveAsync(recipe, cancellationToken);
+            await RequestImagesAsync(recipe);
         }
 
         await messages.CommitAsync(cancellationToken);
         return fresh.Count;
+    }
+
+    /// <summary>Asks for the recipe's photos to be downloaded once this change is saved, when it has any waiting.</summary>
+    private async Task RequestImagesAsync(Recipe recipe)
+    {
+        if (TransformationEngine.PendingImages(recipe).Count > 0)
+        {
+            await messages.PublishAsync(new FetchRecipeImages(recipe.Id));
+        }
     }
 }

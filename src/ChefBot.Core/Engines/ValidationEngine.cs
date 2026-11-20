@@ -20,6 +20,15 @@ internal sealed class ValidationEngine(IPlanAccess plans, IRecipeAccess recipes,
 
     private const int MaxStoreName = 60;
 
+    /// <summary>The largest photo ChefBot keeps, in bytes.</summary>
+    public const int MaxImageBytes = 5 * 1024 * 1024;
+
+    /// <summary>The most photos one recipe can have.</summary>
+    public const int MaxImagesPerRecipe = 10;
+
+    /// <summary>A week: no step of cooking a recipe takes longer.</summary>
+    private const int MaxMinutes = 7 * 24 * 60;
+
     private static readonly Regex ValidUsername = new("^[a-z0-9._-]{3,32}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex ValidBackupName = new(@"^chefbot-backup-\d{8}-\d{6}\.json\.gz$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -133,7 +142,52 @@ internal sealed class ValidationEngine(IPlanAccess plans, IRecipeAccess recipes,
         {
             throw new RuleViolationException("A recipe needs at least one ingredient.");
         }
+
+        foreach (var (minutes, label) in new[] { (recipe.PrepMinutes, "Prep time"), (recipe.CookMinutes, "Cook time"), (recipe.TotalMinutes, "Total time") })
+        {
+            if (minutes is < 0 or > MaxMinutes)
+            {
+                throw new RuleViolationException($"{label} must be between 0 and {MaxMinutes} minutes (a week).");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(recipe.SourceUrl) && !WebAddress.IsHttp(recipe.SourceUrl.Trim()))
+        {
+            throw new RuleViolationException("The source link must be a full web address starting with http:// or https://.");
+        }
     }
+
+    /// <summary>Checks a photo's bytes and says what kind of image it is, judged from the bytes, not the file name.</summary>
+    /// <returns>The image's media type, such as image/jpeg.</returns>
+    public static string Image(byte[]? data)
+    {
+        if (data is not { Length: > 0 })
+        {
+            throw new RuleViolationException("That image is empty. Choose a photo file and try again.");
+        }
+
+        if (data.Length > MaxImageBytes)
+        {
+            throw new RuleViolationException($"That image is larger than {MaxImageBytes / 1024 / 1024} MB. Choose a smaller one.");
+        }
+
+        return ImageFormat.Detect(data)
+            ?? throw new RuleViolationException("That file isn't a photo ChefBot can show. Choose a JPEG, PNG, WebP or GIF image.");
+    }
+
+    /// <summary>Checks the recipe has room for one more photo.</summary>
+    public static void RoomForImage(Recipe recipe)
+    {
+        if (recipe.Images.Count >= MaxImagesPerRecipe)
+        {
+            throw new RuleViolationException($"A recipe can have up to {MaxImagesPerRecipe} photos. Remove one before adding another.");
+        }
+    }
+
+    /// <summary>The recipe's photo with that id.</summary>
+    public static RecipeImage ImageOn(Recipe recipe, Guid imageId) =>
+        recipe.Images.FirstOrDefault(image => image.Id == imageId)
+            ?? throw new NotFoundException($"{recipe.Name} has no photo with id {imageId}.");
 
     /// <summary>The address and token to save for Mealie. An empty address turns Mealie off; an empty token keeps the saved one.</summary>
     public static (string Url, string ApiToken) MealieConnection(string? url, string? apiToken, string savedToken)

@@ -19,6 +19,16 @@ internal static class EntityMapping
         IsSlowCooker = entity.IsSlowCooker,
         IsArchived = entity.IsArchived,
         UpdatedAt = entity.UpdatedAt,
+        Description = entity.Description,
+        Instructions = [.. entity.Instructions],
+        PrepMinutes = entity.PrepMinutes,
+        CookMinutes = entity.CookMinutes,
+        TotalMinutes = entity.TotalMinutes,
+        SourceUrl = entity.SourceUrl,
+        Author = entity.Author,
+        YieldText = entity.YieldText,
+        Notes = entity.Notes,
+        Tags = [.. entity.Tags],
         Ingredients = entity.Ingredients.OrderBy(i => i.Position).Select(i => new RecipeIngredient
         {
             Id = i.Id,
@@ -28,6 +38,15 @@ internal static class EntityMapping
             DisplayName = i.DisplayName,
             Quantity = i.Quantity,
             Unit = i.Unit,
+            Text = i.Text,
+            Note = i.Note,
+        }).ToList(),
+        Images = entity.Images.OrderBy(i => i.Position).Select(i => new RecipeImage
+        {
+            Id = i.Id,
+            Position = i.Position,
+            SourceUrl = i.SourceUrl,
+            ContentType = i.ContentType,
         }).ToList(),
     };
 
@@ -142,6 +161,16 @@ internal static class EntityMapping
         IsSlowCooker = recipe.IsSlowCooker,
         IsArchived = recipe.IsArchived,
         UpdatedAt = recipe.UpdatedAt,
+        Description = recipe.Description,
+        Instructions = [.. recipe.Instructions],
+        PrepMinutes = recipe.PrepMinutes,
+        CookMinutes = recipe.CookMinutes,
+        TotalMinutes = recipe.TotalMinutes,
+        SourceUrl = recipe.SourceUrl,
+        Author = recipe.Author,
+        YieldText = recipe.YieldText,
+        Notes = recipe.Notes,
+        Tags = [.. recipe.Tags],
         Ingredients = recipe.Ingredients.Select(i => new RecipeIngredientEntity
         {
             Id = i.Id,
@@ -152,6 +181,16 @@ internal static class EntityMapping
             DisplayName = i.DisplayName,
             Quantity = i.Quantity,
             Unit = i.Unit,
+            Text = i.Text,
+            Note = i.Note,
+        }).ToList(),
+        Images = recipe.Images.Select(i => new RecipeImageEntity
+        {
+            Id = i.Id,
+            RecipeId = recipe.Id,
+            Position = i.Position,
+            SourceUrl = i.SourceUrl,
+            ContentType = i.ContentType,
         }).ToList(),
     };
 

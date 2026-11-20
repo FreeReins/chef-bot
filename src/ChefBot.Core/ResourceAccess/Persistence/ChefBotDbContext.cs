@@ -9,6 +9,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 {
     public DbSet<RecipeEntity> Recipes => Set<RecipeEntity>();
 
+    public DbSet<RecipeImageDataEntity> RecipeImageData => Set<RecipeImageDataEntity>();
+
     public DbSet<MealPlanEntity> MealPlans => Set<MealPlanEntity>();
 
     public DbSet<PantryItemEntity> PantryItems => Set<PantryItemEntity>();
@@ -39,8 +41,16 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
             recipe.ToTable("Recipes");
             recipe.HasIndex(r => r.ExternalId).IsUnique();
             recipe.HasMany(r => r.Ingredients).WithOne().HasForeignKey(i => i.RecipeId).OnDelete(DeleteBehavior.Cascade);
+            recipe.HasMany(r => r.Images).WithOne().HasForeignKey(i => i.RecipeId).OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.Entity<RecipeIngredientEntity>().ToTable("RecipeIngredients");
+        modelBuilder.Entity<RecipeImageEntity>().ToTable("RecipeImages");
+        modelBuilder.Entity<RecipeImageDataEntity>(data =>
+        {
+            data.ToTable("RecipeImageData");
+            data.HasKey(d => d.ImageId);
+            data.HasOne<RecipeImageEntity>().WithOne().HasForeignKey<RecipeImageDataEntity>(d => d.ImageId).OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelBuilder.Entity<MealPlanEntity>(plan =>
         {

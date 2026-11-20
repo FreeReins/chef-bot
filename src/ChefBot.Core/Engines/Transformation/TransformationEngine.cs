@@ -1,3 +1,4 @@
+using System.Globalization;
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Engines.Contracts.Services;
 using ChefBot.Core.Managers.Contracts;
@@ -41,15 +42,56 @@ internal sealed class TransformationEngine(
         return recipes.Where(recipe => taken.Add(recipe.Name?.Trim() ?? string.Empty)).ToList();
     }
 
-    /// <summary>Fills a recipe in from its text. Ingredient rows are left alone when the lines didn't change.</summary>
+    /// <summary>
+    /// Fills a recipe in from its text. Ingredient rows are left alone when the lines didn't change, and photos are
+    /// only touched when the text lists some to download (the recipe form never does).
+    /// </summary>
     public void ApplyText(RecipeText text, Recipe recipe, DateTimeOffset now)
     {
         recipe.Name = text.Name.Trim();
         recipe.Course = text.Course;
         recipe.IsSlowCooker = text.IsSlowCooker;
         recipe.Servings = text.Servings ?? recipe.Servings;
+        recipe.Description = Tidy(text.Description);
+        recipe.Instructions = TidyList(text.Instructions);
+        recipe.PrepMinutes = text.PrepMinutes;
+        recipe.CookMinutes = text.CookMinutes;
+        recipe.TotalMinutes = text.TotalMinutes;
+        recipe.SourceUrl = Tidy(text.SourceUrl);
+        recipe.Author = Tidy(text.Author);
+        recipe.YieldText = Tidy(text.YieldText);
+        recipe.Notes = Tidy(text.Notes);
+        recipe.Tags = Tags(text.Tags);
         recipe.UpdatedAt = now;
         ReplaceIngredients(recipe, FromLines(text.Ingredients ?? []));
+        if (text.ImageUrls is not null)
+        {
+            ReplaceImageSources(recipe, text.ImageUrls);
+        }
+    }
+
+    /// <summary>The recipe's photos that are waiting to be downloaded.</summary>
+    public static IReadOnlyList<RecipeImage> PendingImages(Recipe recipe) =>
+        recipe.Images.Where(image => !image.IsStored && image.SourceUrl is not null).ToList();
+
+    /// <summary>Adds an uploaded photo after the recipe's others, already stored.</summary>
+    public static RecipeImage AddUploadedImage(Recipe recipe, string contentType, DateTimeOffset now)
+    {
+        var image = new RecipeImage { ContentType = contentType };
+        recipe.Images.Add(image);
+        NumberImages(recipe);
+        recipe.UpdatedAt = now;
+        return image;
+    }
+
+    /// <summary>Takes a photo off a recipe. Its stored bytes go with it.</summary>
+    /// <returns>False when the recipe has no photo with that id.</returns>
+    public static bool RemoveImage(Recipe recipe, Guid imageId, DateTimeOffset now)
+    {
+        if (recipe.Images.RemoveAll(image => image.Id == imageId) == 0) return false;
+        NumberImages(recipe);
+        recipe.UpdatedAt = now;
+        return true;
     }
 
     /// <summary>
@@ -153,10 +195,55 @@ internal sealed class TransformationEngine(
         recipe.Course = course;
         recipe.IsSlowCooker = isSlowCooker;
         recipe.Servings = incoming.Servings is > 0m ? incoming.Servings.Value : options.DefaultServings;
+        recipe.Description = Tidy(incoming.Description);
+        recipe.Instructions = TidyList(incoming.Instructions);
+        recipe.PrepMinutes = DurationParser.Minutes(incoming.PrepTime);
+        recipe.CookMinutes = DurationParser.Minutes(incoming.CookTime);
+        recipe.TotalMinutes = DurationParser.Minutes(incoming.TotalTime);
+        recipe.SourceUrl = Tidy(incoming.SourceUrl);
+        recipe.YieldText = Tidy(incoming.YieldText);
+        recipe.Notes = Tidy(incoming.Notes);
+        recipe.Tags = Tags(incoming.Labels);
         recipe.IsArchived = false;
         recipe.UpdatedAt = now;
         ReplaceIngredients(recipe, Number(incoming.Ingredients.Select(FromSourceRow).OfType<RecipeIngredient>()));
+        ReplaceImageSources(recipe, incoming.ImageUrls ?? []);
     }
+
+    /// <summary>
+    /// Makes the recipe's downloaded photos match the source's list. A photo whose address is still listed keeps
+    /// its stored bytes, new addresses wait to be downloaded, and ones the source dropped go. Uploaded photos stay.
+    /// </summary>
+    private static void ReplaceImageSources(Recipe recipe, IEnumerable<string> urls)
+    {
+        var wanted = urls
+            .Select(url => url?.Trim() ?? string.Empty)
+            .Where(WebAddress.IsHttp)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        var existing = recipe.Images.Where(image => image.SourceUrl is not null).ToDictionary(image => image.SourceUrl!, StringComparer.Ordinal);
+        var uploaded = recipe.Images.Where(image => image.SourceUrl is null);
+        var downloaded = wanted.Select(url => existing.GetValueOrDefault(url) ?? new RecipeImage { SourceUrl = url });
+
+        recipe.Images = [.. downloaded, .. uploaded];
+        NumberImages(recipe);
+    }
+
+    private static void NumberImages(Recipe recipe)
+    {
+        for (var position = 0; position < recipe.Images.Count; position++)
+        {
+            recipe.Images[position].Position = position;
+        }
+    }
+
+    private static string? Tidy(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    private static List<string> TidyList(IEnumerable<string>? lines) =>
+        (lines ?? []).Select(line => line?.Trim() ?? string.Empty).Where(line => line.Length > 0).ToList();
+
+    private static List<string> Tags(IEnumerable<string>? tags) => TidyList(tags).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
     /// <summary>Swaps in a new ingredient list, leaving the stored rows alone when nothing changed.</summary>
     private static void ReplaceIngredients(Recipe recipe, IReadOnlyList<RecipeIngredient> fresh)
@@ -171,13 +258,15 @@ internal sealed class TransformationEngine(
         recipe.Ingredients.AddRange(fresh);
     }
 
-    private static (string, string?, string, decimal?, string) Signature(RecipeIngredient ingredient) =>
-        (ingredient.Key, ingredient.CatalogName, ingredient.DisplayName, ingredient.Quantity, ingredient.Unit);
+    private static (string, string?, string, decimal?, string, string, string?) Signature(RecipeIngredient ingredient) =>
+        (ingredient.Key, ingredient.CatalogName, ingredient.DisplayName, ingredient.Quantity, ingredient.Unit, ingredient.Text, ingredient.Note);
 
     private RecipeIngredient FromLine(string line)
     {
         var parsed = IngredientLineParser.Parse(line);
-        return Create(parsed.Name, parsed.Quantity, parsed.Unit);
+        var ingredient = Create(parsed.Name, parsed.Quantity, parsed.Unit);
+        ingredient.Text = line.Trim();
+        return ingredient;
     }
 
     /// <summary>An ingredient from an outside source, using its parsed food when it has one.</summary>
@@ -185,11 +274,22 @@ internal sealed class TransformationEngine(
     {
         if (!string.IsNullOrWhiteSpace(row.FoodName))
         {
-            return Create(row.FoodName, row.Quantity > 0 ? row.Quantity : null, row.Unit);
+            var ingredient = Create(row.FoodName, row.Quantity > 0 ? row.Quantity : null, row.Unit);
+            ingredient.Note = Tidy(row.Note);
+            ingredient.Text = Tidy(row.Text) ?? Written(ingredient);
+            return ingredient;
         }
 
         // Section headings and empty rows have no text at all.
         return string.IsNullOrWhiteSpace(row.Text) ? null : FromLine(row.Text);
+    }
+
+    /// <summary>A parsed ingredient written as a line: "1.5 lb chicken thigh, skin removed".</summary>
+    private static string Written(RecipeIngredient ingredient)
+    {
+        var amount = ingredient.Quantity is decimal quantity ? quantity.ToString("0.###", CultureInfo.InvariantCulture) : string.Empty;
+        var line = string.Join(' ', new[] { amount, ingredient.Unit, ingredient.DisplayName }.Where(part => part.Length > 0));
+        return ingredient.Note is { } note ? $"{line}, {note}" : line;
     }
 
     private RecipeIngredient Create(string name, decimal? quantity, string? unit)

@@ -23,7 +23,12 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         var contents = new BackupContents
         {
             CreatedAt = DateTimeOffset.UtcNow,
-            Recipes = await db.Recipes.AsNoTracking().Include(recipe => recipe.Ingredients).ToListAsync(cancellationToken),
+            Recipes = await db.Recipes.AsNoTracking()
+                .Include(recipe => recipe.Ingredients)
+                .Include(recipe => recipe.Images)
+                .AsSplitQuery()
+                .ToListAsync(cancellationToken),
+            RecipeImageData = await db.RecipeImageData.AsNoTracking().ToListAsync(cancellationToken),
             MealPlans = await db.MealPlans.AsNoTracking()
                 .Include(plan => plan.Meals).ThenInclude(meal => meal.CustomIngredients)
                 .Include(plan => plan.ShoppingItems)
@@ -99,6 +104,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
 
         db.ChangeTracker.Clear();
         db.AddRange(contents.Recipes);
+        db.AddRange(contents.RecipeImageData);
         db.AddRange(contents.MealPlans);
         db.AddRange(contents.PantryItems);
         db.AddRange(contents.Users);
@@ -123,6 +129,9 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         public DateTimeOffset CreatedAt { get; set; }
 
         public List<RecipeEntity> Recipes { get; set; } = [];
+
+        /// <summary>The recipe photos' bytes. Empty in backups made before ChefBot kept photos.</summary>
+        public List<RecipeImageDataEntity> RecipeImageData { get; set; } = [];
 
         public List<MealPlanEntity> MealPlans { get; set; } = [];
 

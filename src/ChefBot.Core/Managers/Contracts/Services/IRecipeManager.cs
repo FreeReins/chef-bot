@@ -16,6 +16,24 @@ public interface IRecipeManager
     /// <summary>Stops a recipe from being planned. Past plans keep showing it.</summary>
     Task ArchiveAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>A stored photo of a recipe.</summary>
+    /// <exception cref="NotFoundException">The recipe, or a stored photo with that id on it, doesn't exist.</exception>
+    Task<RecipeImageContent> GetImageAsync(Guid id, Guid imageId, CancellationToken cancellationToken);
+
+    /// <summary>Adds an uploaded photo after the recipe's others. Like an edit, this makes an imported recipe a local one.</summary>
+    /// <exception cref="RuleViolationException">The file isn't a JPEG, PNG, WebP or GIF image, is too large, or the recipe has too many photos.</exception>
+    Task<RecipeResponse> AddImageAsync(Guid id, AddRecipeImageRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Removes a photo. Like an edit, this makes an imported recipe a local one.</summary>
+    Task<RecipeResponse> RemoveImageAsync(Guid id, Guid imageId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Downloads the photos an import found for a recipe and keeps copies. A photo that can't be downloaded stays
+    /// waiting, and the next import tries it again.
+    /// </summary>
+    /// <returns>What went wrong with each photo that couldn't be downloaded; empty when all of them worked.</returns>
+    Task<IReadOnlyList<string>> FetchImagesAsync(FetchRecipeImages command, CancellationToken cancellationToken);
+
     /// <summary>The kinds of recipe file that can be imported.</summary>
     IReadOnlyList<RecipeFileFormatResponse> GetFileFormats();
 

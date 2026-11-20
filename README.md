@@ -24,8 +24,10 @@ It is a self-hosted web app: one container for the app, one for PostgreSQL.
   use, favoring food that expires soonest, and invents simple plates from what you have:
   a whole grain, a protein and a vegetable or fruit. Choosing one updates the plan, the leftover lunches
   and the shopping list together.
-- **Keeps its own recipes.** Recipes live in ChefBot's database. Add them in the web page, or import them from
-  [Mealie](https://mealie.io). Mealie is optional and only ever read from.
+- **Keeps its own recipes.** Recipes live in ChefBot's database: their ingredients, steps, prep and cook times,
+  description, tags, notes, source link and photos. Add them in the web page, or import them from
+  [Mealie](https://mealie.io). Mealie is optional and only ever read from. Imported photos are downloaded once,
+  in the background, so they still show when Mealie or the recipe's website is down.
 - **Has accounts.** A setup wizard creates the first (admin) account, who can invite the rest of the
   household with single-use links. Everyone shares the same recipes, plan and pantry.
 - **Runs on a schedule.** Next week's plan is staged automatically (Saturday 09:00 by default).
@@ -284,7 +286,9 @@ try each call. Both need you to be signed in.
 | `POST /api/plans/{planId}/shopping/{itemId}/store` | Buy this ingredient at another store from now on: `{"store": "Costco"}`, or `{"store": ""}` for no particular store |
 | `GET /api/stores`, `PUT /api/stores` | The household's stores, the known stores and the ingredient names they can list. `PUT` replaces the stores (admin) |
 | `GET` `POST /api/pantry`, `PATCH` `DELETE /api/pantry/{id}` | Read and correct the pantry |
-| `GET` `POST /api/recipes`, `PUT` `DELETE /api/recipes/{id}` | Manage local recipes |
+| `GET` `POST /api/recipes`, `PUT` `DELETE /api/recipes/{id}` | Manage local recipes. A recipe has `name`, `course`, `servings`, `isSlowCooker` and `ingredients` (lines such as `"2 cups kale"`), and optionally `description`, `instructions` (a list of steps), `prepMinutes`, `cookMinutes`, `totalMinutes`, `sourceUrl`, `author`, `yieldText`, `notes` and `tags`. Responses add `images` and `ingredientDetails` (each line's quantity, unit and food) |
+| `POST /api/recipes/{id}/images` | Add a photo: `{"data": "<base64>"}`, a JPEG, PNG, WebP or GIF of up to 5 MB, at most 10 per recipe. Makes an imported recipe a local one |
+| `GET` `DELETE /api/recipes/{id}/images/{imageId}` | Get a photo as an image file, or remove it |
 | `POST /api/recipes/import/file` | Import a recipe file: `{"fileName": "recipes.json", "content": "..."}`. Names already in the library are skipped |
 | `GET /api/recipes/import/formats` | The kinds of recipe file that can be imported, with their file name endings |
 | `POST /api/recipes/import/mealie` | Start a background import. Poll `GET /api/recipes/import/status` |
@@ -445,8 +449,8 @@ ChefBot writes a backup every day at 03:00 and keeps the newest 14. On the Setti
 the time, how many to keep, a maximum age in days, make a backup immediately, download one, delete one, or
 **restore** one, which replaces everything in ChefBot with that backup.
 
-- Backups are compressed JSON files holding ChefBot's own data: recipes, plans, the pantry, accounts and
-  settings. They are stored in the `chefbot-backups` Podman volume. To keep them in a host folder instead, see the
+- Backups are compressed JSON files holding ChefBot's own data: recipes and their photos, plans, the pantry,
+  accounts and settings. Photos make backups larger, by up to 5 MB each. They are stored in the `chefbot-backups` Podman volume. To keep them in a host folder instead, see the
   comment in [chefbot.container](deploy/podman/chefbot.container).
 - They contain password hashes, so keep downloaded copies private.
 - A backup on the same disk doesn't protect against losing the disk: download one now and then, or point

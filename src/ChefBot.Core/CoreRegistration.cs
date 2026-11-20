@@ -49,7 +49,7 @@ public static class CoreRegistration
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<PlanWriteLock>();
 
-        // Resource access: PostgreSQL, Mealie, the webhook, the backup folder, and the sample recipe and known store files.
+        // Resource access: PostgreSQL, Mealie, the webhook, recipe photos on the web, the backup folder, and the sample recipe and known store files.
         services.AddDbContext<ChefBotDbContext>(options => options.UseNpgsql(ConnectionString(configuration)));
         services.AddScoped<IRecipeAccess, RecipeAccess>();
         services.AddScoped<IPlanAccess, PlanAccess>();
@@ -64,6 +64,7 @@ public static class CoreRegistration
         // Mealie's address and token are saved settings, passed in with each import.
         services.AddHttpClient<IRecipeSourceAccess, RecipeSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<INotificationAccess, NotificationAccess>(client => client.Timeout = TimeSpan.FromSeconds(10));
+        services.AddHttpClient<IImageSourceAccess, ImageSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(20));
 
         // Engines. They hold no state; ValidationEngine reads through the accessors, so it lives per request.
         services.AddSingleton<RecipeClassifier>();

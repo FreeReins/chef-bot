@@ -11,7 +11,9 @@ namespace ChefBot.Core.Engines.Transformation;
 /// <summary>
 /// The <c>database.json</c> inside a Mealie backup .zip: Mealie's tables, one array of rows each. Recipes are in
 /// <c>recipes</c>, their ingredient lines in <c>recipes_ingredients</c>, and their tags, categories and tools in
-/// link tables, which feed the course classifier.
+/// link tables, which feed the course classifier and become the recipe's tags. Steps are in
+/// <c>recipe_instructions</c> and notes in <c>notes</c>. Photos are kept as files beside <c>database.json</c> in the
+/// .zip, not in it, so this format imports none.
 /// </summary>
 internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeFileFormat
 {
@@ -38,6 +40,8 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeF
         var units = Rows(tables, "ingredient_units").GroupBy(row => Id(row)).ToDictionary(group => group.Key, group => Unit(group.First()));
         var ingredients = Rows(tables, "recipes_ingredients")
             .ToLookup(row => Id(row, "recipe_id"));
+        var steps = Rows(tables, "recipe_instructions").ToLookup(row => Id(row, "recipe_id"));
+        var notes = Rows(tables, "notes").ToLookup(row => Id(row, "recipe_id"));
         var labels = Links(tables, "recipes_to_tags", "tag_id", Names(tables, "tags"))
             .Concat(Links(tables, "recipes_to_categories", "category_id", Names(tables, "categories")))
             .Concat(Links(tables, "recipes_to_tools", "tool_id", Names(tables, "tools")))
@@ -59,7 +63,26 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeF
             var servings = PositiveAmount(Property(recipe, "recipe_servings"))
                 ?? PositiveAmount(Property(recipe, "recipe_yield_quantity"))
                 ?? PositiveAmount(Property(recipe, "recipe_yield"));
-            drafts.Add(new RecipeText(name, course, lines, isSlowCooker, servings));
+            var tags = labels[id].Select(label => label.Trim()).Where(label => label.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            drafts.Add(new RecipeText(
+                name,
+                course,
+                lines,
+                isSlowCooker,
+                servings,
+                Description: Tidy(Text(Property(recipe, "description"))),
+                Instructions: steps[id]
+                    .OrderBy(row => PositiveAmount(Property(row, "position")) ?? 0m)
+                    .Select(row => Tidy(Text(Property(row, "text"))))
+                    .OfType<string>()
+                    .ToList(),
+                PrepMinutes: Minutes(Property(recipe, "prep_time")),
+                CookMinutes: Minutes(Property(recipe, "perform_time") ?? Property(recipe, "cook_time")),
+                TotalMinutes: Minutes(Property(recipe, "total_time")),
+                SourceUrl: Tidy(Text(Property(recipe, "org_url"))),
+                YieldText: YieldWords(Text(Property(recipe, "recipe_yield"))),
+                Notes: Tidy(string.Join("\n\n", notes[id].Select(Note).Where(note => note.Length > 0))),
+                Tags: tags));
         }
 
         return new RecipeFile(drafts, recipes.Count - drafts.Count);
@@ -81,6 +104,10 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeF
         var parts = new[] { quantity?.ToString("0.###", CultureInfo.InvariantCulture), unit, food };
         return string.Join(' ', parts.Where(part => !string.IsNullOrWhiteSpace(part)));
     }
+
+    /// <summary>A note's title and text, as "Title: text".</summary>
+    private static string Note(JsonElement row) =>
+        string.Join(": ", new[] { Tidy(Text(Property(row, "title"))), Tidy(Text(Property(row, "text"))) }.OfType<string>());
 
     private static string Unit(JsonElement row) =>
         Text(Property(row, "abbreviation")) is { Length: > 0 } abbreviation && Property(row, "use_abbreviation") is { ValueKind: JsonValueKind.True }

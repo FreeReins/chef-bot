@@ -30,6 +30,31 @@ public static class RecipeEndpoints
     public static Task Archive(Guid id, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.ArchiveAsync(id, cancellationToken);
 
+    /// <summary>
+    /// A recipe photo, as an image file. A photo's bytes never change once stored (replacing one gives it a new
+    /// id), so browsers may keep it for good.
+    /// </summary>
+    [WolverineGet("/api/recipes/{id}/images/{imageId}")]
+    public static async Task<IResult> GetImage(
+        Guid id, Guid imageId, HttpContext http, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken)
+    {
+        var image = await recipes.GetImageAsync(id, imageId, cancellationToken);
+        http.Response.Headers.CacheControl = "private, max-age=31536000, immutable";
+        return Results.File(image.Data, image.ContentType);
+    }
+
+    /// <summary>Adds a photo to a recipe: <c>{"data": "&lt;base64&gt;"}</c>, a JPEG, PNG, WebP or GIF of up to 5 MB.</summary>
+    [WolverinePost("/api/recipes/{id}/images")]
+    public static Task<RecipeResponse> AddImage(
+        AddRecipeImageRequest request, Guid id, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.AddImageAsync(id, request, cancellationToken);
+
+    /// <summary>Removes a photo from a recipe.</summary>
+    [WolverineDelete("/api/recipes/{id}/images/{imageId}")]
+    public static Task<RecipeResponse> RemoveImage(
+        Guid id, Guid imageId, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.RemoveImageAsync(id, imageId, cancellationToken);
+
     /// <summary>The kinds of recipe file that can be imported.</summary>
     [WolverineGet("/api/recipes/import/formats")]
     public static IReadOnlyList<RecipeFileFormatResponse> FileFormats([FromServices] IRecipeManager recipes) =>

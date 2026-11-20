@@ -77,17 +77,54 @@ internal static class Mapping
         item.FreshnessOn(today, expiringSoonDays),
         catalog.Get(item.CatalogName)?.Group);
 
-    public static RecipeResponse ToResponse(this Recipe recipe) => new(
-        recipe.Id,
-        recipe.Name,
-        recipe.Course,
-        recipe.Origin,
-        recipe.IsSlowCooker,
-        recipe.Servings,
-        recipe.Ingredients.OrderBy(ingredient => ingredient.Position).Select(Describe).ToList());
+    public static RecipeResponse ToResponse(this Recipe recipe)
+    {
+        var ingredients = recipe.Ingredients.OrderBy(ingredient => ingredient.Position).ToList();
+        return new(
+            recipe.Id,
+            recipe.Name,
+            recipe.Course,
+            recipe.Origin,
+            recipe.IsSlowCooker,
+            recipe.Servings,
+            ingredients.Select(Written).ToList(),
+            recipe.Description,
+            [.. recipe.Instructions],
+            recipe.PrepMinutes,
+            recipe.CookMinutes,
+            recipe.TotalMinutes,
+            recipe.SourceUrl,
+            recipe.Author,
+            recipe.YieldText,
+            recipe.Notes,
+            [.. recipe.Tags],
+            recipe.Images
+                .Where(image => image.IsStored)
+                .OrderBy(image => image.Position)
+                .Select(image => new RecipeImageResponse(image.Id, $"/api/recipes/{recipe.Id}/images/{image.Id}"))
+                .ToList(),
+            ingredients
+                .Select(ingredient => new RecipeIngredientResponse(
+                    Written(ingredient), ingredient.Quantity, ingredient.Unit, ingredient.DisplayName, ingredient.Note))
+                .ToList());
+    }
 
-    public static RecipeText ToText(this RecipeDraft draft) =>
-        new(draft.Name, draft.Course, draft.Ingredients ?? [], draft.IsSlowCooker, draft.Servings);
+    public static RecipeText ToText(this RecipeDraft draft) => new(
+        draft.Name,
+        draft.Course,
+        draft.Ingredients ?? [],
+        draft.IsSlowCooker,
+        draft.Servings,
+        draft.Description,
+        draft.Instructions,
+        draft.PrepMinutes,
+        draft.CookMinutes,
+        draft.TotalMinutes,
+        draft.SourceUrl,
+        draft.Author,
+        draft.YieldText,
+        draft.Notes,
+        draft.Tags);
 
     public static MealieSettingsResponse ToResponse(this MealieSettings settings) =>
         new(settings.Url, settings.ApiToken.Length > 0, settings.IsConfigured);
@@ -141,6 +178,10 @@ internal static class Mapping
     public static BackupFile ToResponse(this StoredBackup file) => new(file.Name, file.CreatedAt, file.SizeBytes);
 
     public static DeliveryResult ToResponse(this Delivery delivery) => new(delivery.Delivered, delivery.Problem);
+
+    /// <summary>The ingredient line as written, or rebuilt from its parts for rows saved before lines were kept.</summary>
+    private static string Written(RecipeIngredient ingredient) =>
+        ingredient.Text.Length > 0 ? ingredient.Text : Describe(ingredient);
 
     /// <summary>Writes an ingredient the way it would be typed: "1.5 lb chicken thigh".</summary>
     private static string Describe(RecipeIngredient ingredient)

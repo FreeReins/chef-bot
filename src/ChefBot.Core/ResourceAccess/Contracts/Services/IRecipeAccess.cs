@@ -15,4 +15,13 @@ internal interface IRecipeAccess
 
     /// <summary>Adds the recipe, or updates the stored one with the same id.</summary>
     Task SaveAsync(Recipe recipe, CancellationToken cancellationToken);
+
+    /// <summary>A photo's bytes, or null when the recipe has no stored photo with that id.</summary>
+    Task<RecipeImageFile?> GetImageFileAsync(Guid recipeId, Guid imageId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stores a photo's bytes, replacing any already stored for it. The photo itself must be on its recipe, saved
+    /// with <see cref="SaveAsync"/> in the same commit, with its content type set.
+    /// </summary>
+    Task SaveImageFileAsync(RecipeImageFile file, CancellationToken cancellationToken);
 }

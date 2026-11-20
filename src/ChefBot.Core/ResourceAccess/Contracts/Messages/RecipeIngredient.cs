@@ -20,4 +20,10 @@ internal sealed class RecipeIngredient : IIngredientRef
     public decimal? Quantity { get; set; }
 
     public string Unit { get; set; } = string.Empty;
+
+    /// <summary>The line as the recipe writes it: "2 cups kale, stems removed". Empty for rows saved before it was kept.</summary>
+    public string Text { get; set; } = string.Empty;
+
+    /// <summary>Extra words the source keeps apart from the food, such as "stems removed".</summary>
+    public string? Note { get; set; }
 }

@@ -38,7 +38,7 @@ internal sealed partial class RecipeSourceAccess(HttpClient http, ILogger<Recipe
             try
             {
                 var detail = await GetAsync(mealie, $"api/recipes/{Uri.EscapeDataString(slug)}", MealieJson.Default.MealieRecipe, token);
-                if (Map(detail) is { } recipe)
+                if (Map(detail, mealie.BaseAddress) is { } recipe)
                 {
                     recipes.Add(recipe);
                 }
@@ -105,7 +105,7 @@ internal sealed partial class RecipeSourceAccess(HttpClient http, ILogger<Recipe
         }
     }
 
-    private static SourceRecipe? Map(MealieRecipe recipe)
+    private static SourceRecipe? Map(MealieRecipe recipe, Uri baseAddress)
     {
         if (string.IsNullOrWhiteSpace(recipe.Id) || string.IsNullOrWhiteSpace(recipe.Name))
         {
@@ -123,12 +123,38 @@ internal sealed partial class RecipeSourceAccess(HttpClient http, ILogger<Recipe
                 row.Food?.Name,
                 row.Quantity,
                 row.Unit?.Name,
-                FirstText(row.OriginalText, row.Note, row.Display)))
+                FirstText(row.OriginalText, row.Display, row.Note),
+                row.Food is null ? null : Tidy(row.Note)))
             .ToList();
 
         var servings = recipe.RecipeServings > 0 ? recipe.RecipeServings : recipe.RecipeYieldQuantity;
-        return new SourceRecipe(recipe.Id, recipe.Name, servings > 0 ? servings : null, labels, ingredients);
+        var notes = (recipe.Notes ?? [])
+            .Select(note => string.Join(": ", new[] { Tidy(note.Title), Tidy(note.Text) }.OfType<string>()))
+            .Where(note => note.Length > 0);
+
+        // Mealie serves every recipe's photo at the same path; its image field is only set when there is one.
+        string[] images = recipe.Image is { ValueKind: JsonValueKind.String or JsonValueKind.Number } image && image.ToString().Length > 0
+            ? [new Uri(baseAddress, $"api/media/recipes/{Uri.EscapeDataString(recipe.Id)}/images/original.webp").ToString()]
+            : [];
+
+        return new SourceRecipe(
+            recipe.Id,
+            recipe.Name,
+            servings > 0 ? servings : null,
+            labels,
+            ingredients,
+            Description: Tidy(recipe.Description),
+            Instructions: (recipe.RecipeInstructions ?? []).Select(step => Tidy(step.Text)).OfType<string>().ToList(),
+            PrepTime: recipe.PrepTime,
+            CookTime: FirstText(recipe.PerformTime, recipe.CookTime),
+            TotalTime: recipe.TotalTime,
+            SourceUrl: Tidy(recipe.OrgUrl),
+            YieldText: Tidy(recipe.RecipeYield),
+            Notes: Tidy(string.Join("\n\n", notes)),
+            ImageUrls: images);
     }
+
+    private static string? Tidy(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
     private static string? FirstText(params string?[] candidates) =>
         candidates.FirstOrDefault(text => !string.IsNullOrWhiteSpace(text));
@@ -176,6 +202,34 @@ internal sealed partial class RecipeSourceAccess(HttpClient http, ILogger<Recipe
         public List<MealieNamed>? Tools { get; set; }
 
         public List<MealieIngredient>? RecipeIngredient { get; set; }
+
+        public string? Description { get; set; }
+
+        public string? OrgUrl { get; set; }
+
+        public string? PrepTime { get; set; }
+
+        public string? PerformTime { get; set; }
+
+        public string? CookTime { get; set; }
+
+        public string? TotalTime { get; set; }
+
+        public string? RecipeYield { get; set; }
+
+        public List<MealieText>? RecipeInstructions { get; set; }
+
+        public List<MealieText>? Notes { get; set; }
+
+        /// <summary>A cache key Mealie sets when the recipe has a photo; its type varies between versions.</summary>
+        public JsonElement? Image { get; set; }
+    }
+
+    private sealed class MealieText
+    {
+        public string? Title { get; set; }
+
+        public string? Text { get; set; }
     }
 
     private sealed class MealieIngredient

@@ -132,4 +132,88 @@ public class RecipeFileTests
         await Assert.That(bundt.Ingredients).IsEquivalentTo(["2 lemons, zested"]);
         await Assert.That(bundt.Servings).IsEqualTo(12m);
     }
+
+    [Test]
+    public async Task Reads_everything_a_schema_org_recipe_gives()
+    {
+        var file = Reader.ReadFile("pie.json", """
+            { "@context": "https://schema.org", "@type": "Recipe", "name": "Apple Pie",
+              "description": " A classic. ", "url": "https://example.com/apple-pie",
+              "author": [{ "@type": "Person", "name": "Ada" }, "Grace"],
+              "image": [{ "@type": "ImageObject", "url": "https://example.com/pie.jpg" }, "https://example.com/pie-2.jpg"],
+              "prepTime": "PT30M", "cookTime": "PT1H", "totalTime": "PT1H45M",
+              "recipeYield": ["8", "one 9-inch pie"], "keywords": "dessert, baking, Dessert",
+              "recipeIngredient": ["6 apples", "1 pie crust"],
+              "recipeInstructions": [
+                { "@type": "HowToSection", "name": "Filling", "itemListElement": [
+                    { "@type": "HowToStep", "text": "Slice the apples." },
+                    { "@type": "HowToStep", "text": "Toss with sugar." } ] },
+                { "@type": "HowToStep", "text": "Bake." } ] }
+            """);
+
+        var pie = file.Recipes.Single();
+        await Assert.That(pie.Description).IsEqualTo("A classic.");
+        await Assert.That(pie.SourceUrl).IsEqualTo("https://example.com/apple-pie");
+        await Assert.That(pie.Author).IsEqualTo("Ada, Grace");
+        await Assert.That(pie.ImageUrls!).IsEquivalentTo(["https://example.com/pie.jpg", "https://example.com/pie-2.jpg"]);
+        await Assert.That(pie.PrepMinutes).IsEqualTo(30);
+        await Assert.That(pie.CookMinutes).IsEqualTo(60);
+        await Assert.That(pie.TotalMinutes).IsEqualTo(105);
+        await Assert.That(pie.Servings).IsEqualTo(8m);
+        await Assert.That(pie.YieldText).IsEqualTo("one 9-inch pie");
+        await Assert.That(pie.Tags!).IsEquivalentTo(["dessert", "baking"]);
+        await Assert.That(pie.Instructions!).IsEquivalentTo(["Slice the apples.", "Toss with sugar.", "Bake."]);
+    }
+
+    [Test]
+    public async Task Reads_the_details_in_chefbots_own_shape()
+    {
+        var file = Reader.ReadFile("dinners.json", """
+            [{ "name": "Chili", "ingredients": ["1 lb ground beef, browned"], "servings": "4 servings",
+               "instructions": "Brown the beef.\nAdd the beans.\n\nSimmer.", "prepTime": 10, "cookTime": "1 hour",
+               "sourceUrl": "https://example.com/chili", "author": "Sam", "notes": "Better the next day.",
+               "tags": ["spicy"], "images": ["https://example.com/chili.png"] }]
+            """);
+
+        var chili = file.Recipes.Single();
+        await Assert.That(chili.Instructions!).IsEquivalentTo(["Brown the beef.", "Add the beans.", "Simmer."]);
+        await Assert.That(chili.PrepMinutes).IsEqualTo(10);
+        await Assert.That(chili.CookMinutes).IsEqualTo(60);
+        await Assert.That(chili.Author).IsEqualTo("Sam");
+        await Assert.That(chili.Notes).IsEqualTo("Better the next day.");
+        await Assert.That(chili.YieldText).IsNull();
+        await Assert.That(chili.Tags!).IsEquivalentTo(["spicy"]);
+        await Assert.That(chili.ImageUrls!).IsEquivalentTo(["https://example.com/chili.png"]);
+    }
+
+    [Test]
+    public async Task Reads_steps_notes_and_times_from_a_mealie_backup()
+    {
+        var file = Reader.ReadFile("database.json", """
+            {
+              "recipes": [{ "id": "r1", "name": "Stew", "description": "Hearty.", "org_url": "https://example.com/stew",
+                            "prep_time": "15 minutes", "perform_time": "2 hours", "total_time": "2 hours 15 minutes",
+                            "recipe_yield": "6 bowls" }],
+              "recipes_ingredients": [{ "recipe_id": "r1", "position": 0, "note": "2 lb beef" }],
+              "recipe_instructions": [
+                { "recipe_id": "r1", "position": 1, "text": "Simmer." },
+                { "recipe_id": "r1", "position": 0, "text": "Brown the beef." } ],
+              "notes": [{ "recipe_id": "r1", "title": "Tip", "text": "Freezes well." }],
+              "tags": [{ "id": "t1", "name": "Winter" }],
+              "recipes_to_tags": [{ "recipe_id": "r1", "tag_id": "t1" }]
+            }
+            """);
+
+        var stew = file.Recipes.Single();
+        await Assert.That(stew.Description).IsEqualTo("Hearty.");
+        await Assert.That(stew.SourceUrl).IsEqualTo("https://example.com/stew");
+        await Assert.That(stew.Instructions!).IsEquivalentTo(["Brown the beef.", "Simmer."]);
+        await Assert.That(stew.Instructions![0]).IsEqualTo("Brown the beef.");
+        await Assert.That(stew.PrepMinutes).IsEqualTo(15);
+        await Assert.That(stew.CookMinutes).IsEqualTo(120);
+        await Assert.That(stew.TotalMinutes).IsEqualTo(135);
+        await Assert.That(stew.YieldText).IsEqualTo("6 bowls");
+        await Assert.That(stew.Notes).IsEqualTo("Tip: Freezes well.");
+        await Assert.That(stew.Tags!).IsEquivalentTo(["Winter"]);
+    }
 }
