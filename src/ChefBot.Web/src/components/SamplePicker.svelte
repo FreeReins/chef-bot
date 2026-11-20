@@ -1,12 +1,12 @@
 <!-- The sample recipes, one course at a time so the list stays short. Used by setup step three and by the
      sample page reached from the Recipes tab. -->
 <script>
-  import { app, run } from '../lib/app.svelte.js';
+  import { app, run, loadRecipes } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { SLOT_TITLES } from '../lib/format.js';
   import Chip from './Chip.svelte';
 
-  /** onadded(count) runs after the chosen samples are saved. */
+  /** onadded(count) runs after the chosen samples are saved and `app.recipes` has been reloaded. */
   let { onadded } = $props();
 
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet'];
@@ -32,7 +32,7 @@
     const names = picked.map((sample) => sample.name);
     run(async () => {
       const result = await api('POST', '/api/setup/samples', { names });
-      app.samples = await api('GET', '/api/setup/samples');
+      [app.samples] = await Promise.all([api('GET', '/api/setup/samples'), loadRecipes()]);
       await onadded(result.added);
     });
   }

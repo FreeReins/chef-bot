@@ -1,11 +1,10 @@
 <!-- The sample recipe picker on its own page, reached from the Recipes tab. Setup step three uses SamplePicker too. -->
 <script>
-  import { app, loadRecipes } from '../lib/app.svelte.js';
+  import { app } from '../lib/app.svelte.js';
   import { go } from '../lib/addresses.js';
   import SamplePicker from '../components/SamplePicker.svelte';
 
   async function added(count) {
-    await loadRecipes();
     await go('/recipes');
     app.notes = [count ? `Added ${count} sample recipes. Stage a week when you are ready.` : 'No sample recipes were added.'];
   }

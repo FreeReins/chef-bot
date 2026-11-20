@@ -17,6 +17,7 @@
   const fromMealie = $derived(latest?.state === 'Succeeded' ? latest.result.added + latest.result.updated : 0);
   const imported = $derived(fromFiles + fromMealie);
   const count = $derived(app.recipes.length);
+  const importing = $derived(latest?.state === 'Running');
 
   function toggle(choice, event) {
     event.preventDefault();
@@ -26,11 +27,14 @@
   function finish() {
     run(async () => {
       const total = count;
+      const stillImporting = importing;
       await enterApp();
-      await go(total ? '/recipes' : '/meals');
-      app.notes = [total
-        ? `Setup is done and you have ${total} recipes. Stage a week when you are ready.`
-        : 'Setup is done. Add recipes on the Recipes tab, then stage a week.'];
+      await go(total || stillImporting ? '/recipes' : '/meals');
+      app.notes = [stillImporting
+        ? 'Setup is done. Your Mealie recipes are still importing and will appear on the Recipes tab when it finishes.'
+        : total
+          ? `Setup is done and you have ${total} recipes. Stage a week when you are ready.`
+          : 'Setup is done. Add recipes on the Recipes tab, then stage a week.'];
     });
   }
 </script>
@@ -77,10 +81,12 @@
 
   <div class="finish">
     <span class="muted">
-      {count === 0 ? 'No recipes yet. You can add some later.' : `${count} ${count === 1 ? 'recipe' : 'recipes'} in your library`}
+      {#if importing}Importing from Mealie. You can finish now and it carries on in the background.
+      {:else if count === 0}No recipes yet. You can add some later.
+      {:else}{count} {count === 1 ? 'recipe' : 'recipes'} in your library{/if}
     </span>
-    <button type="button" class={count ? 'primary' : ''} onclick={finish}>
-      {count ? 'Finish setup' : 'Skip for now'}
+    <button type="button" class={count || importing ? 'primary' : ''} onclick={finish}>
+      {count || importing ? 'Finish setup' : 'Skip for now'}
     </button>
   </div>
 </section>
