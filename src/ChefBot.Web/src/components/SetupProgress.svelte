@@ -2,6 +2,7 @@
      exists, every other step can be opened from here. -->
 <script>
   import { app, setupSteps, openSetupStep } from '../lib/app.svelte.js';
+  import Check from '@lucide/svelte/icons/check';
 
   const steps = $derived(setupSteps());
   const current = $derived(steps.findIndex((step) => step.screen === app.screen));
@@ -16,12 +17,12 @@
         {#if canMove && index !== current}
           <button type="button" class="step" onclick={() => openSetupStep(step.screen)}>
             <span class="segment"></span>
-            <span class="label">{index < current ? '✓ ' : ''}{step.label}</span>
+            <span class="label">{#if index < current}<Check size={13} /><span class="sr-only">Done: </span>{/if}{step.label}</span>
           </button>
         {:else}
           <span class="step">
             <span class="segment"></span>
-            <span class="label">{index < current ? '✓ ' : ''}{step.label}</span>
+            <span class="label">{#if index < current}<Check size={13} /><span class="sr-only">Done: </span>{/if}{step.label}</span>
           </span>
         {/if}
       </li>
@@ -36,6 +37,7 @@
   li { font-size: .8rem; color: var(--muted); }
   .step { display: grid; gap: .3rem; width: 100%; text-align: left; font: inherit; color: inherit; }
   button.step { padding: 0; border: 0; background: none; cursor: pointer; }
+  .label { display: inline-flex; align-items: center; gap: .25rem; }
   button.step:hover .label { color: var(--ink); text-decoration: underline; }
   .segment { height: .4rem; border-radius: 1rem; background: var(--line); }
   li.done .segment, li.current .segment { background: var(--accent); }

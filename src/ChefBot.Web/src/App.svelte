@@ -17,14 +17,21 @@
   import Recipes from './tabs/Recipes.svelte';
   import People from './tabs/People.svelte';
   import Settings from './tabs/Settings.svelte';
+  import Utensils from '@lucide/svelte/icons/utensils';
+  import CalendarDays from '@lucide/svelte/icons/calendar-days';
+  import Carrot from '@lucide/svelte/icons/carrot';
+  import ChefHat from '@lucide/svelte/icons/chef-hat';
+  import Users from '@lucide/svelte/icons/users';
+  import SettingsIcon from '@lucide/svelte/icons/settings';
+  import CodeXml from '@lucide/svelte/icons/code-xml';
 
   const TABS = [
-    { key: 'meals', label: 'Meals' },
-    { key: 'schedule', label: 'Schedule' },
-    { key: 'ingredients', label: 'Ingredients' },
-    { key: 'recipes', label: 'Recipes' },
-    { key: 'people', label: 'People', adminOnly: true },
-    { key: 'settings', label: 'Settings' },
+    { key: 'meals', label: 'Meals', icon: Utensils },
+    { key: 'schedule', label: 'Schedule', icon: CalendarDays },
+    { key: 'ingredients', label: 'Ingredients', icon: Carrot },
+    { key: 'recipes', label: 'Recipes', icon: ChefHat },
+    { key: 'people', label: 'People', icon: Users, adminOnly: true },
+    { key: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
   const GATES = { 'setup-account': SetupAccount, 'setup-https': SetupHttps, 'setup-recipes': SetupRecipes,
     'setup-stores': SetupStores, 'setup-samples': SetupSamples,
@@ -93,7 +100,7 @@
 {#if inApp}
   <nav class="tabs" aria-label="Views">
     {#each tabs as tab (tab.key)}
-      <a href="/{tab.key}" aria-current={app.tab === tab.key ? 'page' : undefined}>{tab.label}</a>
+      <a href="/{tab.key}" aria-current={app.tab === tab.key ? 'page' : undefined}><tab.icon size={18} />{tab.label}</a>
     {/each}
   </nav>
 {/if}
@@ -120,7 +127,8 @@
 </main>
 
 <!-- Pinned to the bottom of the window. Add a link by adding an <li>; the | between items comes from the CSS.
-     Icons are inline SVG from GitHub's Octicons (MIT licence), drawn in the text colour. -->
+     Icons are drawn in the text colour. The GitHub mark is inline SVG from GitHub's Octicons (MIT licence), since
+     Lucide has no brand logos; the rest come from Lucide like the other icons on the page. -->
 <footer class="site-footer">
   <ul class="footer-links">
     <li>
@@ -131,7 +139,7 @@
     </li>
     <li hidden={!inApp}>
       <a href="/docs" aria-label="API reference" title="API reference">
-        <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z"/></svg>
+        <CodeXml size={18} />
       </a>
     </li>
   </ul>
@@ -140,7 +148,9 @@
 <style>
   .top { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-start; }
   .tabs { display: flex; gap: .25rem; margin: 1.25rem 0 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
-  .tabs a { border-bottom: 3px solid transparent; color: var(--muted); padding: .6rem .9rem; text-decoration: none; white-space: nowrap; }
+  .tabs a { display: inline-flex; align-items: center; gap: .45rem; border-bottom: 3px solid transparent; color: var(--muted);
+    padding: .6rem .9rem; text-decoration: none; white-space: nowrap; }
+  .tabs a :global(svg) { flex: none; }
   .tabs a:hover { color: var(--ink); }
   .tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }

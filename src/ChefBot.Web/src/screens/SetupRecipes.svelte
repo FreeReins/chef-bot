@@ -3,6 +3,7 @@
 <script>
   import { app } from '../lib/app.svelte.js';
   import Chip from '../components/Chip.svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import SetupNav from '../components/SetupNav.svelte';
   import SetupProgress from '../components/SetupProgress.svelte';
   import SamplePicker from '../components/SamplePicker.svelte';
@@ -38,6 +39,7 @@
           <span class="muted">From a recipe file or your Mealie server</span>
         </span>
         {#if imported}<Chip tone="good">{imported} imported</Chip>{/if}
+        <ChevronRight class="chevron" size={18} />
       </summary>
       <div class="body two-up">
         <div class="source">
@@ -58,6 +60,7 @@
           <span class="muted">{app.samples.length} ready-made recipes, so you can try planning straight away</span>
         </span>
         {#if samplesAdded}<Chip tone="good">{samplesAdded} added</Chip>{/if}
+        <ChevronRight class="chevron" size={18} />
       </summary>
       <div class="body">
         <SamplePicker onadded={(added) => { samplesAdded += added; }} />
@@ -78,12 +81,12 @@
   .choice[open] { border-color: var(--accent); }
   summary { display: flex; gap: .75rem; align-items: center; justify-content: space-between; padding: .8rem 1rem; cursor: pointer; list-style: none; }
   summary::-webkit-details-marker { display: none; }
-  summary::after { content: "▸"; color: var(--muted); transition: transform .15s; }
-  .choice[open] summary::after { transform: rotate(90deg); }
+  summary :global(.chevron) { flex: none; color: var(--muted); transition: transform .15s; }
+  .choice[open] summary :global(.chevron) { transform: rotate(90deg); }
   summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: .5rem; }
   .title { display: grid; flex: 1; min-width: 0; }
   .body { padding: .8rem 1rem 1rem; border-top: 1px solid var(--line); }
   .two-up { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
   .source { display: grid; gap: .5rem; align-content: start; }
-  @media (prefers-reduced-motion: reduce) { summary::after { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { summary :global(.chevron) { transition: none; } }
 </style>

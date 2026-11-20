@@ -4,6 +4,7 @@
 <script>
   import { app } from '../lib/app.svelte.js';
   import Chip from './Chip.svelte';
+  import X from '@lucide/svelte/icons/x';
 
   /** stores: [{ name, isMain, items, seasonalProduce, months }], changed in place. */
   let { stores = $bindable() } = $props();
@@ -119,7 +120,7 @@
                   {#each store.items as item (item)}
                     <span class="chip item">{item}
                       <button type="button" class="remove" aria-label="Stop buying {item} at {store.name}"
-                              onclick={() => store.items.splice(store.items.indexOf(item), 1)}>×</button>
+                              onclick={() => store.items.splice(store.items.indexOf(item), 1)}><X size={14} /></button>
                     </span>
                   {/each}
                 </div>
@@ -192,7 +193,7 @@
   .spaced { margin-top: 1.25rem; }
   .details { display: grid; gap: .6rem; margin: .5rem 0 .25rem; padding: .6rem .8rem; background: var(--bg); border-radius: .4rem; }
   .item { display: inline-flex; gap: .25rem; align-items: center; color: var(--ink); }
-  .remove { border: 0; background: none; padding: 0 .1rem; line-height: 1; color: var(--muted); }
+  .remove { display: inline-flex; border: 0; background: none; padding: 0 .1rem; line-height: 1; color: var(--muted); }
   .remove:hover { color: var(--bad); }
   .add-item { margin-top: .4rem; }
   .add-item input { flex: 1 1 12rem; }

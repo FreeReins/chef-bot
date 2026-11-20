@@ -5,6 +5,7 @@
   import { api } from '../lib/api.js';
   import Chip from '../components/Chip.svelte';
   import RecipeForm from './RecipeForm.svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 
   let { id } = $props();
 
@@ -35,7 +36,7 @@
   }
 </script>
 
-<p style="margin:1rem 0 0"><a href="/recipes">← All recipes</a></p>
+<p style="margin:1rem 0 0"><a class="back" href="/recipes"><ArrowLeft size={16} />All recipes</a></p>
 
 {#if !recipe}
   <div class="card empty">
@@ -69,3 +70,7 @@
     </ul>
   </div>
 {/if}
+
+<style>
+  .back { display: inline-flex; align-items: center; gap: .3rem; }
+</style>
