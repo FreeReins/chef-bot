@@ -1,3 +1,4 @@
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines.Contracts.Messages;
@@ -8,4 +9,6 @@ namespace ChefBot.Core.Engines.Contracts.Messages;
 /// <param name="Unit">The unit of <paramref name="Quantity"/>.</param>
 /// <param name="IsOptional">True when only optional meals need it.</param>
 /// <param name="UsedIn">The meal that needs it.</param>
-internal sealed record RequiredIngredient(IIngredientRef Ingredient, decimal? Quantity, string Unit, bool IsOptional, string UsedIn);
+/// <param name="Meals">The planned meals behind it: more than one when a recipe is cooked once for several meals.</param>
+internal sealed record RequiredIngredient(
+    IIngredientRef Ingredient, decimal? Quantity, string Unit, bool IsOptional, string UsedIn, IReadOnlyList<PlannedMeal> Meals);

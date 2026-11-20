@@ -61,7 +61,10 @@ internal static class Mapping
     public static IngredientsResponse ToResponse(this IngredientOverview overview, DateOnly today, int expiringSoonDays, IngredientCatalog catalog) => new(
         overview.Ingredients.Select(line => new IngredientLine(
             line.Name, line.Status, line.Quantity, line.Unit, line.Store, line.Group, line.ExpiresOn, line.IsOptional, line.UsedIn, line.ShoppingItemId)).ToList(),
-        overview.Pantry.Select(line => new PantryUseResponse(line.Item.ToResponse(today, expiringSoonDays, catalog), line.UsedByPlan)).ToList());
+        overview.Pantry.Select(line => new PantryUseResponse(
+            line.Item.ToResponse(today, expiringSoonDays, catalog),
+            line.UsedByPlan,
+            line.UsedFor.Select(meal => new PantryMealUse(meal.Id, meal.Title, meal.Date, meal.Slot)).ToList())).ToList());
 
     public static PantryItemResponse ToResponse(this PantryItem item, DateOnly today, int expiringSoonDays, IngredientCatalog catalog) => new(
         item.Id,

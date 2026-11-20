@@ -13,7 +13,8 @@
   import Reset from './screens/Reset.svelte';
   import Meals from './tabs/Meals.svelte';
   import Schedule from './tabs/Schedule.svelte';
-  import Ingredients from './tabs/Ingredients.svelte';
+  import Shopping from './tabs/Shopping.svelte';
+  import Pantry from './tabs/Pantry.svelte';
   import Recipes from './tabs/Recipes.svelte';
   import People from './tabs/People.svelte';
   import Settings from './tabs/Settings.svelte';
@@ -21,7 +22,8 @@
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import Utensils from '@lucide/svelte/icons/utensils';
   import CalendarDays from '@lucide/svelte/icons/calendar-days';
-  import Carrot from '@lucide/svelte/icons/carrot';
+  import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
+  import Refrigerator from '@lucide/svelte/icons/refrigerator';
   import ChefHat from '@lucide/svelte/icons/chef-hat';
   import Users from '@lucide/svelte/icons/users';
   import SettingsIcon from '@lucide/svelte/icons/settings';
@@ -30,7 +32,8 @@
   const TABS = [
     { key: 'meals', label: 'Meals', icon: Utensils },
     { key: 'schedule', label: 'Schedule', icon: CalendarDays },
-    { key: 'ingredients', label: 'Ingredients', icon: Carrot },
+    { key: 'shopping', label: 'Shopping', icon: ShoppingCart },
+    { key: 'pantry', label: 'Pantry', icon: Refrigerator },
     { key: 'recipes', label: 'Recipes', icon: ChefHat },
     { key: 'people', label: 'People', icon: Users, adminOnly: true },
     { key: 'settings', label: 'Settings', icon: SettingsIcon },
@@ -38,8 +41,8 @@
   const GATES = { 'setup-account': SetupAccount, 'setup-https': SetupHttps, 'setup-recipes': SetupRecipes,
     'setup-stores': SetupStores, 'setup-samples': SetupSamples,
     'sign-in': SignIn, join: Join, reset: Reset };
-  const PLAN_TABS = { meals: Meals, schedule: Schedule, ingredients: Ingredients };
-  const OTHER_TABS = { recipes: Recipes, people: People, settings: Settings };
+  const PLAN_TABS = { meals: Meals, schedule: Schedule, shopping: Shopping };
+  const OTHER_TABS = { pantry: Pantry, recipes: Recipes, people: People, settings: Settings };
 
   const inApp = $derived(app.screen === 'app');
   const tabs = $derived(TABS.filter((tab) => !tab.adminOnly || isAdmin()));
@@ -118,7 +121,7 @@
       <p class="muted">
         {app.recipes.length === 0
           ? 'Add some recipes on the Recipes tab first, then stage a week.'
-          : 'Stage a week to see proposed meals, a schedule and the ingredients it needs.'}
+          : 'Stage a week to see proposed meals, a schedule and a shopping list.'}
       </p>
     </div>
   {:else}

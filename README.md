@@ -12,13 +12,14 @@ It is a self-hosted web app: one container for the app, one for PostgreSQL.
   optional weekday breakfasts, plus snacks and sweets. A staged plan is a proposal: shuffle it, swap meals,
   then confirm it.
 - **Shows it three ways.** *Meals* lists what was chosen. *Schedule* lays it out day by day.
-  *Ingredients* shows everything the plan needs, where each item comes from (to buy, pantry, staple),
-  which meals use it, and the pantry beside it.
+  *Shopping* shows everything the plan needs, where each item comes from (to buy, pantry, staple)
+  and which meals use it.
 - **Builds the shopping list.** Quantities are totalled and scaled to portions, staples are left off,
   pantry stock is subtracted, and the list is split between the stores you shop at, or grouped by food group
   if you haven't chosen any.
 - **Tracks the pantry.** Marking an item as bought puts it in the pantry with an expiration date, estimated
-  from the ingredient's shelf life unless you enter the date on the package.
+  from the ingredient's shelf life unless you enter the date on the package. The *Pantry* tab lists what you
+  have, which planned meals will use each item, and what no meal uses yet.
 - **Swaps meals after shopping.** For any meal, ChefBot suggests recipes ranked by how much of the pantry they
   use, favoring food that expires soonest, and invents simple plates from what you have:
   a whole grain, a protein and a vegetable or fruit. Choosing one updates the plan, the leftover lunches
@@ -250,7 +251,7 @@ grouped by food group. The `Stores` setting is no longer read.
 
 1. **Saturday morning** the schedule stages next week and posts a summary to your webhook.
 2. **Review** the Meals tab. Press *Shuffle* for a different week, or *Swap* on a single meal.
-3. **Confirm** the plan. The Ingredients tab is now your shopping list.
+3. **Confirm** the plan. The Shopping tab is now your shopping list.
 4. **Shop**, then press *Bought* per item or *Mark all as bought*. Purchases move to the pantry with
    expiration dates.
 5. **During the week**, mark meals *Cooked* on the Schedule tab; their ingredients come out of the pantry.
@@ -274,7 +275,7 @@ try each call. Both need you to be signed in.
 | `POST /api/plans/stage` | Stage a week. Body `{}` for the upcoming week, or `{"weekStart": "2026-11-08", "replace": true}` |
 | `GET /api/plans/current` | The plan for this week, or the next upcoming one |
 | `POST /api/plans/{planId}/confirm` | Make a staged plan the working plan |
-| `GET /api/plans/{planId}/ingredients` | Everything the plan needs, plus the pantry |
+| `GET /api/plans/{planId}/ingredients` | Everything the plan needs, plus the pantry with the meals that use each item (`usedFor`) |
 | `GET /api/plans/{planId}/meals/{mealId}/alternatives` | Recipe and creative suggestions for one meal |
 | `PUT /api/plans/{planId}/meals/{mealId}` | Replace a meal: `{"recipeId": "..."}` or `{"custom": {"title": "...", "ingredients": ["..."]}}` |
 | `POST /api/plans/{planId}/meals/{mealId}/status` | `{"status": "Cooked"}`, `"Skipped"` or `"Planned"` |

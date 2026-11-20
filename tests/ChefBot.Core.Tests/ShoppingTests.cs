@@ -165,4 +165,35 @@ public class ShoppingTests
         await Assert.That(overview.Pantry.Single(line => line.Item.Key == "cabbage").UsedByPlan).IsTrue();
         await Assert.That(overview.Pantry.Single(line => line.Item.Key == "apple").UsedByPlan).IsFalse();
     }
+
+    [Test]
+    public async Task The_pantry_view_lists_the_meals_that_use_each_item_soonest_first()
+    {
+        var plan = PlanOf(TestData.Bowls, TestData.Tacos, TestData.Bowls);
+        var cabbage = TestData.Stocked("cabbage", 1m, "head");
+
+        var line = TestData.Shopping.BuildOverview(plan, [cabbage], TestData.Sunday, TestData.Options.ExpiringSoonDays).Pantry.Single();
+
+        // Bowls are cooked once for two dinners, but both dinners are listed.
+        await Assert.That(line.UsedFor.Select(meal => meal.Id)).IsEquivalentTo(plan.Meals.Select(meal => meal.Id), TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task The_pantry_view_leaves_out_meals_already_cooked_and_leftovers()
+    {
+        var plan = PlanOf(TestData.Tacos, TestData.Bowls);
+        var dinners = TestData.Dinners(plan);
+        dinners[0].Status = MealStatus.Cooked;
+        plan.Meals.Add(new PlannedMeal
+        {
+            Slot = MealSlot.Lunch, Date = TestData.Sunday.AddDays(3), Title = "Leftovers", LeftoverOfMealId = dinners[1].Id,
+        });
+        var cabbage = TestData.Stocked("cabbage", 1m, "head");
+        var apples = TestData.Stocked("apples", 4m);
+
+        var pantry = TestData.Shopping.BuildOverview(plan, [cabbage, apples], TestData.Sunday, TestData.Options.ExpiringSoonDays).Pantry;
+
+        await Assert.That(pantry.Single(line => line.Item.Key == "cabbage").UsedFor.Select(meal => meal.Id)).IsEquivalentTo([dinners[1].Id]);
+        await Assert.That(pantry.Single(line => line.Item.Key == "apple").UsedFor).IsEmpty();
+    }
 }

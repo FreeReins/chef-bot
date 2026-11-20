@@ -17,17 +17,18 @@ internal static class MealRequirements
         foreach (var batch in toCook.Where(meal => meal.Recipe is not null).GroupBy(meal => meal.Recipe!.Id))
         {
             var recipe = batch.First().Recipe!;
-            var scale = Scale(batch.ToList(), recipe.Servings);
-            var optional = batch.All(meal => meal.IsOptional);
+            var batchMeals = batch.ToList();
+            var scale = Scale(batchMeals, recipe.Servings);
+            var optional = batchMeals.All(meal => meal.IsOptional);
             required.AddRange(recipe.Ingredients
                 .OrderBy(ingredient => ingredient.Position)
-                .Select(ingredient => new RequiredIngredient(ingredient, ingredient.Quantity * scale, ingredient.Unit, optional, recipe.Name)));
+                .Select(ingredient => new RequiredIngredient(ingredient, ingredient.Quantity * scale, ingredient.Unit, optional, recipe.Name, batchMeals)));
         }
 
         foreach (var meal in toCook.Where(m => m.Recipe is null))
         {
             required.AddRange(meal.CustomIngredients
-                .Select(ingredient => new RequiredIngredient(ingredient, null, string.Empty, meal.IsOptional, meal.Title)));
+                .Select(ingredient => new RequiredIngredient(ingredient, null, string.Empty, meal.IsOptional, meal.Title, [meal])));
         }
 
         return required;

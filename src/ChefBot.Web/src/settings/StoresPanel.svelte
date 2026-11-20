@@ -21,7 +21,7 @@
 <h2>Stores</h2>
 <p class="muted">
   Each item on the shopping list goes to the first store that lists it, then in-season produce to a seasonal market
-  while it is open, then to your main store. You can also move an item from the Ingredients tab.
+  while it is open, then to your main store. You can also move an item from the Shopping tab.
 </p>
 <div class="card"><StoreEditor bind:stores /></div>
 <div class="row-actions">

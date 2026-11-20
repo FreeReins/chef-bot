@@ -27,6 +27,7 @@ export const app = $state({
   settingsSection: 'login', // which Settings sidebar item is open
   plan: null,          // PlanResponse, or null when nothing is staged yet
   ingredients: null,   // IngredientsResponse for the plan
+  pantry: [],          // PantryItemResponse[], loaded by the Pantry tab when there is no plan to read it from
   recipes: [],
   swap: null,          // { mealId, options } while a meal's alternatives are open
   toasts: [],          // { id, text, kind: 'note' | 'error' } shown in the corner by Toasts.svelte
@@ -115,12 +116,15 @@ export async function loadPlan() {
   app.ingredients = ingredients;
 }
 
-/** Applies a plan returned by a change, together with the ingredients view that matches it. */
-export async function applyPlan(plan) {
+/**
+ * Applies a plan returned by a change, together with the ingredients view that matches it. Its notes (what was left
+ * off the shopping list) are shown unless `quiet`, for refreshes the person didn't ask to change the plan with.
+ */
+export async function applyPlan(plan, { quiet = false } = {}) {
   const ingredients = await ingredientsFor(plan);
   app.plan = plan;
   app.ingredients = ingredients;
-  for (const note of plan.notes ?? []) toast(note);
+  if (!quiet) for (const note of plan.notes ?? []) toast(note);
   app.swap = null;
 }
 
@@ -161,9 +165,14 @@ export function replaceMeal(mealId, body) {
 
 export async function refreshAfterPantryChange() {
   if (app.plan) {
-    await applyPlan(await api('POST', `/api/plans/${app.plan.id}/refresh`));
+    await applyPlan(await api('POST', `/api/plans/${app.plan.id}/refresh`), { quiet: true });
+  } else {
+    await loadPantry();
   }
 }
+
+/** Loads the pantry on its own. With a plan, the pantry comes with the plan's ingredients view instead. */
+export const loadPantry = async () => { app.pantry = await api('GET', '/api/pantry'); };
 
 // ---------- recipes ----------
 

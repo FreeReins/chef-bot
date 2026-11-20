@@ -116,18 +116,23 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
     {
         var pantry = new PantrySnapshot(pantryItems, today, expiringSoonDays);
         var lines = new List<OverviewLine>();
-        var neededKeys = new HashSet<string>(StringComparer.Ordinal);
+        var mealsByKey = new Dictionary<string, IReadOnlyList<PlannedMeal>>(StringComparer.Ordinal);
 
         foreach (var group in MealRequirements.For(plan.Meals).GroupBy(requirement => requirement.Ingredient.Key))
         {
-            neededKeys.Add(group.Key);
+            mealsByKey[group.Key] = group
+                .SelectMany(requirement => requirement.Meals)
+                .DistinctBy(meal => meal.Id)
+                .OrderBy(meal => meal.Date ?? DateOnly.MaxValue)
+                .ThenBy(meal => meal.Slot)
+                .ToList();
             lines.AddRange(LinesFor(plan, pantry, group.ToList()));
         }
 
         var pantryLines = pantryItems
             .OrderBy(item => item.ExpiresOn ?? DateOnly.MaxValue)
             .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .Select(item => new PantryLine(item, neededKeys.Contains(item.Key)))
+            .Select(item => new PantryLine(item, mealsByKey.GetValueOrDefault(item.Key) ?? []))
             .ToList();
 
         var ordered = lines
