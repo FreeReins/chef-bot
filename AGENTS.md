@@ -30,8 +30,8 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 - Accessors take and return the plain data contracts in `ResourceAccess/Contracts/`, never EF entities, and
   changes only count once passed back to a `Save` method. Managers commit once through `IUnitOfWork`.
 - Managers react to each other through messages, not calls: publish with `IUnitOfWork.PublishAsync` (sent only
-  when the commit succeeds), and handle it in `src/ChefBot.Api/Messaging/Handlers.cs` by calling the other
-  manager. Keep handlers simple: log expected failures, don't add retry logic.
+  when the commit succeeds), and handle it in `src/ChefBot.Api/Messaging/<Message>Handler.cs` by calling the
+  other manager. Keep handlers simple: log expected failures, don't add retry logic.
 - Ingredient needs come only from `MealRequirements`. Anything that changes a plan goes through `PlanManager`,
   which ends with `ReconcileAsync` so leftovers and the shopping list stay in step.
 - Admin-only endpoints use `[Authorize(Policy = Sessions.AdminPolicy)]`; managers don't check roles.
@@ -45,7 +45,7 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 ## When you change...
 
 - **Logic in `ChefBot.Core`**: add TUnit tests beside the existing ones in `tests/ChefBot.Core.Tests/`: engines
-  directly, managers with the fakes in `Fakes.cs` (`new TestCore().PlanManager()`). Assertions are awaited:
+  directly, managers with the `Fake*` accessors through `TestCore` (`new TestCore().PlanManager()`). Assertions are awaited:
   `await Assert.That(actual).IsEqualTo(expected);`.
 - **A public type** (in practice, anything in `Contracts/`): give it an XML `<summary>` saying what it is for.
 - **A user-facing message**: write a plain sentence that says what happened and what to do next.
@@ -72,6 +72,11 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 ## Style
 
 File-scoped namespaces, nullable reference types, `var` where the type is obvious.
+
+One top-level type per file, named after the type (`PlanStatus.cs`, `IPlanAccess.cs`), in the folder its layer
+belongs to. This includes small records, enums and test fakes. Nested types stay inside their parent. A comment
+about several types goes on each of them or in CONTRIBUTING.md, not loose in a file. The build fails otherwise
+(StyleCop SA1402 and SA1649, set to errors in `.editorconfig`).
 
 ## Improving this file
 

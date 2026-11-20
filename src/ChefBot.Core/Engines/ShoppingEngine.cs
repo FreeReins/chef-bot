@@ -4,48 +4,6 @@ using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines;
 
-/// <summary>A freshly worked-out shopping list, with what was left off it and why.</summary>
-/// <param name="Items">What still has to be bought.</param>
-/// <param name="CoveredByPantry">Needed ingredients that are already in the pantry.</param>
-/// <param name="AssumedStaples">Needed ingredients treated as always on hand.</param>
-internal sealed record ShoppingDraft(
-    IReadOnlyList<ShoppingItem> Items,
-    IReadOnlyList<string> CoveredByPantry,
-    IReadOnlyList<string> AssumedStaples)
-{
-    /// <summary>Plain sentences explaining what was left off the list.</summary>
-    public IEnumerable<string> Notes()
-    {
-        if (CoveredByPantry.Count > 0)
-        {
-            yield return $"Already in your pantry: {string.Join(", ", CoveredByPantry)}.";
-        }
-
-        if (AssumedStaples.Count > 0)
-        {
-            yield return $"Assumed to be on hand: {string.Join(", ", AssumedStaples)}.";
-        }
-    }
-}
-
-/// <summary>One ingredient the plan needs, and where it comes from.</summary>
-internal sealed record OverviewLine(
-    string Name,
-    IngredientStatus Status,
-    decimal? Quantity,
-    string Unit,
-    string? Store,
-    DateOnly? ExpiresOn,
-    bool IsOptional,
-    IReadOnlyList<string> UsedIn,
-    Guid? ShoppingItemId);
-
-/// <summary>A pantry item, and whether the plan is going to use it.</summary>
-internal sealed record PantryLine(PantryItem Item, bool UsedByPlan);
-
-/// <summary>Everything the plan needs next to everything on hand.</summary>
-internal sealed record IngredientOverview(IReadOnlyList<OverviewLine> Ingredients, IReadOnlyList<PantryLine> Pantry);
-
 /// <summary>
 /// Works out shopping and stock: the shopping list for the meals still to be cooked, the ingredients view, and
 /// what cooking a meal takes out of the pantry. Reads and saves nothing.

@@ -5,9 +5,6 @@ using ChefBot.Core.ResourceAccess.Contracts;
 
 namespace ChefBot.Core.Engines;
 
-/// <summary>A new link and the secret token that goes in it. The token is never stored, only its hash.</summary>
-internal sealed record NewLink(AccessLink Link, string Token);
-
 /// <summary>
 /// The rules that keep accounts safe: counting wrong passwords and locking accounts, ending sessions when a
 /// password changes, and issuing and checking single-use links. Reads and saves nothing.

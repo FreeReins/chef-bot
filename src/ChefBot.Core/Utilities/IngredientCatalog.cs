@@ -7,68 +7,6 @@ using ChefBot.Core.Contracts.Messages;
 namespace ChefBot.Core.Utilities;
 
 /// <summary>
-/// What ChefBot knows about one ingredient. Entries are loaded from config/ingredients.json. The lists turn a missing
-/// or null value into an empty list: the build-time JSON reader passes null for a field the file leaves out.
-/// </summary>
-internal sealed record CatalogEntry
-{
-    /// <summary>The shared name every alias maps to, for example "green onion".</summary>
-    public required string Name { get; init; }
-
-    /// <summary>Other names for the same ingredient, for example "scallion".</summary>
-    public IReadOnlyList<string> Aliases { get; init => field = value ?? []; } = [];
-
-    public IngredientGroup Group { get; init; } = IngredientGroup.Other;
-
-    /// <summary>Roughly how long it keeps after purchase. Used to estimate expiration dates.</summary>
-    public int? ShelfLifeDays { get; init; }
-
-    /// <summary>Months (1-12) it is in season locally. Empty means it is never scored for season.</summary>
-    public IReadOnlyList<int> SeasonMonths { get; init => field = value ?? []; } = [];
-
-    /// <summary>True for things assumed to be on hand, which never go on a shopping list.</summary>
-    public bool PantryStaple { get; init; }
-
-    /// <summary>
-    /// True when the exact variety matters at the store, so "butternut squash"
-    /// stays on the list under that name while still matching "winter squash" for planning.
-    /// </summary>
-    public bool KeepSpecificName { get; init; }
-
-    /// <summary>The store that usually has it, when that isn't the default store.</summary>
-    public string? Store { get; init; }
-
-    public bool IsFreshProduce => Group is IngredientGroup.Vegetable or IngredientGroup.Fruit or IngredientGroup.Herb;
-
-    /// <summary>True, false, or null when the ingredient has no season.</summary>
-    public bool? IsInSeason(int month) => SeasonMonths.Count == 0 ? null : SeasonMonths.Contains(month);
-
-    public bool SpoilsWithin(int days) => ShelfLifeDays is int shelfLife && shelfLife <= days;
-}
-
-/// <summary>How an ingredient is identified across recipes, shopping lists and the pantry.</summary>
-internal interface IIngredientRef
-{
-    /// <summary>The exact item, used to merge shopping lines and match pantry stock ("chicken thigh").</summary>
-    string Key { get; }
-
-    /// <summary>The catalog entry it belongs to, when known ("chicken").</summary>
-    string? CatalogName { get; }
-
-    /// <summary>The name shown to people.</summary>
-    string DisplayName { get; }
-}
-
-/// <summary>The result of looking a piece of ingredient text up in the catalog.</summary>
-internal sealed record IngredientIdentity(string Key, string? CatalogName, string DisplayName) : IIngredientRef;
-
-internal static class IngredientRefExtensions
-{
-    /// <summary>The loosest sensible name for "do I have something like this": the catalog name, else the key.</summary>
-    public static string MatchName(this IIngredientRef ingredient) => ingredient.CatalogName ?? ingredient.Key;
-}
-
-/// <summary>
 /// Recognizes ingredients in messy recipe text and maps them to one shared name,
 /// so recipes can be compared with each other, with the seasons and with the pantry.
 /// </summary>

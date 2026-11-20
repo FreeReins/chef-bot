@@ -4,27 +4,6 @@ using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines;
 
-/// <summary>A recipe that could replace a planned meal, and what choosing it would mean.</summary>
-internal sealed record Alternative(
-    Recipe Recipe,
-    double Score,
-    IReadOnlyList<string> OnHand,
-    IReadOnlyList<string> ExpiringSoon,
-    IReadOnlyList<string> ToBuy);
-
-/// <summary>One part of a creative meal.</summary>
-/// <param name="Name">The ingredient.</param>
-/// <param name="Group">Its role: whole grain, protein, vegetable or fruit.</param>
-/// <param name="OnHand">False when it would have to be bought.</param>
-/// <param name="ExpiresOn">When the pantry's stock of it expires, if known.</param>
-internal sealed record IdeaPart(string Name, IngredientGroup Group, bool OnHand, DateOnly? ExpiresOn);
-
-/// <summary>A meal idea built from a whole grain, a protein and a vegetable or fruit.</summary>
-internal sealed record MealIdea(string Title, IReadOnlyList<IdeaPart> Parts);
-
-/// <summary>Everything that could replace one meal.</summary>
-internal sealed record Suggestions(IReadOnlyList<Alternative> Recipes, IReadOnlyList<MealIdea> Ideas);
-
 /// <summary>
 /// Suggests swaps for a planned meal: recipes ranked by how well they use the pantry, especially food that is about
 /// to expire, and simple grain, protein and produce ideas. Reads and saves nothing.

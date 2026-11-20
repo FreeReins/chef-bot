@@ -1,0 +1,19 @@
+root = true
+
+[*.cs]
+# StyleCop.Analyzers is only here to enforce one type per file. Its other rules are off.
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.DocumentationRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.LayoutRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.MaintainabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.NamingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.OrderingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.ReadabilityRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpacingRules.severity = none
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpecialRules.severity = none
+
+# One top-level type per file (stylecop.json lists which kinds of type count).
+dotnet_diagnostic.SA1402.severity = error
+# The file is named after the type it holds.
+dotnet_diagnostic.SA1649.severity = error
+# Says XML comment checks are off in projects without documentation files; nothing to fix.
+dotnet_diagnostic.SA0001.severity = none

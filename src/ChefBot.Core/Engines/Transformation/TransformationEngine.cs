@@ -5,9 +5,6 @@ using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines.Transformation;
 
-/// <summary>The recipes a Mealie import adds or changes, and the counts reported back.</summary>
-internal sealed record ImportChanges(IReadOnlyList<Recipe> Changed, ImportResult Result);
-
 /// <summary>
 /// Turns outside data into ChefBot's own: recipe files, typed-in recipes and Mealie recipes into stored recipes,
 /// ingredient names into pantry items and free-form meals. Reads and saves nothing.
