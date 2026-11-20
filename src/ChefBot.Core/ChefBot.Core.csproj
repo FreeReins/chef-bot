@@ -1,3 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Domain and application logic. Deliberately has no package dependencies. -->
+  <!-- Domain logic, application services, and their PostgreSQL, Mealie and webhook implementations. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
 </Project>

@@ -21,7 +21,8 @@ public static class AccountEndpoints
         CancellationToken cancellationToken)
     {
         var user = Sessions.UserId(principal) is Guid id ? await accounts.FindUserAsync(id, cancellationToken) : null;
-        return new SessionResponse(await accounts.IsSetupRequiredAsync(cancellationToken), user?.ToResponse(), imports.IsConfigured);
+        return new SessionResponse(
+            await accounts.IsSetupRequiredAsync(cancellationToken), user?.ToResponse(), await imports.IsConfiguredAsync(cancellationToken));
     }
 
     /// <summary>Setup wizard, step one: creates the first account as an admin and signs it in.</summary>

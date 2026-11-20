@@ -41,11 +41,12 @@ public static class RecipeEndpoints
         IMessageBus bus,
         [FromServices] RecipeImportService imports,
         [FromServices] ImportStatusTracker status,
-        [FromServices] TimeProvider clock)
+        [FromServices] TimeProvider clock,
+        CancellationToken cancellationToken)
     {
-        if (!imports.IsConfigured)
+        if (!await imports.IsConfiguredAsync(cancellationToken))
         {
-            throw new RuleViolationException("Mealie isn't set up. Set Mealie__Url and Mealie__ApiToken to import from it.");
+            throw new RuleViolationException("Mealie isn't set up. An admin can enter its address and an API token on the Settings tab.");
         }
 
         var queued = new ImportStatus("Running", clock.GetUtcNow());

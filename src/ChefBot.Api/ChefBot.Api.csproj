@@ -5,7 +5,6 @@
     <PackageReference Include="WolverineFx.Http" />
     <PackageReference Include="WolverineFx.RuntimeCompilation" />
     <ProjectReference Include="../ChefBot.Core/ChefBot.Core.csproj" />
-    <ProjectReference Include="../ChefBot.Infrastructure/ChefBot.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- Editable data files live in /config at the repository root and ship next to the app. -->

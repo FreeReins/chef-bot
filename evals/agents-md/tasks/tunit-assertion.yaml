@@ -1,0 +1,8 @@
+id: tunit-assertion
+name: Writes TUnit assertions in the repo's style
+tags: [style]
+inputs:
+  prompt: "Write one line of ChefBot test code asserting that the variable total equals 3. Reply with the line only."
+expected:
+  output_contains:
+    - "await Assert.That(total)"

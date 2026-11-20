@@ -2,7 +2,6 @@
   <Folder Name="/src/">
     <Project Path="src/ChefBot.Api/ChefBot.Api.csproj" />
     <Project Path="src/ChefBot.Core/ChefBot.Core.csproj" />
-    <Project Path="src/ChefBot.Infrastructure/ChefBot.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ChefBot.Core.Tests/ChefBot.Core.Tests.csproj" />

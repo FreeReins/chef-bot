@@ -8,3 +8,12 @@
 .idea/
 *.user
 deploy/
+.claude/
+evals/
+results/
+.waza-cache/
+.waza.yaml
+AGENTS.md
+# The web page's packages and build output: the image installs and builds its own.
+**/node_modules/
+src/ChefBot.Api/wwwroot/

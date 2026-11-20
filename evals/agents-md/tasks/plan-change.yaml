@@ -1,0 +1,8 @@
+id: plan-change
+name: Routes plan changes through PlanRefresher
+tags: [rules]
+inputs:
+  prompt: "I'm adding a ChefBot feature that removes a meal from a plan. Which existing class must the change go through, and why? Answer in two sentences."
+expected:
+  output_contains:
+    - "PlanRefresher"

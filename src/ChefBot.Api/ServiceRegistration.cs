@@ -10,9 +10,10 @@ using ChefBot.Core.Planning;
 using ChefBot.Core.Recipes;
 using ChefBot.Core.Shopping;
 using ChefBot.Core.Swaps;
-using ChefBot.Infrastructure;
+using ChefBot.Core;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Wolverine;
 
 namespace ChefBot.Api;
@@ -124,11 +125,15 @@ public static class ServiceRegistration
     }
 
     /// <summary>
-    /// Loads the HTTPS certificate (creating a self-signed one on first start) and registers what serves HTTPS.
-    /// This runs before the app is built because the web server needs the certificate to start listening.
+    /// Checks the data folders can be written, then loads the HTTPS certificate (creating a self-signed one on first
+    /// start) and registers what serves HTTPS. This runs before the app is built because the web server needs the
+    /// certificate to start listening, which also makes it the first place a badly mounted folder is noticed.
     /// </summary>
     public static CertificateStore AddChefBotHttps(this IServiceCollection services, IConfiguration configuration)
     {
+        DataFolders.RequireWritable(KeysFolder(configuration), "Data:SessionKeys");
+        DataFolders.RequireWritable(DataFile(configuration, "Data:Backups", "backups"), "Data:Backups");
+
         var options = configuration.GetSection("Https").Get<HttpsOptions>() ?? new HttpsOptions();
         var certificates = new CertificateStore(options, KeysFolder(configuration));
         certificates.Load();
@@ -136,6 +141,44 @@ public static class ServiceRegistration
         services.AddSingleton(certificates);
         services.AddSingleton<HttpsPolicy>();
         return certificates;
+    }
+
+    /// <summary>
+    /// Behind a reverse proxy listed in Https:TrustedProxies, takes the visitor's address and whether they used HTTPS
+    /// from the proxy's X-Forwarded-For and X-Forwarded-Proto headers. Off unless proxies are listed, because
+    /// anyone could send those headers otherwise.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">An entry in Https:TrustedProxies isn't an address or a network.</exception>
+    public static void UseChefBotProxyHeaders(this WebApplication app)
+    {
+        var trusted = app.Services.GetRequiredService<CertificateStore>().Options.TrustedProxies
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (trusted.Length == 0)
+        {
+            return;
+        }
+
+        var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto };
+        forwarded.KnownProxies.Clear();
+        forwarded.KnownIPNetworks.Clear();
+        foreach (var entry in trusted)
+        {
+            if (entry.Contains('/') && System.Net.IPNetwork.TryParse(entry, out var network))
+            {
+                forwarded.KnownIPNetworks.Add(network);
+            }
+            else if (System.Net.IPAddress.TryParse(entry, out var address))
+            {
+                forwarded.KnownProxies.Add(address);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"\"{entry}\" in Https:TrustedProxies isn't an IP address (10.0.0.5) or a network (172.16.0.0/12).");
+            }
+        }
+
+        app.UseForwardedHeaders(forwarded);
     }
 
     /// <summary>Sends plain HTTP requests to HTTPS when an admin has turned "always use HTTPS" on.</summary>
@@ -161,6 +204,10 @@ public static class ServiceRegistration
     /// </summary>
     public static async Task PrepareChefBotAsync(this IServiceProvider services)
     {
+        // Renewals and certificate problems found after startup are logged from here on.
+        services.GetRequiredService<CertificateStore>().Logger =
+            services.GetRequiredService<ILoggerFactory>().CreateLogger("ChefBot.Https");
+
         await services.InitializeChefBotDatabaseAsync();
 
         await using var scope = services.CreateAsyncScope();
@@ -168,10 +215,13 @@ public static class ServiceRegistration
         var rules = await accounts.GetSecuritySettingsAsync(CancellationToken.None);
         services.GetRequiredService<HttpsPolicy>().RequireHttps = rules.RequireHttps;
 
-        // A webhook in the configuration file is the starting value until one is saved on the Settings tab.
+        // A webhook and a Mealie connection in the configuration are the starting values until something
+        // is saved on the Settings tab.
         var configuration = services.GetRequiredService<IConfiguration>();
         await scope.ServiceProvider.GetRequiredService<ReminderService>()
             .UseDefaultWebhookAsync(configuration["Notifications:WebhookUrl"], CancellationToken.None);
+        await scope.ServiceProvider.GetRequiredService<RecipeImportService>()
+            .UseDefaultConnectionAsync(configuration["Mealie:Url"], configuration["Mealie:ApiToken"], CancellationToken.None);
 
         var username = configuration["Accounts:RecoverUsername"];
         if (string.IsNullOrWhiteSpace(username))

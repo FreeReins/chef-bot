@@ -26,9 +26,16 @@ builder.Services.AddWolverineHttp();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseChefBotProxyHeaders();
 app.UseChefBotHttpsRedirect();
 app.UseDefaultFiles();
-app.UseStaticFiles();
+// The web page is built from src/ChefBot.Web. Vite names the files under /assets after their content, so they
+// can be cached for good; index.html is checked on every visit, so an upgrade shows up straight away.
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = file => file.Context.Response.Headers.CacheControl =
+        file.Context.Request.Path.StartsWithSegments("/assets") ? "public, max-age=31536000, immutable" : "no-cache",
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapOpenApi().RequireAuthorization();

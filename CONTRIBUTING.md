@@ -9,6 +9,7 @@ Everything runs in containers, so only Podman is required (`docker build` works 
 ```sh
 podman build --target test .      # restore, build and run the tests
 deploy/podman/install.sh          # build the image and run the app and its database as Quadlet services
+deploy/podman/uninstall.sh        # stop and remove them again, keeping the data (--delete-data removes it)
 ```
 
 The Quadlet units in `deploy/podman/` are the supported way to run ChefBot. A new setting that people should
@@ -24,7 +25,9 @@ To see changes as you make them, with the .NET 10 SDK and Podman installed:
 ```
 
 The dev copy uses its own database (`chefbot-dev-db`) and never touches an installed ChefBot. It runs on
-<http://localhost:8080>, or on 5080 when 8080 is taken. `./dev.sh help` lists the other commands. The schema
+<http://localhost:8080> and <https://localhost:8443> with its own self-signed certificate, or on 5080 and 5443
+when those ports are taken. The web page also runs on <http://localhost:5173>, where it reloads as you save;
+use that address while working on the page. `./dev.sh help` lists the other commands. The schema
 is only created, never upgraded, so after changing an entity run `./dev.sh reset`.
 
 With the .NET 10 SDK installed you can also work directly:
@@ -39,13 +42,14 @@ dotnet test --solution ChefBot.slnx               # the same tests through dotne
 
 | Project | Holds | May depend on |
 |---|---|---|
-| `ChefBot.Core` | Entities, planning and shopping logic, use-case services, interfaces for storage and outside systems | Nothing but the .NET base library |
-| `ChefBot.Infrastructure` | PostgreSQL (EF Core), the Mealie reader, the webhook notifier | `ChefBot.Core` |
-| `ChefBot.Api` | Wolverine HTTP endpoints, message handlers, the weekly schedule, the web page, startup wiring | Both |
+| `ChefBot.Core` | Entities, planning and shopping logic, use-case services, interfaces for storage and outside systems, and their implementations: PostgreSQL (EF Core) in `Persistence/`, the Mealie reader in `Mealie/`, the webhook notifier in `Notifications/` | ASP.NET Core and the Npgsql EF Core provider |
+| `ChefBot.Api` | Wolverine HTTP endpoints, message handlers, the weekly schedule, startup wiring; serves the web page | `ChefBot.Core` |
+| `ChefBot.Web` | The web page: Svelte 5 components built with Vite into `ChefBot.Api/wwwroot` | The HTTP API |
 
 Rules of thumb:
 
-- Decisions belong in `ChefBot.Core` as plain classes that take their inputs as arguments. `WeekPlanner`,
+- Decisions belong in `ChefBot.Core` as plain classes that take their inputs as arguments and never touch
+  `Persistence/`, `Mealie/` or the webhook. `WeekPlanner`,
   `ShoppingListBuilder`, `AlternativeFinder` and `CreativeMealGenerator` read nothing and save nothing,
   which is why they can be tested without a database.
 - Services (`PlanningService`, `MealService`, ...) load, call the logic, and save once.
@@ -64,6 +68,20 @@ The schema is created with `EnsureCreated` on first start, which is simple but c
 database. Before the first release that changes a table, switch to EF Core migrations:
 add `Microsoft.EntityFrameworkCore.Design`, run `dotnet ef migrations add Initial`, and replace
 `EnsureCreatedAsync` with `MigrateAsync` in `DependencyInjection.cs`.
+
+## The web page
+
+`src/ChefBot.Web` is a [Svelte 5](https://svelte.dev) page, written in plain JavaScript and built with Vite.
+Node is only needed to build it: `./dev.sh` and the image build use Node from a container when this machine
+has none.
+
+- `src/lib/app.svelte.js` holds everything the page shows (`app`) and every action that loads or changes it.
+  Components read `app` and call those actions; Svelte redraws what changed.
+- `src/App.svelte` is the header, tabs and footer. Each screen is a component: `screens/` for setup and
+  sign-in, `tabs/` for the tabs, `settings/` for the Settings sections.
+- `src/styles.css` is the one stylesheet.
+- `./dev.sh web` builds the page once into `src/ChefBot.Api/wwwroot`, which is build output and not in git.
+  Use it before a plain `dotnet run`, and to check that the page still builds.
 
 ## Style
 

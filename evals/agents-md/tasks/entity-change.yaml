@@ -1,0 +1,8 @@
+id: entity-change
+name: Knows the schema is not migrated
+tags: [rules]
+inputs:
+  prompt: "I added a property to a ChefBot entity. What does the developer have to do so their dev database matches? Answer in one or two sentences."
+expected:
+  output_contains:
+    - "dev.sh reset"

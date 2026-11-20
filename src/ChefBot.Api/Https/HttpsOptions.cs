@@ -44,4 +44,10 @@ public sealed class HttpsOptions
 
     /// <summary>Certificate mode: the password of the .pfx file, if it has one.</summary>
     public string CertificatePassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Reverse proxies whose X-Forwarded-For and X-Forwarded-Proto headers are believed, separated by commas: IP
+    /// addresses such as "10.0.0.5" or networks such as "172.16.0.0/12". Empty, the default, believes no one.
+    /// </summary>
+    public string TrustedProxies { get; set; } = string.Empty;
 }

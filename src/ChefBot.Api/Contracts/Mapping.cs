@@ -32,6 +32,9 @@ public static class Mapping
         return new PlanResponse(plan.Id, plan.WeekStart, plan.WeekEnd, plan.Status, meals, shopping, view.Notes);
     }
 
+    public static MealieSettingsResponse ToResponse(this MealieSettings settings) =>
+        new(settings.Url, settings.ApiToken.Length > 0, settings.IsConfigured);
+
     public static MealResponse ToResponse(this PlannedMeal meal) => new(
         meal.Id,
         meal.Date,

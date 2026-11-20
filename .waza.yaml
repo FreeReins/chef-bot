@@ -1,0 +1,13 @@
+# Microsoft waza settings (https://microsoft.github.io/waza/). Used by .claude/skills/tune-agents-md.
+# Telemetry is turned off with WAZA_TELEMETRY_OPTOUT=1 in evals/Containerfile. Don't add a `telemetry:`
+# section here: waza 0.41.0 then silently ignores this whole file.
+paths:
+  evals: evals/
+  results: results/
+tokens:
+  limits:
+    overrides:
+      # AGENTS.md is loaded into every agent session, so every token in it is paid for on every task.
+      "AGENTS.md": 1200
+      # Loaded only when the skill is used. Waza's default for SKILL.md is 500.
+      ".claude/skills/tune-agents-md/SKILL.md": 1500

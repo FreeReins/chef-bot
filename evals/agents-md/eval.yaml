@@ -1,0 +1,19 @@
+# Asks questions whose answers are in AGENTS.md, with AGENTS.md given to the agent.
+# Compare against baseline.yaml (same tasks, no AGENTS.md) to see what the file adds.
+# Run with: waza run evals/agents-md/eval.yaml -c evals/agents-md/context/with
+schemaVersion: "2.0"
+name: agents-md
+scenario: ChefBot repo guidance with AGENTS.md
+config:
+  executor: copilot-sdk
+  model: claude-sonnet-4.6
+  trials_per_task: 1
+  timeout_seconds: 180
+  instruction_files:
+    - AGENTS.md
+metrics:
+  - name: task_completion
+    weight: 1
+    threshold: 0.8
+tasks:
+  - "tasks/*.yaml"

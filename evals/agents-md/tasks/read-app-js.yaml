@@ -1,0 +1,8 @@
+id: read-app-js
+name: Finds a tab's component
+tags: [reading]
+inputs:
+  prompt: "Which file holds the Recipes tab of ChefBot's web page? Answer with the path only."
+expected:
+  output_contains:
+    - "tabs/Recipes.svelte"

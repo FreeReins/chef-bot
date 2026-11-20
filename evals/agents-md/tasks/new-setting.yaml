@@ -1,0 +1,8 @@
+id: new-setting
+name: Documents new settings for operators
+tags: [rules]
+inputs:
+  prompt: "I added a ChefBot setting that people running it should be able to change. Which file besides appsettings.json must I update? Reply with the path only."
+expected:
+  output_contains:
+    - "chefbot.env.example"

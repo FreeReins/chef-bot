@@ -1,0 +1,9 @@
+id: run-one-test-class
+name: Runs a single test class with the TUnit filter
+tags: [commands]
+inputs:
+  prompt: "In the ChefBot repo, give the exact command to run only the tests in the ShoppingTests class. Reply with the command only."
+expected:
+  output_contains:
+    - "treenode-filter"
+    - "ShoppingTests"

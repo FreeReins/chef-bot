@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Local development: ChefBot runs on this machine with hot reload, against a throwaway PostgreSQL container.
-# Needs the .NET 10 SDK and Podman.
+# Needs the .NET 10 SDK and Podman. The web page uses Node if this machine has it, otherwise Node in a container.
 #
-#   ./dev.sh          start the dev database if needed, then run the app with dotnet watch
+#   ./dev.sh          start the dev database if needed, then run the app with dotnet watch and the web page
+#                     with live reload (Vite)
+#   ./dev.sh web      build the web page once into src/ChefBot.Api/wwwroot, for a plain `dotnet run`
 #   ./dev.sh test     run the tests again on every save
 #   ./dev.sh db       start the dev database only
 #   ./dev.sh psql     open a SQL prompt on the dev database
@@ -21,6 +23,10 @@ volume=chefbot-dev-db
 db_port=5432
 # Where the dev copy keeps its session keys and backups: next to the built app (Data:SessionKeys, Data:Backups).
 app_output=src/ChefBot.Api/bin/Debug/net10.0
+web=src/ChefBot.Web
+web_output=src/ChefBot.Api/wwwroot
+web_container=chefbot-dev-web
+node_image=docker.io/library/node:24-alpine
 
 port_in_use() {
     ss -Hltn "( sport = :$1 )" 2>/dev/null | grep -q .
@@ -70,33 +76,86 @@ reset_all() {
     echo "Deleted the dev database, sign-in keys and backups."
 }
 
+# Runs npm in the web page's folder: with this machine's Node when there is one, otherwise in a Node container.
+# Variables like CHEFBOT_API=... listed in web_env are passed to it; web_container_options go to podman run.
+web_env=()
+web_container_options=()
+web_npm() {
+    if command -v npm >/dev/null 2>&1; then
+        (cd "$web" && exec env "${web_env[@]}" npm "$@")
+    else
+        mkdir -p "$web_output"
+        local env_options=()
+        for variable in "${web_env[@]}"; do env_options+=(--env "$variable"); done
+        # keep-id: files it writes (node_modules, the build) belong to you. Host network: the dev server reaches the API.
+        podman run --rm --init "${web_container_options[@]}" --userns=keep-id --network=host --env HOME=/tmp --env NPM_CONFIG_UPDATE_NOTIFIER=false \
+            "${env_options[@]}" --volume "$PWD/$web:/source/$web:z" --volume "$PWD/$web_output:/source/$web_output:z" \
+            --workdir "/source/$web" "$node_image" npm "$@"
+    fi
+}
+
+build_web() {
+    echo "Building the web page..."
+    web_npm install --no-audit --no-fund --loglevel=error
+    web_npm run build -- --logLevel warn
+}
+
 run_app() {
     start_db
 
-    local http_port=8080
-    if port_in_use "$http_port"; then
-        http_port=5080
-        echo "Port 8080 is in use (an installed ChefBot?), so the dev copy uses $http_port."
-        if port_in_use "$http_port"; then
-            echo "Port $http_port is in use too. Stop one of them and try again." >&2
-            exit 1
-        fi
-    fi
+    local http_port https_port web_port
+    http_port="$(pick_port 8080 5080 HTTP)"
+    https_port="$(pick_port 8443 5443 HTTPS)"
+    web_port="$(pick_port 5173 5174 "live-reload web page")"
 
-    echo "ChefBot will be at http://localhost:$http_port"
+    # Built once, so the app's own addresses serve a current page too.
+    build_web
+    # The live-reload copy of the page passes API calls through to the app. It stops when the app does.
+    web_env=("CHEFBOT_API=http://localhost:$http_port" "CHEFBOT_WEB_PORT=$web_port")
+    # Named, so a dev server left behind by a dev.sh that was killed is replaced, not doubled.
+    web_container_options=(--name "$web_container" --replace)
+    web_npm run dev -- --clearScreen false &
+    local web_pid=$!
+    trap 'kill "$web_pid" 2>/dev/null; podman rm --force --time 2 "$web_container" >/dev/null 2>&1 || true' EXIT
+
+    echo "Edit the web page at http://localhost:$web_port: it reloads as you save files in $web."
+    echo "ChefBot will be at http://localhost:$http_port and https://localhost:$https_port"
+    # HTTPS works like an installed ChefBot: a self-signed certificate, kept with the dev copy's other keys, so
+    # the HTTPS settings and the setup wizard's HTTPS step can be tried out. ./dev.sh reset deletes it.
     # Development turns on hot reload's browser refresh. The schedule is off so the dev copy never stages plans
     # on its own, and edits that hot reload can't apply restart the app instead of asking.
     ASPNETCORE_ENVIRONMENT=Development \
     DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1 \
-    Https__Mode=Off \
+    Https__Mode=SelfSigned \
     Https__HttpPort="$http_port" \
+    Https__Port="$https_port" \
+    Https__PublicPort="$https_port" \
     Schedule__Enabled=false \
-        exec dotnet watch --project src/ChefBot.Api
+        dotnet watch --project src/ChefBot.Api
+}
+
+# Prints the preferred port, or the fallback when an installed ChefBot (or anything else) already uses it.
+pick_port() {
+    local preferred=$1 fallback=$2 name=$3
+    if ! port_in_use "$preferred"; then
+        echo "$preferred"
+        return
+    fi
+    if port_in_use "$fallback"; then
+        echo "$name ports $preferred and $fallback are both in use. Stop one of them and try again." >&2
+        exit 1
+    fi
+    echo "Port $preferred is in use (an installed ChefBot?), so the dev copy uses $fallback for $name." >&2
+    echo "$fallback"
 }
 
 case "${1:-run}" in
     run)
         run_app
+        ;;
+    web)
+        build_web
+        echo "Built into $web_output."
         ;;
     test)
         exec dotnet watch --project tests/ChefBot.Core.Tests run
@@ -126,7 +185,7 @@ case "${1:-run}" in
         run_app
         ;;
     *)
-        sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
         exit 1
         ;;
 esac

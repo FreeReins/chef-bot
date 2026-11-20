@@ -1,0 +1,16 @@
+id: check-work
+name: Knows how to check a change before finishing
+tags: [commands]
+inputs:
+  prompt: "In the ChefBot repo, which commands should I run to check a code change before calling it done? Reply with the commands only."
+expected:
+  output_contains:
+    - "dotnet build"
+    - "tests/ChefBot.Core.Tests"
+graders:
+  - name: no-watch-commands
+    type: text
+    config:
+      not_contains:
+        - "dotnet watch"
+        - "dev.sh"

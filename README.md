@@ -63,11 +63,19 @@ journalctl --user -u chefbot -f          # app logs (chefbot-db for the database
 systemctl --user stop chefbot-pod        # stop the app and the database
 ```
 
-To remove ChefBot, stop it, delete `~/.config/containers/systemd/chefbot/`, then run
-`systemctl --user daemon-reload`. The data stays in the `chefbot-db`, `chefbot-keys` and `chefbot-backups`
-volumes until you run `podman volume rm`. The password stays until `podman secret rm chefbot-db-password`.
-Don't remove the secret while keeping the `chefbot-db` volume: PostgreSQL only takes the password when the
-database is first created, so a new secret won't match it.
+To remove ChefBot:
+
+```sh
+deploy/podman/uninstall.sh                # stop it and remove its services; keep its data
+deploy/podman/uninstall.sh --delete-data  # also delete its data, password, settings and image (asks first)
+```
+
+The first form tears down the pod and its containers, including one started by hand, and removes the units
+from `~/.config/containers/systemd/chefbot/`. It keeps the `chefbot-db`, `chefbot-keys` and `chefbot-backups`
+volumes, the `chefbot-db-password` secret, `chefbot.env` and the image, so `install.sh` brings ChefBot back as
+it was. `--delete-data` removes those too; download a backup from **Settings → Backups** first if you want
+one. It deletes the secret and the database together because PostgreSQL only takes the password when the
+database is first created, so a new secret wouldn't match an old database.
 
 Open <http://localhost:8080>. The first visit starts the setup wizard:
 
@@ -79,8 +87,9 @@ Open <http://localhost:8080>. The first visit starts the setup wizard:
 
 Then press **Stage next week**.
 
-To use your own recipes, set `Mealie__Url` and `Mealie__ApiToken` in `chefbot.env`, restart, and press
-**Import from Mealie** on the Recipes tab.
+To use your own recipes, an admin enters Mealie's address and an API token under **Settings → Mealie**, then
+presses **Import from Mealie** on the Recipes tab. `Mealie__Url` and `Mealie__ApiToken` in `chefbot.env` can
+set the starting values instead; anything saved on the Settings tab takes their place.
 
 ### Adding people
 
@@ -111,11 +120,107 @@ next to HTTP on 8080. Nothing needs to be installed or issued.
   tab, or set `Https__Hostnames=chefbot.local,192.168.1.20` in `chefbot.env`. A new certificate is used
   immediately, no restart.
 - **Always use HTTPS** (wizard or Settings) sends plain HTTP visitors to the HTTPS address.
-- The certificate is kept in the `chefbot-keys` volume, lasts about two years and is renewed at startup
-  in its last 30 days. A renewed certificate has to be accepted or installed again.
-- To use your own certificate set `Https__Mode=Certificate` with `Https__CertificatePath` (a `.pfx`, or a PEM
-  file with `Https__KeyPath`). Behind a reverse proxy that handles HTTPS, set `Https__Mode=Off` and
-  leave "Always use HTTPS" off.
+- The certificate is kept in the `chefbot-keys` volume, lasts about two years and is renewed in its last
+  30 days. A renewed certificate has to be accepted or installed again.
+- To use your own certificate, or to run behind a reverse proxy, see
+  [Your own certificate](#your-own-certificate) and [Behind a reverse proxy](#behind-a-reverse-proxy).
+
+## Running the container
+
+Every release is published as a container image, so ChefBot runs anywhere Docker or Podman does. It needs a
+PostgreSQL database next to it. The image serves HTTP on port 8080 and HTTPS on 8443, with a certificate it
+makes itself.
+
+```yaml
+# compose.yaml: then run `docker compose up -d` and open https://your-host:8443
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chefbot
+      POSTGRES_USER: chefbot
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - chefbot-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U chefbot -d chefbot"]
+      interval: 5s
+      retries: 12
+
+  chefbot:
+    image: ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__ChefBot: Host=db;Port=5432;Database=chefbot;Username=chefbot;Password=change-me
+      TZ: America/Chicago
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    volumes:
+      - chefbot-keys:/app/keys        # sign-in keys and the HTTPS certificate
+      - chefbot-backups:/app/backups  # daily backups
+
+volumes:
+  chefbot-db:
+  chefbot-keys:
+  chefbot-backups:
+```
+
+- **Keep the two volumes.** Without `/app/keys` on a named volume, replacing the container makes a new
+  certificate that every browser has to accept again, and signs everyone out.
+- **Host folders instead of volumes** must be writable by the container's user, id 1654:
+  `sudo chown 1654 ./keys ./backups` with Docker, `podman unshare chown 1654 ./keys ./backups` with rootless
+  Podman (add `:Z` to the mount on Fedora and other SELinux systems). ChefBot stops at startup with a message
+  naming the folder if it can't write there.
+- **Other ports on the host:** when HTTPS is published on a different port, for example `"443:8443"`, set
+  `Https__PublicPort` to that port (`443`). ChefBot uses it in links and when sending plain HTTP to HTTPS.
+- Every other setting in [Configuration](#configuration) can be given the same way, with `__` between levels.
+
+### Your own certificate
+
+```yaml
+    environment:
+      Https__Mode: Certificate
+      Https__CertificatePath: /certs/fullchain.pem
+      Https__KeyPath: /certs/privkey.pem
+    volumes:
+      - /srv/chefbot/certs:/certs:ro
+```
+
+- **Use the full chain.** A PEM file holding the certificate followed by its intermediates (Let's Encrypt's
+  `fullchain.pem`) is served whole, which phones, `curl` and Home Assistant need. A `.pfx` file works too,
+  with `Https__CertificatePassword` if it has one.
+- **Renewals are picked up by themselves.** ChefBot checks the files every minute and switches to a renewed
+  certificate without a restart. A half-written file is ignored until it is complete.
+- **The key must be readable by user 1654.** Let's Encrypt keys are readable by root only, so copy both
+  files to the mounted folder from a certbot deploy hook, giving ChefBot its own copy of the key:
+  ```sh
+  install -m 644 "$RENEWED_LINEAGE/fullchain.pem" /srv/chefbot/certs/fullchain.pem
+  install -m 600 -o 1654 "$RENEWED_LINEAGE/privkey.pem" /srv/chefbot/certs/privkey.pem
+  ```
+  With rootless Podman, user 1654 inside the container is a different id on the host; run
+  `podman unshare chown 1654 /srv/chefbot/certs/privkey.pem` after copying instead of `-o 1654`.
+
+### Behind a reverse proxy
+
+When Caddy, Traefik, nginx or similar handles HTTPS, let it talk to ChefBot over plain HTTP:
+
+```yaml
+    environment:
+      Https__Mode: "Off"
+      Https__TrustedProxies: 172.16.0.0/12   # the proxy's address or network
+```
+
+- **`Https__TrustedProxies`** lists the proxies whose `X-Forwarded-For` and `X-Forwarded-Proto` headers ChefBot
+  believes: addresses or networks, separated by commas. With it, ChefBot knows visitors arrived over HTTPS, so
+  sign-in cookies are marked secure and the Settings page says HTTPS is handled by the proxy. Leave it empty
+  when nothing sits in front of ChefBot, or anyone could claim to be on HTTPS.
+- **Leave "Always use HTTPS" off.** Redirecting is the proxy's job.
+- Point the proxy at port 8080. Port 8443 isn't used in this mode.
 
 ## A week with ChefBot
 
@@ -164,6 +269,7 @@ The full description is served at `/openapi/v1.json`.
 | `GET` `PUT /api/system/security` | Lockout rules and "always use HTTPS" (admin) |
 | `GET /api/system/https`, `GET` `POST /api/system/https/certificate` | HTTPS status, download or recreate the certificate |
 | `POST /api/plans/{planId}/regenerate`, `DELETE /api/plans/{planId}` | Rebuild a plan around the pantry, or clear it |
+| `GET` `PUT /api/system/mealie` | Mealie's address and API token. The token is never returned (admin) |
 | `GET` `PUT /api/system/notifications`, `POST .../test`, `POST .../send-today` | Reminder settings, and sending now (admin) |
 | `GET` `PUT` `POST /api/system/backups` | Backup settings and list, or back up now (admin) |
 | `GET` `DELETE /api/system/backups/{name}`, `POST .../{name}/restore` | Download, delete or restore a backup (admin) |
@@ -204,11 +310,14 @@ using `__` between levels (for example `Planner__Dinners=5`). With the Podman se
 | `Stores` | Hy-Vee, farmers market May to October | Default store and when in-season produce goes to the market |
 | `Classifier` | see file | Tag words that sort imported recipes into courses |
 | `Notifications:WebhookUrl` | empty | The starting webhook address, until one is saved on the Settings tab |
+| `Mealie:Url`, `Mealie:ApiToken` | empty | The starting Mealie connection, until one is saved on the Settings tab |
 | `Planner:Weights:RegeneratePantryBoost` | `4` | How much more pantry food counts in "Regenerate from pantry" |
 | `Data:Backups` | `backups` | The folder backups are written to |
-| `Https:Mode` | `Off` (`SelfSigned` in `chefbot.env`) | `Off`, `SelfSigned` or `Certificate` |
+| `Https:Mode` | `Off` (`SelfSigned` in the container image) | `Off`, `SelfSigned` or `Certificate` |
 | `Https:HttpPort`, `Https:Port`, `Https:PublicPort` | `8080`, `8443`, `8443` | Listening ports, and the HTTPS port people type |
 | `Https:Hostnames` | empty | Names the first self-signed certificate covers |
+| `Https:CertificatePath`, `KeyPath`, `CertificatePassword` | empty | Your own certificate, in `Certificate` mode |
+| `Https:TrustedProxies` | empty | Reverse proxies whose forwarded headers are believed |
 | `Accounts:RecoverUsername` | empty | Logs a password reset link for this account at startup |
 
 ### The ingredient catalog
@@ -297,9 +406,10 @@ the time, how many to keep, a maximum age in days, make a backup immediately, do
 ## How it is built
 
 ```
-src/ChefBot.Core             Planning, shopping, pantry, swap and account logic. No dependencies.
-src/ChefBot.Infrastructure   PostgreSQL via EF Core, backups, the Mealie reader, the webhook sender.
-src/ChefBot.Api              Wolverine HTTP endpoints and message handlers, the schedule, the web page.
+src/ChefBot.Core             Planning, shopping, pantry, swap and account logic; PostgreSQL via EF Core,
+                             backups, the Mealie reader, the webhook sender.
+src/ChefBot.Api              Wolverine HTTP endpoints and message handlers, the schedule. Serves the web page.
+src/ChefBot.Web              The web page: Svelte 5, built with Vite.
 tests/ChefBot.Core.Tests     TUnit tests for the logic.
 config/                     The ingredient catalog and sample recipes.
 ```
@@ -335,4 +445,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+GNU General Public License v3.0. See [LICENSE](LICENSE).

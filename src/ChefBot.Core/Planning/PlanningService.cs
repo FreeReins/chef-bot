@@ -134,7 +134,7 @@ public sealed class PlanningService(
 
     private async Task ImportIfConfiguredAsync(List<string> notes, CancellationToken cancellationToken)
     {
-        if (!options.ImportFromMealieBeforePlanning || !imports.IsConfigured)
+        if (!options.ImportFromMealieBeforePlanning || !await imports.IsConfiguredAsync(cancellationToken))
         {
             return;
         }

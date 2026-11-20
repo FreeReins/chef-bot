@@ -1,0 +1,17 @@
+# The same tasks as eval.yaml, without AGENTS.md. Tasks that pass here too test something the model
+# already knows, so the AGENTS.md line behind them may be safe to cut.
+# Run with: waza run evals/agents-md/baseline.yaml -c evals/agents-md/context/without
+schemaVersion: "2.0"
+name: agents-md-baseline
+scenario: ChefBot repo guidance without AGENTS.md
+config:
+  executor: copilot-sdk
+  model: claude-sonnet-4.6
+  trials_per_task: 1
+  timeout_seconds: 180
+metrics:
+  - name: task_completion
+    weight: 1
+    threshold: 0.8
+tasks:
+  - "tasks/*.yaml"

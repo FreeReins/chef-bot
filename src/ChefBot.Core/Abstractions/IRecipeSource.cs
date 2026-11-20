@@ -1,3 +1,5 @@
+using ChefBot.Core.Recipes;
+
 namespace ChefBot.Core.Abstractions;
 
 /// <summary>One ingredient row as an outside source describes it.</summary>
@@ -21,9 +23,7 @@ public sealed record RecipeSourceResult(IReadOnlyList<SourceRecipe> Recipes, int
 /// <summary>An outside recipe library that can be imported, such as a Mealie instance.</summary>
 public interface IRecipeSource
 {
-    /// <summary>False when no source has been configured.</summary>
-    bool IsConfigured { get; }
-
+    /// <summary>Reads every recipe, using the address and token saved in <paramref name="connection"/>.</summary>
     /// <exception cref="ChefBot.Core.Common.RecipeSourceException">The source couldn't be reached or read.</exception>
-    Task<RecipeSourceResult> FetchAllAsync(CancellationToken cancellationToken);
+    Task<RecipeSourceResult> FetchAllAsync(MealieSettings connection, CancellationToken cancellationToken);
 }

@@ -1,0 +1,30 @@
+# Microsoft waza in a container, so evals need nothing on the host but Podman. Built and run by evals/waza.sh.
+# To upgrade: change WAZA_VERSION and both checksums, taken from the release's checksums.txt.
+FROM docker.io/library/debian:bookworm-slim
+
+ARG WAZA_VERSION=0.41.0
+ARG WAZA_SHA256_AMD64=9c7397d8d28127d7c99ec6ad1fab730cbd438174a3960afbc82c3a60dacccb74
+ARG WAZA_SHA256_ARM64=a6437f4687d70f3b3fd438639d4b3c754dc478e692767abd3a67baa8734f0487
+ARG TARGETARCH=amd64
+
+# git: waza tokens compare reads git refs. curl is removed once the binary is in place.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl git \
+    && case "$TARGETARCH" in \
+         amd64) sha="$WAZA_SHA256_AMD64" ;; \
+         arm64) sha="$WAZA_SHA256_ARM64" ;; \
+         *) echo "No waza build for $TARGETARCH" >&2; exit 1 ;; \
+       esac \
+    && curl -fsSL -o /usr/local/bin/waza \
+         "https://github.com/microsoft/waza/releases/download/v${WAZA_VERSION}/waza-linux-${TARGETARCH}" \
+    && echo "$sha  /usr/local/bin/waza" | sha256sum -c - \
+    && chmod +x /usr/local/bin/waza \
+    && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
+# Telemetry and update checks off. HOME is a volume (see waza.sh) so the Copilot runtime waza unpacks is kept.
+ENV WAZA_TELEMETRY_OPTOUT=1 \
+    WAZA_NO_UPDATE_CHECK=1 \
+    HOME=/cache
+
+WORKDIR /work
+ENTRYPOINT ["waza"]
