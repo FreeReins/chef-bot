@@ -17,6 +17,8 @@
   import Recipes from './tabs/Recipes.svelte';
   import People from './tabs/People.svelte';
   import Settings from './tabs/Settings.svelte';
+  import Toasts from './components/Toasts.svelte';
+  import ConfirmDialog from './components/ConfirmDialog.svelte';
   import Utensils from '@lucide/svelte/icons/utensils';
   import CalendarDays from '@lucide/svelte/icons/calendar-days';
   import Carrot from '@lucide/svelte/icons/carrot';
@@ -92,10 +94,8 @@
   </div>
 </header>
 
-<div id="messages" aria-live="polite">
-  {#if app.error}<p class="error" role="alert">{app.error}</p>{/if}
-  {#each app.notes as note, index (index)}<p class="note">{note}</p>{/each}
-</div>
+<Toasts />
+<ConfirmDialog />
 
 {#if inApp}
   <nav class="tabs" aria-label="Views">

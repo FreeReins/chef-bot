@@ -29,8 +29,8 @@ export const app = $state({
   ingredients: null,   // IngredientsResponse for the plan
   recipes: [],
   swap: null,          // { mealId, options } while a meal's alternatives are open
-  notes: [],
-  error: null,
+  toasts: [],          // { id, text, kind: 'note' | 'error' } shown in the corner by Toasts.svelte
+  confirmation: null,  // { title, message, confirmLabel, danger } while ConfirmDialog.svelte is asking
 });
 
 export const isConfirmed = () => app.plan?.status === 'Confirmed';
@@ -38,22 +38,64 @@ export const isAdmin = () => app.session?.user?.isAdmin === true;
 
 /** Runs an action, then shows either its result or a readable error. */
 export async function run(action) {
-  app.error = null;
+  clearErrors();
   try {
     await action();
   } catch (error) {
-    app.error = error.message;
     if (error.status === 401 && app.screen === 'app') {
       app.screen = 'sign-in';
-      app.error = 'Your session has ended. Sign in again.';
+      toast('Your session has ended. Sign in again.', 'error');
+    } else {
+      toast(error.message, 'error');
     }
   }
 }
 
-/** Clears the messages left by the previous view. */
-export function clearMessages() {
-  app.notes = [];
-  app.error = null;
+// ---------- toasts ----------
+
+let nextToastId = 0;
+
+/**
+ * Shows a short message in the corner of the window and returns its id. A note goes away by itself after long
+ * enough to read it; an error stays until it is closed or the next action starts.
+ */
+export function toast(text, kind = 'note') {
+  const id = nextToastId++;
+  app.toasts.push({ id, text, kind });
+  if (kind !== 'error') setTimeout(() => dismissToast(id), Math.max(5000, text.length * 60));
+  return id;
+}
+
+export function dismissToast(id) {
+  const index = app.toasts.findIndex((item) => item.id === id);
+  if (index >= 0) app.toasts.splice(index, 1);
+}
+
+/** Closes the errors left by an earlier action. Notes stay until they time out. */
+export function clearErrors() {
+  app.toasts = app.toasts.filter((item) => item.kind !== 'error');
+}
+
+// ---------- confirmation ----------
+
+let answerConfirmation = null;
+
+/**
+ * Asks before doing something hard to undo, in a dialog on the page. Resolves to true when confirmed, false when
+ * cancelled. `danger` colours the confirm button for changes that lose data.
+ */
+export function ask({ title, message, confirmLabel = 'Confirm', danger = false }) {
+  answerConfirmation?.(false);
+  app.confirmation = { title, message, confirmLabel, danger };
+  return new Promise((resolve) => { answerConfirmation = resolve; });
+}
+
+/** Closes the confirmation dialog with the person's answer. */
+export function answer(confirmed) {
+  const resolve = answerConfirmation;
+  answerConfirmation = null;
+  app.confirmation = null;
+  resolve?.(confirmed);
 }
 
 // ---------- plan ----------
@@ -78,25 +120,27 @@ export async function applyPlan(plan) {
   const ingredients = await ingredientsFor(plan);
   app.plan = plan;
   app.ingredients = ingredients;
-  app.notes = plan.notes ?? [];
+  for (const note of plan.notes ?? []) toast(note);
   app.swap = null;
 }
 
 export const stage = (body) => run(async () => applyPlan(await api('POST', '/api/plans/stage', body)));
 export const planAction = (path, body) => run(async () => applyPlan(await api('POST', `/api/plans/${app.plan.id}/${path}`, body)));
 
-export function clearPlan() {
-  if (!confirm('Clear this plan? Meals and the shopping list are removed. Your pantry is kept.')) return;
+export async function clearPlan() {
+  if (!(await ask({ title: 'Clear this plan?', message: 'Meals and the shopping list are removed. Your pantry is kept.',
+    confirmLabel: 'Clear plan', danger: true }))) return;
   run(async () => {
     await api('DELETE', `/api/plans/${app.plan.id}`);
     await loadPlan();
-    app.notes = ['The plan was cleared. Your pantry is unchanged.'];
+    toast('The plan was cleared. Your pantry is unchanged.');
     app.swap = null;
   });
 }
 
-export function regenerate() {
-  if (!confirm('Replace this plan with a new one built around what is in your pantry?')) return;
+export async function regenerate() {
+  if (!(await ask({ title: 'Regenerate this plan?', message: 'It is replaced with a new plan built around what is in your pantry.',
+    confirmLabel: 'Regenerate' }))) return;
   planAction('regenerate');
 }
 
@@ -138,10 +182,13 @@ export function importFromMealie() {
   return run(async () => {
     await api('POST', '/api/recipes/import/mealie');
     app.mealieImport = { state: 'Running' };
-    if (app.screen === 'app') app.notes = ['Importing from Mealie in the background. This page will update when it finishes.'];
+    if (app.screen === 'app') importingToast = toast('Importing from Mealie in the background. This page will update when it finishes.');
     await pollImport();
   });
 }
+
+// The "importing" note, closed when the import finishes so it never sits beside the result.
+let importingToast = null;
 
 async function pollImport() {
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -151,12 +198,13 @@ async function pollImport() {
 
     app.mealieImport = status;
     const inApp = app.screen === 'app';
+    dismissToast(importingToast);
     if (status.state === 'Succeeded') {
-      if (inApp) app.notes = [describeMealieImport(status.result)];
+      if (inApp) toast(describeMealieImport(status.result));
       await loadRecipes().catch(() => {});
     } else {
       app.mealieImport.message = status.message || 'The Mealie import failed. Check the address and token, then try again.';
-      if (inApp) { app.error = app.mealieImport.message; app.notes = []; }
+      if (inApp) toast(app.mealieImport.message, 'error');
     }
     return;
   }
@@ -307,7 +355,7 @@ export function signOut() {
     await api('POST', '/api/account/sign-out');
     app.session.user = null;
     app.plan = null;
-    app.notes = [];
+    app.toasts = [];
     app.screen = 'sign-in';
   });
 }
@@ -323,7 +371,7 @@ export async function start() {
   } else if (app.linkToken) {
     await api('GET', `/api/account/link?token=${encodeURIComponent(app.linkToken)}`)
       .then((link) => { app.link = link; app.screen = link.purpose === 'Invite' ? 'join' : 'reset'; })
-      .catch((error) => { app.screen = 'sign-in'; app.error = error.message; });
+      .catch((error) => { app.screen = 'sign-in'; toast(error.message, 'error'); });
   } else {
     app.screen = 'sign-in';
   }

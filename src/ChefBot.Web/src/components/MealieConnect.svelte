@@ -1,7 +1,7 @@
 <!-- Connecting Mealie once, then importing from it. Until it is set up this is a short form; afterwards it shows the
      connection, an Import button and how the latest import went. Settings → Mealie edits the same settings. -->
 <script>
-  import { app, run, importFromMealie, saveMealie, describeMealieImport } from '../lib/app.svelte.js';
+  import { app, run, importFromMealie, saveMealie, describeMealieImport, toast } from '../lib/app.svelte.js';
   import Chip from './Chip.svelte';
 
   let editing = $state(false);
@@ -16,7 +16,7 @@
     run(async () => {
       await saveMealie(data.get('url'), data.get('apiToken'));
       if (!app.mealie.isConfigured) {
-        app.error = 'Mealie needs both an address and an API token. Fill in both, then connect again.';
+        toast('Mealie needs both an address and an API token. Fill in both, then connect again.', 'error');
         return;
       }
       editing = false;

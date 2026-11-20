@@ -5,6 +5,7 @@
   import { app } from '../lib/app.svelte.js';
   import Chip from './Chip.svelte';
   import X from '@lucide/svelte/icons/x';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
 
   /** stores: [{ name, isMain, items, seasonalProduce, months }], changed in place. */
   let { stores = $bindable() } = $props();
@@ -106,7 +107,7 @@
             <button type="button" class="small" aria-expanded={String(editing === index)} onclick={() => open(index)}>
               {editing === index ? 'Done' : 'Edit'}
             </button>
-            <button type="button" class="small" onclick={() => remove(index)}>Remove</button>
+            <button type="button" class="icon remove" aria-label="Remove {store.name}" title="Remove" onclick={() => remove(index)}><Trash2 size={16} /></button>
           </div>
         </div>
 
@@ -193,8 +194,7 @@
   .spaced { margin-top: 1.25rem; }
   .details { display: grid; gap: .6rem; margin: .5rem 0 .25rem; padding: .6rem .8rem; background: var(--bg); border-radius: .4rem; }
   .item { display: inline-flex; gap: .25rem; align-items: center; color: var(--ink); }
-  .remove { display: inline-flex; border: 0; background: none; padding: 0 .1rem; line-height: 1; color: var(--muted); }
-  .remove:hover { color: var(--bad); }
+  .item .remove { padding: 0 .1rem; }
   .add-item { margin-top: .4rem; }
   .add-item input { flex: 1 1 12rem; }
   .check { border-top: 0; padding: 0; }

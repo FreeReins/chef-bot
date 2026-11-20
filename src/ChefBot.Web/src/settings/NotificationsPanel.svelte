@@ -1,5 +1,5 @@
 <script>
-  import { app, run } from '../lib/app.svelte.js';
+  import { app, run, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
 
   const REMINDERS = [
@@ -19,12 +19,12 @@
     for (const [key] of REMINDERS) changes[key] = data.get(key) === 'on';
     run(async () => {
       app.notifications = await api('PUT', '/api/system/notifications', { ...settings, ...changes });
-      app.notes = ['Notification settings saved.'];
+      toast('Notification settings saved.');
     });
   }
 
   const send = (path, describe) => run(async () => {
-    app.notes = [describe(await api('POST', path))];
+    toast(describe(await api('POST', path)));
   });
 
   const describeTest = (result) => (result.delivered ? 'The test notification was delivered.' : `The test wasn't delivered. ${result.problem}`);

@@ -2,7 +2,7 @@
 //   /meals  /schedule  /ingredients  /recipes  /recipes/{id}  /recipes/samples  /people  /settings/{section}
 // The address is the source of truth: links and buttons call go(path), and showAddress() shows what it names.
 import { api } from './api.js';
-import { app, run, isAdmin, clearMessages } from './app.svelte.js';
+import { app, run, isAdmin, clearErrors } from './app.svelte.js';
 
 const TAB_KEYS = ['meals', 'schedule', 'ingredients', 'recipes', 'people', 'settings'];
 const ADMIN_TABS = ['people'];
@@ -12,7 +12,7 @@ export async function go(path, { replace = false } = {}) {
   if (path !== location.pathname + location.search) {
     history[replace ? 'replaceState' : 'pushState'](null, '', path);
   }
-  clearMessages();
+  clearErrors();
   await run(showAddress);
 }
 

@@ -1,6 +1,6 @@
 <!-- How the browser reaches ChefBot securely. Shown in setup step 2 and in Settings. -->
 <script>
-  import { app, run, isAdmin, saveSecurity, httpsUrl } from '../lib/app.svelte.js';
+  import { app, run, isAdmin, saveSecurity, httpsUrl, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import Chip from '../components/Chip.svelte';
 
@@ -12,7 +12,7 @@
     const hostnames = String(new FormData(event.currentTarget).get('hostnames')).split(',').map((name) => name.trim()).filter(Boolean);
     run(async () => {
       app.https = await api('POST', '/api/system/https/certificate', { hostnames });
-      app.notes = ['A new certificate is in use. Your browser may ask you to accept it again.'];
+      toast('A new certificate is in use. Your browser may ask you to accept it again.');
     });
   }
 

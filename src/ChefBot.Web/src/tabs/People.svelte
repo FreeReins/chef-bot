@@ -4,6 +4,8 @@
   import { api } from '../lib/api.js';
   import { dayMonth } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import UserRoundStar from '@lucide/svelte/icons/user-round-star';
 
   const day = (iso) => dayMonth(new Date(iso));
   const isLocked = (user) => user.lockedUntil && new Date(user.lockedUntil) > new Date();
@@ -44,25 +46,31 @@
       <ul class="plain">
         {#each app.people.users as user (user.id)}
           {@const isYou = user.id === app.session.user.id}
-          <li class="row">
-            <div>
-              <strong>{user.displayName}</strong> <span class="muted">@{user.username}</span>
-              <div class="chips">
-                {#if user.isAdmin}<Chip tone="good">Admin</Chip>{/if}
-                {#if isLocked(user)}<Chip tone="bad">Locked</Chip>{/if}
-                {#if isYou}<Chip>You</Chip>{/if}
-                <Chip>Joined {day(user.createdAt)}</Chip>
+          <li>
+            <div class="person-head">
+              <span class="clip" title="{user.displayName} @{user.username}">
+                <strong>{user.displayName}</strong> <span class="muted">@{user.username}</span>
+              </span>
+              <div class="person-actions">
+                {#if isLocked(user)}
+                  <button class="small" onclick={() => change(() => api('POST', `/api/users/${user.id}/unlock`))}>Unlock</button>
+                {/if}
+                <button class="small" onclick={() => issue(`Password reset link for @${user.username}`,
+                  () => api('POST', `/api/users/${user.id}/password-reset`))}>Reset password</button>
+                {#if !isYou}
+                  <button class="icon remove" aria-label="Remove @{user.username}" title="Remove"
+                          onclick={() => change(() => api('DELETE', `/api/users/${user.id}`))}><Trash2 size={16} /></button>
+                {:else}
+                  <!-- You can't remove yourself, so this marks your own admin account in the trash can's place. -->
+                  <span class="row-icon" role="img" aria-label="Administrator" title="Administrator"><UserRoundStar size={16} /></span>
+                {/if}
               </div>
             </div>
-            <div class="row-actions">
-              {#if isLocked(user)}
-                <button class="small" onclick={() => change(() => api('POST', `/api/users/${user.id}/unlock`))}>Unlock</button>
-              {/if}
-              <button class="small" onclick={() => issue(`Password reset link for @${user.username}`,
-                () => api('POST', `/api/users/${user.id}/password-reset`))}>Reset password</button>
-              {#if !isYou}
-                <button class="small" onclick={() => change(() => api('DELETE', `/api/users/${user.id}`))}>Remove</button>
-              {/if}
+            <div class="chips">
+              {#if user.isAdmin}<Chip tone="good">Admin</Chip>{/if}
+              {#if isLocked(user)}<Chip tone="bad">Locked</Chip>{/if}
+              {#if isYou}<Chip>You</Chip>{/if}
+              <Chip>Joined {day(user.createdAt)}</Chip>
             </div>
           </li>
         {/each}
@@ -118,6 +126,11 @@
 </div>
 
 <style>
+  /* Name on the left, cut off with "…" so it never pushes the buttons onto another line. */
+  .person-head { display: flex; align-items: center; gap: .75rem; }
+  .person-head .clip { flex: 1 1 auto; }
+  .person-actions { display: flex; align-items: center; gap: .4rem; flex: none; }
+  .row-icon { display: inline-flex; padding: .2rem; line-height: 1; color: var(--muted); }
   .link-box { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
   .link-box input { flex: 1 1 16rem; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; }
 </style>

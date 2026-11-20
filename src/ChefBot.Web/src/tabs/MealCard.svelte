@@ -3,6 +3,8 @@
   import { shortDate } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
   import SwapPanel from './SwapPanel.svelte';
+  import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
+  import X from '@lucide/svelte/icons/x';
 
   let { meal } = $props();
 
@@ -23,7 +25,10 @@
     </div>
     <div class="row-actions">
       {#if meal.status === 'Planned'}
-        <button class="small" onclick={() => (swapOpen ? closeSwap() : openSwap(meal))}>{swapOpen ? 'Close' : 'Swap'}</button>
+        <button class="icon" aria-label="{swapOpen ? 'Close swap for' : 'Swap'} {meal.title}" title={swapOpen ? 'Close' : 'Swap'}
+                aria-expanded={String(swapOpen)} onclick={() => (swapOpen ? closeSwap() : openSwap(meal))}>
+          {#if swapOpen}<X size={16} />{:else}<ArrowLeftRight size={16} />{/if}
+        </button>
       {/if}
     </div>
   </div>

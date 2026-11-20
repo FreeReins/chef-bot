@@ -3,6 +3,7 @@
   import { api } from '../lib/api.js';
   import { amount, shortDate } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
 
   const TONES = { Expired: 'bad', ExpiringSoon: 'warn', Fresh: 'good', Unknown: '' };
   const LABELS = { Expired: 'Expired', ExpiringSoon: 'Use soon', Fresh: 'Fresh', Unknown: 'No date' };
@@ -49,7 +50,7 @@
               {#if !usedByPlan}<Chip>Not used by this plan</Chip>{/if}
             </div>
           </div>
-          <button class="small" aria-label="Remove {item.name}" onclick={() => remove(item.id)}>Remove</button>
+          <button class="icon remove" aria-label="Remove {item.name}" title="Remove" onclick={() => remove(item.id)}><Trash2 size={16} /></button>
         </li>
       {/each}
     </ul>

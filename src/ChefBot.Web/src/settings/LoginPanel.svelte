@@ -1,5 +1,5 @@
 <script>
-  import { app, run, isAdmin, saveSecurity } from '../lib/app.svelte.js';
+  import { app, run, isAdmin, saveSecurity, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
 
   function changePassword(event) {
@@ -9,7 +9,7 @@
     run(async () => {
       await api('POST', '/api/account/password', { currentPassword: data.get('current'), newPassword: data.get('next') });
       form.reset();
-      app.notes = ['Your password has been changed. Other devices have been signed out.'];
+      toast('Your password has been changed. Other devices have been signed out.');
     });
   }
 
@@ -18,7 +18,7 @@
     const data = new FormData(event.currentTarget);
     run(async () => {
       await saveSecurity({ maxFailedSignIns: Number(data.get('attempts')), lockoutMinutes: Number(data.get('minutes')) });
-      app.notes = ['Sign-in rules saved.'];
+      toast('Sign-in rules saved.');
     });
   }
 </script>

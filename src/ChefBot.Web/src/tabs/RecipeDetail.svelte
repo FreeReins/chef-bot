@@ -1,6 +1,6 @@
 <!-- One recipe on its own page, /recipes/{id}, so it can be bookmarked. Shows it, and lets it be edited or archived. -->
 <script>
-  import { app, run, loadRecipes } from '../lib/app.svelte.js';
+  import { app, run, loadRecipes, toast, ask } from '../lib/app.svelte.js';
   import { go } from '../lib/addresses.js';
   import { api } from '../lib/api.js';
   import Chip from '../components/Chip.svelte';
@@ -19,19 +19,20 @@
       await loadRecipes();
       editing = false;
       saved = true;
-      app.notes = ['Recipe saved.'];
+      toast('Recipe saved.');
     });
     return saved;
   }
 
-  function archive() {
-    if (!confirm(`Archive ${recipe.name}? It won't be planned again, and past plans keep showing it.`)) return;
+  async function archive() {
+    if (!(await ask({ title: `Archive ${recipe.name}?`, message: "It won't be planned again, and past plans keep showing it.",
+      confirmLabel: 'Archive', danger: true }))) return;
     const name = recipe.name;
     run(async () => {
       await api('DELETE', `/api/recipes/${recipe.id}`);
       await loadRecipes();
       await go('/recipes');
-      app.notes = [`${name} was archived and won't be planned again.`];
+      toast(`${name} was archived and won't be planned again.`);
     });
   }
 </script>

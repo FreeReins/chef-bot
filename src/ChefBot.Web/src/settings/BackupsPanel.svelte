@@ -1,5 +1,5 @@
 <script>
-  import { app, run } from '../lib/app.svelte.js';
+  import { app, run, toast, ask } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
 
   const backups = $derived(app.backups);
@@ -15,21 +15,23 @@
         keepCount: Number(data.get('keepCount')),
         keepDays: Number(data.get('keepDays')),
       });
-      app.notes = ['Backup settings saved.'];
+      toast('Backup settings saved.');
     });
   }
 
   const runNow = () => run(async () => {
     app.backups = await api('POST', '/api/system/backups');
-    app.notes = ['Backup made.'];
+    toast('Backup made.');
   });
 
   const remove = (file) => run(async () => {
     app.backups = await api('DELETE', `/api/system/backups/${file.name}`);
   });
 
-  function restore(file) {
-    if (!confirm(`Replace everything in ChefBot with the backup from ${new Date(file.createdAt).toLocaleString()}? Anything saved since then is lost.`)) return;
+  async function restore(file) {
+    if (!(await ask({ title: 'Restore this backup?',
+      message: `Everything in ChefBot is replaced with the backup from ${new Date(file.createdAt).toLocaleString()}. Anything saved since then is lost.`,
+      confirmLabel: 'Restore backup', danger: true }))) return;
     run(async () => {
       await api('POST', `/api/system/backups/${file.name}/restore`);
       location.reload();

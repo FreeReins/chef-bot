@@ -1,5 +1,5 @@
 <script>
-  import { app, run, enterApp } from '../lib/app.svelte.js';
+  import { app, run, enterApp, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
 
   function onsubmit(event) {
@@ -8,7 +8,7 @@
     run(async () => {
       app.session.user = await api('POST', '/api/account/reset-password', { token: app.linkToken, password });
       await enterApp();
-      app.notes = ['Your password has been changed.'];
+      toast('Your password has been changed.');
     });
   }
 </script>
