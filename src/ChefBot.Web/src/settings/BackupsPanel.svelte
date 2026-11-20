@@ -2,6 +2,7 @@
   import { app, run, toast, ask } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
 
   const backups = $derived(app.backups);
   const size = (bytes) => (bytes < 1048576 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`);
@@ -92,7 +93,7 @@
           <div class="row-actions">
             <a class="button small" href="/api/system/backups/{file.name}" download={file.name}>Download</a>
             <button class="small" onclick={() => restore(file)}>Restore</button>
-            <button class="small" onclick={() => remove(file)}>Delete</button>
+            <button class="icon remove" aria-label="Delete this backup" title="Delete" onclick={() => remove(file)}><Trash2 size={16} /></button>
           </div>
         </div>
         {#if open[file.name]}
@@ -113,6 +114,7 @@
 </div>
 
 <style>
+  .row .row-actions { align-items: center; }
   .toggle { display: flex; gap: .4rem; align-items: baseline; flex-wrap: wrap; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
   .toggle :global(.chevron) { align-self: center; flex: none; color: var(--muted); transition: transform .15s; }
   .toggle[aria-expanded='true'] :global(.chevron) { transform: rotate(90deg); }
