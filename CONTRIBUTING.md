@@ -54,6 +54,9 @@ Rules of thumb:
   which is why they can be tested without a database.
 - Services (`PlanningService`, `MealService`, ...) load, call the logic, and save once.
 - Endpoints and handlers stay thin: bind the request, call one service, map the result.
+- Recipe file imports are pluggable. To read a new kind of file, implement `IRecipeFileFormat` in
+  `ChefBot.Core/Recipes/Files/` and register it in `ServiceRegistration.cs`; `RecipeFileReader` picks it by file
+  name ending and the web page's file picker lists it automatically.
 - One way to do each thing. Ingredient needs come from `MealRequirements`; anything that changes a plan
   goes through `PlanRefresher` so leftovers and the shopping list can't drift.
 

@@ -1,6 +1,5 @@
 <script>
-  import { app, run, applyMealie } from '../lib/app.svelte.js';
-  import { api } from '../lib/api.js';
+  import { app, run, saveMealie } from '../lib/app.svelte.js';
   import Chip from '../components/Chip.svelte';
 
   const mealie = $derived(app.mealie);
@@ -10,7 +9,7 @@
     const form = event.currentTarget;
     const data = new FormData(form);
     run(async () => {
-      applyMealie(await api('PUT', '/api/system/mealie', { url: data.get('url'), apiToken: data.get('apiToken') || null }));
+      await saveMealie(data.get('url'), data.get('apiToken'));
       form.elements.apiToken.value = '';
       app.notes = [app.mealie.isConfigured ? 'Mealie settings saved. Import from the Recipes tab.' : 'Mealie settings saved.'];
     });
@@ -19,7 +18,7 @@
   function remove() {
     if (!confirm('Stop using Mealie? Recipes already imported stay in ChefBot.')) return;
     run(async () => {
-      applyMealie(await api('PUT', '/api/system/mealie', { url: '' }));
+      await saveMealie('', null);
       app.notes = ['ChefBot no longer uses Mealie.'];
     });
   }

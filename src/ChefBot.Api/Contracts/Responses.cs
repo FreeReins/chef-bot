@@ -157,6 +157,9 @@ public sealed record SampleRecipeResponse(
 
 public sealed record AddSamplesResponse(int Added);
 
+/// <summary>A kind of recipe file that can be imported, for the file picker.</summary>
+public sealed record RecipeFileFormatResponse(string Name, IReadOnlyList<string> Extensions);
+
 /// <summary>Backup settings and the backups that exist, newest first.</summary>
 public sealed record BackupsResponse(
     bool Enabled,

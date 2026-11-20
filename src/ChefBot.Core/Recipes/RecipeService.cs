@@ -1,5 +1,6 @@
 using ChefBot.Core.Abstractions;
 using ChefBot.Core.Common;
+using ChefBot.Core.Recipes.Files;
 
 namespace ChefBot.Core.Recipes;
 
@@ -11,11 +12,18 @@ public sealed record RecipeDraft(
     bool IsSlowCooker = false,
     decimal? Servings = null);
 
+/// <summary>What importing a recipe file did.</summary>
+/// <param name="Added">Recipes new to the library.</param>
+/// <param name="AlreadyInLibrary">Recipes left alone because one with the same name is already there.</param>
+/// <param name="Skipped">Entries without a name or any ingredients.</param>
+public sealed record FileImportResult(int Added, int AlreadyInLibrary, int Skipped);
+
 /// <summary>Manages the recipes kept in ChefBot's own database.</summary>
 public sealed class RecipeService(
     IRecipeRepository recipes,
     IUnitOfWork unitOfWork,
     RecipeIngredientBuilder ingredients,
+    RecipeFileReader files,
     TimeProvider clock)
 {
     public async Task<IReadOnlyList<Recipe>> ListAsync(CancellationToken cancellationToken) =>
@@ -67,6 +75,15 @@ public sealed class RecipeService(
 
         await unitOfWork.CommitAsync(cancellationToken);
         return added;
+    }
+
+    /// <summary>Adds the recipes in an uploaded file. Importing the same file again adds nothing new.</summary>
+    /// <exception cref="RuleViolationException">The file is of an unknown kind or holds no recipes.</exception>
+    public async Task<FileImportResult> ImportFileAsync(string fileName, string text, CancellationToken cancellationToken)
+    {
+        var file = files.Read(fileName, text);
+        var added = await AddManyAsync(file.Recipes, cancellationToken);
+        return new FileImportResult(added, file.Recipes.Count - added, file.Skipped);
     }
 
     private void Apply(RecipeDraft draft, Recipe recipe)

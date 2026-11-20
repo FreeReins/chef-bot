@@ -24,6 +24,9 @@ public sealed record PurchaseAllRequest(DateOnly? PurchasedOn = null);
 /// <summary>Correct a pantry item. Null leaves a value unchanged.</summary>
 public sealed record UpdatePantryItemRequest(decimal? Quantity = null, DateOnly? ExpiresOn = null);
 
+/// <summary>A recipe file to import: its name, which decides the format, and its text as read by the browser.</summary>
+public sealed record ImportFileRequest(string FileName, string Content);
+
 public sealed record SignInRequest(string Username, string Password);
 
 /// <summary>Create an account from an invite link.</summary>

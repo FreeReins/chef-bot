@@ -8,6 +8,7 @@ using ChefBot.Core.Ingredients;
 using ChefBot.Core.Pantry;
 using ChefBot.Core.Planning;
 using ChefBot.Core.Recipes;
+using ChefBot.Core.Recipes.Files;
 using ChefBot.Core.Shopping;
 using ChefBot.Core.Swaps;
 using ChefBot.Core;
@@ -38,6 +39,12 @@ public static class ServiceRegistration
         // Pure logic with no state of its own.
         services.AddSingleton<RecipeClassifier>();
         services.AddSingleton<RecipeIngredientBuilder>();
+        services.AddSingleton<RecipeFileReader>();
+
+        // Recipe file formats, chosen by file name ending and then by the first one that recognises the file.
+        // Add a line here for each new kind of file; put specific formats before general ones like JsonRecipeFormat.
+        services.AddSingleton<IRecipeFileFormat, MealieBackupFormat>();
+        services.AddSingleton<IRecipeFileFormat, JsonRecipeFormat>();
         services.AddSingleton<WeekPlanner>();
         services.AddSingleton<StoreRouter>();
         services.AddSingleton<ShoppingListBuilder>();

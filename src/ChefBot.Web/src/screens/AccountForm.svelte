@@ -1,8 +1,9 @@
 <!-- Shared by the setup wizard and the invite page: both create an account. -->
 <script>
   import { run } from '../lib/app.svelte.js';
+  import SetupProgress from '../components/SetupProgress.svelte';
 
-  /** submit receives { displayName, username, password }. */
+  /** step: the setup step number, or null outside setup. submit receives { displayName, username, password }. */
   let { step = null, title, intro, button, submit } = $props();
 
   function onsubmit(event) {
@@ -17,7 +18,7 @@
 </script>
 
 <section class="gate">
-  {#if step}<p class="steps">{step}</p>{/if}
+  {#if step}<SetupProgress current={step} />{/if}
   <h2>{title}</h2>
   <p class="muted">{intro}</p>
   <form class="stack card" {onsubmit}>

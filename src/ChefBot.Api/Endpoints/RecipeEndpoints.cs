@@ -2,13 +2,14 @@ using ChefBot.Api.Contracts;
 using ChefBot.Api.Messaging;
 using ChefBot.Core.Common;
 using ChefBot.Core.Recipes;
+using ChefBot.Core.Recipes.Files;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine;
 using Wolverine.Http;
 
 namespace ChefBot.Api.Endpoints;
 
-/// <summary>The recipe library kept in ChefBot's own database, and importing into it from Mealie.</summary>
+/// <summary>The recipe library kept in ChefBot's own database, and importing into it from a file or Mealie.</summary>
 public static class RecipeEndpoints
 {
     [WolverineGet("/api/recipes")]
@@ -34,6 +35,20 @@ public static class RecipeEndpoints
     [WolverineDelete("/api/recipes/{id}")]
     public static Task Archive(Guid id, [FromServices] RecipeService recipes, CancellationToken cancellationToken) =>
         recipes.ArchiveAsync(id, cancellationToken);
+
+    /// <summary>The kinds of recipe file that can be imported.</summary>
+    [WolverineGet("/api/recipes/import/formats")]
+    public static IReadOnlyList<RecipeFileFormatResponse> FileFormats([FromServices] RecipeFileReader files) =>
+        files.Formats.Select(format => new RecipeFileFormatResponse(format.Name, format.Extensions)).ToList();
+
+    /// <summary>
+    /// Adds the recipes in a file, read with the format its name ending belongs to. Recipes whose name is
+    /// already in the library are left alone, so the same file can be imported again safely.
+    /// </summary>
+    [WolverinePost("/api/recipes/import/file")]
+    public static Task<FileImportResult> ImportFile(
+        ImportFileRequest request, [FromServices] RecipeService recipes, CancellationToken cancellationToken) =>
+        recipes.ImportFileAsync(request.FileName ?? string.Empty, request.Content ?? string.Empty, cancellationToken);
 
     /// <summary>Starts a Mealie import in the background. Poll the status endpoint for the outcome.</summary>
     [WolverinePost("/api/recipes/import/mealie")]

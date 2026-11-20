@@ -93,3 +93,52 @@ body { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
 }
 .link-box { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
 .link-box input { flex: 1 1 16rem; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; }
+/* Setup: the progress bar at the top of each step. */
+.progress { margin-bottom: 1rem; }
+.progress ol { list-style: none; margin: .35rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+.progress li { display: grid; gap: .3rem; font-size: .8rem; color: var(--muted); }
+.progress .segment { height: .4rem; border-radius: 1rem; background: var(--line); }
+.progress li.done .segment, .progress li.current .segment { background: var(--accent); }
+.progress li.current { color: var(--ink); font-weight: 600; }
+/* Setup step three: choices that expand one at a time, and a bar that keeps "Finish" in reach. */
+.choices { display: grid; gap: .6rem; margin-top: 1rem; }
+.choice { background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; }
+.choice[open] { border-color: var(--accent); }
+.choice summary { display: flex; gap: .75rem; align-items: center; justify-content: space-between; padding: .8rem 1rem; cursor: pointer; list-style: none; }
+.choice summary::-webkit-details-marker { display: none; }
+.choice summary::after { content: "▸"; color: var(--muted); transition: transform .15s; }
+.choice[open] summary::after { transform: rotate(90deg); }
+.choice summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: .5rem; }
+.choice-title { display: grid; flex: 1; min-width: 0; }
+.choice-body { padding: 0 1rem 1rem; border-top: 1px solid var(--line); padding-top: .8rem; }
+.two-up { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.source { display: grid; gap: .5rem; align-content: start; }
+.source p { margin: 0; }
+.drop { position: relative; display: grid; place-items: center; min-height: 4.5rem; border: 2px dashed var(--line); border-radius: .5rem;
+  color: var(--muted); text-align: center; padding: .75rem; cursor: pointer; }
+.drop:hover, .drop.dragging, .drop:focus-within { border-color: var(--accent); color: var(--ink); }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.file-results li { display: grid; font-size: .9rem; }
+.bad-text { color: var(--bad); font-size: .9rem; margin: 0; }
+.clip { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+p .clip { display: inline-block; max-width: 14rem; vertical-align: bottom; }
+button.link { border: 0; background: none; padding: 0 .25rem; color: var(--accent); text-decoration: underline; font-size: .9rem; }
+.spinner { display: inline-block; width: .8rem; height: .8rem; border: 2px solid var(--line); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -.1rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .choice summary::after { transition: none; } }
+.setup-bar { position: sticky; bottom: calc(3rem + env(safe-area-inset-bottom)); display: flex; gap: 1rem; align-items: center;
+  justify-content: space-between; margin-top: 1rem; padding: .6rem 1rem; background: var(--panel); border: 1px solid var(--line);
+  border-radius: .5rem; box-shadow: 0 2px 10px rgb(0 0 0 / .08); }
+/* The sample picker: course tabs over a two-column list. */
+.picker-head { align-items: center; margin-bottom: .5rem; }
+.segmented { display: flex; flex-wrap: wrap; gap: .25rem; }
+.segmented button { font-size: .85rem; padding: .25rem .65rem; border-radius: 1rem; }
+.segmented button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.segmented .count { opacity: .75; font-size: .8em; }
+.sample-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 1.25rem; }
+.sample { display: flex; gap: .55rem; align-items: flex-start; padding: .4rem 0; border-top: 1px solid var(--line); color: var(--ink); font-size: .95rem; }
+.sample input { margin-top: .3rem; }
+.sample.added { opacity: .6; }
+.sample-text { min-width: 0; flex: 1; }
+.sample-text .clip { font-size: .8rem; }

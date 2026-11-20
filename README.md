@@ -82,8 +82,13 @@ Open <http://localhost:8080>. The first visit starts the setup wizard:
 1. **Create your account.** This first account is the admin.
 2. **Secure connection.** Shows the HTTPS address, lets you name the certificate for the address you use,
    download it, and choose to always use HTTPS.
-3. **Choose starter recipes.** Review the 22 sample recipes with their ingredients, tick the ones you want,
-   or skip them all. You can come back to this list later from the Recipes tab.
+3. **Add your recipes.** Pick one or both:
+   - **Import my recipes** from a recipe file (JSON in ChefBot's own shape, the `database.json` from a Mealie
+     backup .zip, a Mealie recipe export or schema.org recipes from a website), as many files as you like, or connect Mealie once and import from it.
+   - **Start with sample recipes**: tick the ones you want from the 22 samples. You can come back to this
+     list later from the Recipes tab.
+
+   Or skip the step and add recipes later.
 
 Then press **Stage next week**.
 
@@ -257,6 +262,8 @@ The full description is served at `/openapi/v1.json`.
 | `POST /api/plans/{planId}/shopping/purchase-all` | Mark everything bought. Body `{}` |
 | `GET` `POST /api/pantry`, `PATCH` `DELETE /api/pantry/{id}` | Read and correct the pantry |
 | `GET` `POST /api/recipes`, `PUT` `DELETE /api/recipes/{id}` | Manage local recipes |
+| `POST /api/recipes/import/file` | Import a recipe file: `{"fileName": "recipes.json", "content": "..."}`. Names already in the library are skipped |
+| `GET /api/recipes/import/formats` | The kinds of recipe file that can be imported, with their file name endings |
 | `POST /api/recipes/import/mealie` | Start a background import. Poll `GET /api/recipes/import/status` |
 | `GET /api/session` | Whether setup is needed and who is signed in |
 | `POST /api/setup/account`, `POST /api/account/sign-in`, `POST /api/account/sign-out` | First account, signing in and out |
