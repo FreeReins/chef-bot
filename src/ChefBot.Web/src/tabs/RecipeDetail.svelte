@@ -1,11 +1,14 @@
 <!-- One recipe on its own page, /recipes/{id}, so it can be bookmarked: its photos, ingredients and steps to read.
      Editing it (/recipes/{id}/edit) and managing its photos (/recipes/{id}/photos) open in dialogs over the page,
-     and cooking mode (/recipes/{id}/cook, RecipeCook.svelte) over the whole screen; archiving it is in the ⋯ menu. -->
+     and cooking mode (/recipes/{id}/cook, RecipeCook.svelte) over the whole screen; sharing it as text, printing it and archiving it are
+     in the ⋯ menu. -->
 <script>
   import { tick } from 'svelte';
   import { app, run, loadRecipes, toast, ask } from '../lib/app.svelte.js';
   import { go, closeDialog } from '../lib/addresses.js';
   import { api } from '../lib/api.js';
+  import { duration } from '../lib/format.js';
+  import { canShare, share, recipeText } from '../lib/exporting.js';
   import Chip from '../components/Chip.svelte';
   import Modal from '../components/Modal.svelte';
   import RecipeForm from './RecipeForm.svelte';
@@ -18,10 +21,24 @@
   import Pencil from '@lucide/svelte/icons/pencil';
   import Ellipsis from '@lucide/svelte/icons/ellipsis';
   import Archive from '@lucide/svelte/icons/archive';
+  import Share2 from '@lucide/svelte/icons/share-2';
+  import Copy from '@lucide/svelte/icons/copy';
+  import Printer from '@lucide/svelte/icons/printer';
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
   const MAX_PHOTO_MB = 5;
+
+  /**
+   * "Back to recipes" is a link, so it can open in a new tab. When this page was opened from the list, a plain click
+   * goes back in history instead, so the list comes back as it was left: the same search, page and scroll position.
+   */
+  function backToList(event) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!/^\/recipes(\?|$)/.test(history.state?.from ?? '')) return;
+    event.preventDefault();
+    history.back();
+  }
 
   let { id } = $props();
 
@@ -47,13 +64,6 @@
     { key: 'steps', label: 'Steps' },
     ...(hasMore ? [{ key: 'more', label: 'Notes and source' }] : []),
   ]);
-
-  /** "45 min", "1 h", "1 h 10 min". */
-  function duration(minutes) {
-    const hours = Math.floor(minutes / 60);
-    const rest = minutes % 60;
-    return [hours ? `${hours} h` : '', rest ? `${rest} min` : ''].filter(Boolean).join(' ');
-  }
 
   /** Shows a recipe the server sent back, and names the browser tab after it. */
   function show(found) {
@@ -112,6 +122,20 @@
     return saved;
   }
 
+  // Sharing hands the recipe as text to the phone's share sheet; without one it is copied to paste anywhere.
+  function shareRecipe() {
+    menuOpen = false;
+    run(async () => {
+      const done = await share(recipe.name, recipeText(recipe));
+      if (done === 'copied') toast(`${recipe.name} was copied as text. Paste it wherever you need it.`);
+    });
+  }
+
+  function print() {
+    menuOpen = false;
+    window.print();
+  }
+
   async function archive() {
     menuOpen = false;
     if (!(await ask({ title: `Archive ${recipe.name}?`, message: "It won't be planned again, and past plans keep showing it.",
@@ -165,7 +189,7 @@
   }
 </script>
 
-<p class="back-row"><a class="back" href="/recipes"><ArrowLeft size={16} />All recipes</a></p>
+<p class="back-row"><a class="button back" href="/recipes" onclick={backToList}><ArrowLeft size={16} />Back to recipes</a></p>
 
 {#if !loaded}
   <p class="loading muted" role="status" aria-label="Loading the recipe"><LoaderCircle size={24} /></p>
@@ -202,6 +226,12 @@
           <button type="button" class="with-icon" aria-label="More actions for {recipe.name}" aria-expanded={menuOpen}
                   aria-controls="recipe-menu" onclick={() => (menuOpen = !menuOpen)}><Ellipsis size={18} /></button>
           <div id="recipe-menu" class="menu-panel" hidden={!menuOpen}>
+            {#if canShare()}
+              <button type="button" class="with-icon" onclick={shareRecipe}><Share2 size={16} />Share recipe</button>
+            {:else}
+              <button type="button" class="with-icon" onclick={shareRecipe}><Copy size={16} />Copy as text</button>
+            {/if}
+            <button type="button" class="with-icon" onclick={print}><Printer size={16} />Print recipe</button>
             <button type="button" class="with-icon bad-text" onclick={archive}><Archive size={16} />Archive recipe</button>
           </div>
         </div>
@@ -300,7 +330,6 @@
 
 <style>
   .back-row { margin: 1rem 0 0; }
-  .back { display: inline-flex; align-items: center; gap: .3rem; }
   .with-icon { display: inline-flex; align-items: center; gap: .35rem; }
 
   .hero { margin-top: .75rem; }
@@ -344,6 +373,15 @@
     .sections a { border: 1px solid var(--line); border-radius: 999px; padding: .25rem .75rem; font-size: .9rem; white-space: nowrap;
       text-decoration: none; }
     section[tabindex] { scroll-margin-top: 3.5rem; }
+  }
+
+  /* On paper: one small photo, ingredients beside the steps, and nothing to click. */
+  @media print {
+    .back-row, .row-actions, .sections, .strip { display: none; }
+    .cover { max-height: 7cm; }
+    .cook { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+    .ingredients { position: static; }
+    .steps li, .ingredients li { break-inside: avoid; }
   }
 
   .photo-grid { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .6rem;

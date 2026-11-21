@@ -6,9 +6,16 @@
 <script>
   import { untrack } from 'svelte';
   import { app, isConfirmed, run, loadPantry, addToShoppingList, buyEverything, toast } from '../lib/app.svelte.js';
-  import { FOOD_GROUPS, shortDate, weekName, freshness, plural } from '../lib/format.js';
+  import { FOOD_GROUPS, shortDate, weekName, freshness, plural, todayIso } from '../lib/format.js';
+  import { pending } from '../lib/pending.js';
+  import { canShare, share, download, shoppingText, shoppingCsv } from '../lib/exporting.js';
   import Chip from '../components/Chip.svelte';
   import IngredientLine from './IngredientLine.svelte';
+  import Share2 from '@lucide/svelte/icons/share-2';
+  import Copy from '@lucide/svelte/icons/copy';
+  import Printer from '@lucide/svelte/icons/printer';
+  import Download from '@lucide/svelte/icons/download';
+  import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
 
   // With a plan the pantry comes with its ingredients view; without one it is loaded on its own, as on the Pantry tab.
   $effect(() => {
@@ -65,15 +72,30 @@
     ].filter((group) => group.lines.length)
     : []);
 
+  // What is left to buy, to take out of ChefBot: shared or copied as a checklist, or saved as a spreadsheet.
+  const listTitle = $derived(app.plan ? `Shopping list, week of ${shortDate(app.plan.weekStart)}` : 'Shopping list');
+
+  function shareList() {
+    run(async () => {
+      if (await share(listTitle, shoppingText(listTitle, sections)) === 'copied') {
+        toast('The shopping list was copied. Paste it into a note or a message.');
+      }
+    });
+  }
+
+  function downloadCsv() {
+    run(async () => download(`shopping-list-${app.plan?.weekStart ?? todayIso()}.csv`, 'text/csv;charset=utf-8', shoppingCsv(sections)));
+  }
+
   async function add(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const added = await addToShoppingList({
+    const added = await pending(event, () => addToShoppingList({
       name: data.get('name'),
       quantity: data.get('quantity') ? Number(data.get('quantity')) : null,
       unit: data.get('unit') || null,
-    });
+    }));
     if (added) {
       form.reset();
       form.elements.name.focus();
@@ -87,13 +109,14 @@
 </script>
 
 <section>
+  <h2 class="print-only">{listTitle}</h2>
   {#if app.plan && !isConfirmed()}
-    <p class="card notice">
+    <p class="card notice no-print">
       A preview for the draft plan, {shortDate(app.plan.weekStart)} to {shortDate(app.plan.weekEnd)}.
       <a href="/plan">Confirm the plan</a> to tick its items off.
     </p>
   {:else if app.plan && app.plans.length > 1}
-    <p class="muted">
+    <p class="muted no-print">
       {weekName(app.plan.weekStart, app.plan.weekEnd)}: {shortDate(app.plan.weekStart)} to {shortDate(app.plan.weekEnd)}.
       Choose another week on the <a href="/plan">Plan tab</a>.
     </p>
@@ -111,7 +134,19 @@
     {/if}
   </div>
 
-  <form class="inline card add" onsubmit={add}>
+  {#if toBuy.length}
+    <div class="row-actions export">
+      {#if canShare()}
+        <button class="small with-icon" onclick={shareList}><Share2 size={14} />Share list</button>
+      {:else}
+        <button class="small with-icon" onclick={shareList}><Copy size={14} />Copy list</button>
+      {/if}
+      <button class="small with-icon" onclick={() => window.print()}><Printer size={14} />Print</button>
+      <button class="small with-icon" onclick={downloadCsv}><Download size={14} />Download CSV</button>
+    </div>
+  {/if}
+
+  <form class="inline card add no-print" onsubmit={add}>
     <label>Add to the list <input id="shopping-name" name="name" required placeholder="e.g. milk"></label>
     <label>Amount <input id="shopping-quantity" name="quantity" type="number" min="0" step="any"></label>
     <label>Unit <input id="shopping-unit" name="unit" size="6" placeholder="l"></label>
@@ -120,6 +155,7 @@
 
   {#if toBuy.length === 0}
     <div class="card empty-list">
+      <span class="empty-icon" style="--area: var(--area-shopping)" aria-hidden="true"><ShoppingCart size={24} /></span>
       <p class="muted">
         {app.plan
           ? 'Nothing left to buy for this plan. Add anything else you need above.'
@@ -127,18 +163,20 @@
       </p>
     </div>
   {/if}
-  {#each sections as section (section.key)}
-    <div class="card">
-      <h3>{section.title} <span class="count">{section.lines.length}</span></h3>
-      <ul class="plain">
-        {#each section.lines as line (line.manualId ?? line.shoppingItemId ?? line.name)}<IngredientLine {line} />{/each}
-      </ul>
-    </div>
-  {/each}
+  <div class="lists">
+    {#each sections as section (section.key)}
+      <div class="card">
+        <h3>{section.title} <span class="count">{section.lines.length}</span></h3>
+        <ul class="plain">
+          {#each section.lines as line (line.manualId ?? line.shoppingItemId ?? line.name)}<IngredientLine {line} />{/each}
+        </ul>
+      </div>
+    {/each}
+  </div>
 
   {#if restock.length}
-    <h2>Running out in the pantry ({restock.length})</h2>
-    <div class="card">
+    <h2 class="no-print">Running out in the pantry ({restock.length})</h2>
+    <div class="card no-print">
       <ul class="plain">
         {#each restock as item (item.id)}
           {@const warning = freshness(item)}
@@ -154,8 +192,8 @@
   {/if}
 
   {#if notListed.length}
-    <h2>Not on the list</h2>
-    <div class="card folds">
+    <h2 class="no-print">Not on the list</h2>
+    <div class="card folds no-print">
       {#each notListed as group (group.title)}
         <details>
           <summary>{group.title} ({group.lines.length})</summary>
@@ -184,11 +222,21 @@
   .head { align-items: center; margin-top: 1rem; }
   .head h2 { margin: 0; }
   .add { padding: .6rem 1rem; }
-  .empty-list { padding: 1.25rem 1rem; }
+  .empty-list { display: flex; gap: .9rem; align-items: center; padding: 1rem; }
+  .empty-list .empty-icon { flex: none; margin: 0; }
   h3 { margin-bottom: .25rem; }
   .count { color: var(--muted); font-weight: 400; font-size: .9rem; }
   .folds details { border-top: 1px solid var(--line); padding: .4rem 0; }
   .folds details:first-child { border-top: 0; }
   .folds summary { cursor: pointer; font-weight: 600; }
   .folds details > p { margin: .25rem 0; }
+  .export { margin-top: .5rem; }
+  .with-icon { display: inline-flex; align-items: center; gap: .3rem; }
+
+  /* On paper: only what is left to buy, in two columns with each store kept together. */
+  @media print {
+    .head { display: none; }
+    .lists { columns: 2; column-gap: 1.5rem; }
+    .lists .card { break-inside: avoid; margin: 0 0 .75rem; }
+  }
 </style>

@@ -39,9 +39,9 @@
 
 <article class="meal" class:done={!planned} class:leftover={meal.isLeftover} class:kept class:movable
          draggable={movable ? 'true' : undefined} ondragstart={movable ? startDrag : undefined} ondragend={movable ? ondragend : undefined}>
-  <div class="slot">
+  <div class="slot" data-slot={meal.isLeftover ? 'Leftovers' : meal.slot}>
     {#if movable}<span class="grip" title="Drag to another day"><GripVertical size={14} /></span>{/if}
-    <span>{label}{meal.isOptional ? ', optional' : ''}</span>
+    <span class="slot-name">{label}{meal.isOptional ? ', optional' : ''}</span>
   </div>
   <h4>
     {#if meal.recipeId && !meal.isLeftover}<a href="/recipes/{meal.recipeId}" class="quiet" draggable="false">{meal.title}</a>{:else}{meal.title}{/if}
@@ -91,6 +91,13 @@
   .meal.done, .meal.done :is(h4, a) { color: var(--muted); }
   .meal.done { background: var(--bg); }
   .slot { display: flex; align-items: center; gap: .2rem; color: var(--muted); font-size: .8rem; }
+  /* Each kind of meal has its colour, so a week reads at a glance. */
+  .slot-name { border-radius: 1rem; padding: 0 .45rem; background: var(--chip); }
+  [data-slot="Dinner"] .slot-name { color: var(--good); background: var(--good-bg); }
+  [data-slot="Breakfast"] .slot-name { color: var(--warn); background: var(--warn-bg); }
+  :is([data-slot="Lunch"], [data-slot="Leftovers"]) .slot-name { color: var(--info); background: var(--info-bg); }
+  [data-slot="Sweet"] .slot-name { color: var(--bad); background: var(--bad-bg); }
+  .meal.done .slot-name { color: var(--muted); background: var(--chip); }
   .grip { display: inline-flex; color: var(--muted); }
   h4 { margin: 0; font-size: .95rem; line-height: 1.3; }
   .quiet { color: inherit; text-decoration: none; }

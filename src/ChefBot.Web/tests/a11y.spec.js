@@ -62,6 +62,7 @@ const VIEWS = [
   { name: 'shopping, with two weeks planned', path: '/shopping', answers: weeks(data.plan(), data.nextPlan()) },
   { name: 'shopping without a plan', path: '/shopping', answers: { ...noPlan, 'GET /api/shopping/items': data.manualItems() } },
   { name: 'shopping without a plan, empty list', path: '/shopping', answers: { ...noPlan, 'GET /api/pantry': [] } },
+  { name: 'shopping, printed', path: '/shopping', act: (page) => page.emulateMedia({ media: 'print' }) },
   { name: 'pantry with a plan', path: '/pantry' },
   { name: 'pantry without a plan', path: '/pantry', answers: noPlan },
   {
@@ -104,6 +105,7 @@ const VIEWS = [
     act: (page) => page.getByRole('button', { name: /^More actions/ }).click()
       .then(() => page.getByRole('button', { name: 'Archive recipe' }).waitFor()),
   },
+  { name: 'a recipe, printed', path: `/recipes/${data.ids.tacos}`, act: (page) => page.emulateMedia({ media: 'print' }) },
   { name: 'a recipe without photos', path: `/recipes/${data.ids.stew}` },
   { name: 'editing a recipe', path: `/recipes/${data.ids.tacos}/edit` },
   { name: 'a recipe\'s photos', path: `/recipes/${data.ids.tacos}/photos` },
@@ -159,6 +161,17 @@ const VIEWS = [
       .then(() => page.getByRole('dialog').waitFor()),
   },
   { name: 'settings: login', path: '/settings/login' },
+  { name: 'settings: appearance', path: '/settings/appearance' },
+  {
+    name: 'dark mode chosen with the sun and moon button', path: '/plan',
+    act: async (page) => {
+      const before = await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches);
+      // In the dark project this picks light, so both themes are also checked when chosen rather than followed.
+      await page.getByRole('button', { name: before ? 'Switch to light mode' : 'Switch to dark mode' }).click();
+    },
+  },
+  { name: 'sign in, with the theme button', path: '/', answers: signedOut,
+    act: (page) => page.getByRole('button', { name: /^Switch to (light|dark) mode$/ }).click() },
   { name: 'settings: https', path: '/settings/https' },
   { name: 'settings: plan styles', path: '/settings/styles' },
   {
@@ -176,7 +189,32 @@ const VIEWS = [
     name: 'settings: a store open for editing', path: '/settings/stores',
     act: (page) => page.getByRole('button', { name: 'Edit' }).nth(1).click(),
   },
+  {
+    name: 'settings: stores, a change saved with Undo offered', path: '/settings/stores',
+    act: (page) => page.getByRole('button', { name: /^Remove/ }).first().click()
+      .then(() => page.getByRole('button', { name: 'Undo changes' }).waitFor())
+      .then(() => page.getByRole('status').filter({ hasText: 'Saved' }).waitFor()),
+  },
   { name: 'settings: notifications', path: '/settings/notifications' },
+  {
+    name: 'settings: notifications, saved by itself', path: '/settings/notifications',
+    act: (page) => page.getByRole('checkbox', { name: /^Today's meals/ }).click()
+      .then(() => page.getByRole('status').filter({ hasText: 'Saved' }).waitFor()),
+  },
+  {
+    name: 'settings: notifications, a field that stops it saving', path: '/settings/notifications',
+    act: async (page) => {
+      await page.getByLabel('Send daily reminders at').fill('');
+      await page.getByLabel('Send daily reminders at').blur();
+      await page.getByText('Not saved yet').waitFor();
+    },
+  },
+  {
+    name: 'settings: notifications, a save that failed', path: '/settings/notifications',
+    answers: { 'PUT /api/system/notifications': reply(500, { detail: 'The settings could not be saved. Try again in a minute.' }) },
+    act: (page) => page.getByRole('checkbox', { name: /^Today's meals/ }).click()
+      .then(() => page.getByRole('button', { name: 'Try again' }).waitFor()),
+  },
   {
     name: 'settings: backups with one opened', path: '/settings/backups',
     act: (page) => page.getByRole('button', { expanded: false }).first().click()

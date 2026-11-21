@@ -1,14 +1,15 @@
 <script>
   import { app, run, enterApp } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
+  import { pending } from '../lib/pending.js';
 
   function onsubmit(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    run(async () => {
+    pending(event, () => run(async () => {
       app.session.user = await api('POST', '/api/account/sign-in', { username: form.get('username'), password: form.get('password') });
       await enterApp();
-    });
+    }));
   }
 </script>
 

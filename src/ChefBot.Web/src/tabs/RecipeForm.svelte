@@ -1,5 +1,7 @@
 <!-- The fields of a recipe, for adding one in the Add a recipe dialog and editing one from its own page. -->
 <script>
+  import { pending } from '../lib/pending.js';
+
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
 
   /** recipe: the one being edited, or null for a new one. save(draft) receives a RecipeDraft. plain: no card around
@@ -21,7 +23,7 @@
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const saved = await save({
+    const saved = await pending(event, () => save({
       name: data.get('name'),
       course: data.get('course'),
       isSlowCooker: data.get('isSlowCooker') === 'on',
@@ -37,7 +39,7 @@
       yieldText: text(data, 'yieldText'),
       notes: text(data, 'notes'),
       tags: String(data.get('tags') ?? '').split(',').map((tag) => tag.trim()).filter(Boolean),
-    });
+    }));
     if (saved && !recipe) form.reset();
   }
 </script>

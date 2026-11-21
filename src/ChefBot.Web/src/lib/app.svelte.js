@@ -40,6 +40,7 @@ export const app = $state({
   swap: null,          // { mealId, options } while a meal's alternatives are open
   toasts: [],          // { id, text, kind: 'note' | 'error', action?: { label, run } } shown in the corner by Toasts.svelte
   confirmation: null,  // { title, message, confirmLabel, danger } while ConfirmDialog.svelte is asking
+  busy: 0,             // actions run() has started and not finished; App.svelte shows a progress bar while above 0
 });
 
 export const isConfirmed = () => app.plan?.status === 'Confirmed';
@@ -48,6 +49,7 @@ export const isAdmin = () => app.session?.user?.isAdmin === true;
 /** Runs an action, then shows either its result or a readable error. */
 export async function run(action) {
   clearErrors();
+  app.busy++;
   try {
     await action();
   } catch (error) {
@@ -57,6 +59,8 @@ export async function run(action) {
     } else {
       toast(error.message, 'error');
     }
+  } finally {
+    app.busy--;
   }
 }
 

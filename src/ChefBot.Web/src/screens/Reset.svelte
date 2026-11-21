@@ -1,15 +1,16 @@
 <script>
   import { app, run, enterApp, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
+  import { pending } from '../lib/pending.js';
 
   function onsubmit(event) {
     event.preventDefault();
     const password = new FormData(event.currentTarget).get('password');
-    run(async () => {
+    pending(event, () => run(async () => {
       app.session.user = await api('POST', '/api/account/reset-password', { token: app.linkToken, password });
       await enterApp();
       toast('Your password has been changed.');
-    });
+    }));
   }
 </script>
 

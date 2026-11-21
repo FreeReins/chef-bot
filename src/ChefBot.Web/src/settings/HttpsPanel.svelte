@@ -2,6 +2,7 @@
 <script>
   import { app, run, isAdmin, saveSecurity, httpsUrl, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
+  import { pending } from '../lib/pending.js';
   import Chip from '../components/Chip.svelte';
 
   const https = $derived(app.https);
@@ -10,10 +11,10 @@
   function regenerateCertificate(event) {
     event.preventDefault();
     const hostnames = String(new FormData(event.currentTarget).get('hostnames')).split(',').map((name) => name.trim()).filter(Boolean);
-    run(async () => {
+    pending(event, () => run(async () => {
       app.https = await api('POST', '/api/system/https/certificate', { hostnames });
       toast('A new certificate is in use. Your browser may ask you to accept it again.');
-    });
+    }));
   }
 
   async function setRequireHttps(event) {
@@ -63,7 +64,7 @@
     {/if}
     {#if isAdmin() && app.security}
       <label class="check" style="margin-top:.5rem">
-        <input id="require-https" type="checkbox" checked={app.security.requireHttps} onchange={setRequireHttps}>
+        <input id="require-https" type="checkbox" class="switch" checked={app.security.requireHttps} onchange={setRequireHttps}>
         <span>
           Always use HTTPS
           <span class="muted" style="display:block">Sends anyone arriving over plain HTTP to the HTTPS address. Turn it on once HTTPS works in your browser.</span>

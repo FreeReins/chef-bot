@@ -50,6 +50,13 @@ export function amount(quantity, unit) {
   return unit ? `${rounded} ${unit}` : `${rounded}`;
 }
 
+/** "45 min", "1 h", "1 h 10 min". */
+export function duration(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return [hours ? `${hours} h` : '', rest ? `${rest} min` : ''].filter(Boolean).join(' ');
+}
+
 /**
  * A warning about a pantry item's date: { tone, text } such as { tone: 'warn', text: '3 days left' }, or null when it
  * is fresh or has no date, since those need no attention.

@@ -199,6 +199,15 @@ has none.
   more than one place (the sample picker, file import, setup progress bar).
 - `src/styles.css` holds the colours and the shared building blocks: buttons, cards, rows, chips, forms and
   lists. Styles only one component uses go in that component's `<style>` block, where Svelte scopes them.
+- Each colour in `styles.css` is a token written as `light-dark(light, dark)`, so it is defined once for both
+  themes. The page follows the device until someone picks a theme with the sun and moon button
+  (`lib/theme.svelte.js`), which sets `data-theme` on `<html>`. Use the tokens rather than new hex values:
+  `--good`/`--warn`/`--bad`/`--info` with their `-bg` tints for status, `--accent-2` for small warm highlights,
+  and `--area-<tab>` for a tab's own colour on icons and borders, never on body text.
+- Settings save by themselves rather than with a Save button: `autosave()` from `lib/autosave.svelte.js` debounces
+  the save, checks it can be sent, and saves anything waiting when the section closes; `components/SaveStatus.svelte`
+  says how it went. Forms that send something once, such as signing in or adding an item, keep their button and
+  wrap the work in `pending(event, ...)` from `lib/pending.js`, so a second click doesn't send it again.
 - `./dev.sh web` builds the page once into `src/ChefBot.Api/wwwroot`, which is build output and not in git.
   Use it before a plain `dotnet run`, and to check that the page still builds.
 

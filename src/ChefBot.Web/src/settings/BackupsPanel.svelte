@@ -1,6 +1,8 @@
 <script>
   import { app, run, toast, ask } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
+  import { autosave } from '../lib/autosave.svelte.js';
+  import SaveStatus from '../components/SaveStatus.svelte';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import Download from '@lucide/svelte/icons/download';
@@ -30,18 +32,22 @@
     });
   }
 
-  function save(event) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    run(async () => {
-      app.backups = await api('PUT', '/api/system/backups', {
-        enabled: data.get('enabled') === 'on',
-        time: data.get('time'),
-        keepCount: Number(data.get('keepCount')),
-        keepDays: Number(data.get('keepDays')),
-      });
-      toast('Backup settings saved.');
+  let form;
+
+  // Saved shortly after each change; a field is changed once it is left or Enter is pressed.
+  const saver = autosave(async () => {
+    const data = new FormData(form);
+    app.backups = await api('PUT', '/api/system/backups', {
+      enabled: data.get('enabled') === 'on',
+      time: data.get('time'),
+      keepCount: Number(data.get('keepCount')),
+      keepDays: Number(data.get('keepDays')),
     });
+  }, { validate: () => form.checkValidity() });
+
+  function submit(event) {
+    event.preventDefault();
+    saver.retry();
   }
 
   const runNow = () => run(async () => {
@@ -65,9 +71,9 @@
 </script>
 
 <h2>Backups</h2>
-<form class="stack card" onsubmit={save}>
+<form class="stack card" bind:this={form} onchange={saver.schedule} onsubmit={submit}>
   <label class="check">
-    <input id="backup-enabled" name="enabled" type="checkbox" checked={backups.enabled}>
+    <input id="backup-enabled" name="enabled" type="checkbox" class="switch" checked={backups.enabled}>
     <span>Back up automatically every day</span>
   </label>
   <label>At <input id="backup-time" name="time" type="time" required value={backups.time}></label>
@@ -78,8 +84,8 @@
     <input id="backup-days" name="keepDays" type="number" min="0" max="3650" required value={backups.keepDays}>
   </label>
   {#if backups.lastResult}<p class="muted">{backups.lastResult}</p>{/if}
+  <SaveStatus {saver} />
   <div class="row-actions">
-    <button type="submit" class="primary">Save</button>
     <button type="button" onclick={runNow}>Back up now</button>
   </div>
 </form>

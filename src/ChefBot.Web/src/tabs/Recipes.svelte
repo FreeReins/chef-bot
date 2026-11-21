@@ -71,6 +71,19 @@
     .filter((group) => group.recipes.length > 0));
   const adding = $derived(app.recipeDialog?.startsWith('new-') ?? false);
 
+  // This component stays while a recipe is open, so the search, course and page are kept; coming back to the list
+  // also scrolls to where it was left. scrollY is read before the list is swapped for the recipe.
+  let listScroll = 0;
+  $effect.pre(() => {
+    if (app.recipeId) listScroll = untrack(() => scrollY);
+  });
+  $effect(() => {
+    if (!app.recipeId && listScroll) {
+      scrollTo(0, listScroll);
+      listScroll = 0;
+    }
+  });
+
   function turnTo(next) {
     page = next;
     listTop?.scrollIntoView({ block: 'start' });
@@ -195,7 +208,7 @@
   .filters p { margin: 0; flex-basis: 100%; }
   .filters p:empty { display: none; }
   .layout button { display: inline-flex; align-items: center; gap: .3rem; }
-  .empty :global(svg) { color: var(--muted); }
+  .empty :global(svg) { color: var(--area-recipes); }
   .empty h3 { margin: .5rem 0 .25rem; }
   .empty .row-actions { justify-content: center; margin-top: 1rem; }
   .course { margin: 1.25rem 0 .5rem; }
@@ -203,8 +216,9 @@
   .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: .9rem;
     grid-template-columns: repeat(auto-fill, minmax(min(13.5rem, 100%), 1fr)); }
   .cards li { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: .6rem;
-    overflow: hidden; }
-  .cards li:hover, .cards li:focus-within { border-color: var(--accent); }
+    overflow: hidden; transition: border-color .15s, box-shadow .15s, translate .15s; }
+  .cards li:hover, .cards li:focus-within { border-color: var(--area-recipes); box-shadow: 0 6px 18px var(--shadow); translate: 0 -2px; }
+  @media (prefers-reduced-motion: reduce) { .cards li { transition: none; } .cards li:hover, .cards li:focus-within { translate: none; } }
   .recipe-card { display: flex; flex-direction: column; color: var(--ink); text-decoration: none; flex: 1; }
   .recipe-card:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .cover { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--chip); }

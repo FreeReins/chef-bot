@@ -1,31 +1,52 @@
-<!-- Settings, Plan styles: the ways weeks can be planned. Anyone signed in can change them; plans already made keep
-     the style they were made with. -->
+<!-- Settings, Plan styles: the ways weeks can be planned. Anyone signed in can change them, and changes save by
+     themselves; plans already made keep the style they were made with. -->
 <script>
-  import { app, run, saveStyles, toast } from '../lib/app.svelte.js';
+  import { app, saveStyles } from '../lib/app.svelte.js';
+  import { autosave } from '../lib/autosave.svelte.js';
   import PlanStyleEditor from '../components/PlanStyleEditor.svelte';
+  import SaveStatus from '../components/SaveStatus.svelte';
 
-  let styles = $state($state.snapshot(app.styles.styles));
+  const opened = JSON.stringify(app.styles.styles);
+  let styles = $state(JSON.parse(opened));
+  // What the server has now, as JSON: what the section opened with, then each list sent.
+  let saved = opened;
+  let editor;
 
-  const changed = $derived(JSON.stringify($state.snapshot(styles)) !== JSON.stringify(app.styles.styles));
+  const current = () => JSON.stringify($state.snapshot(styles));
+  const changedSinceOpening = $derived(JSON.stringify(styles) !== opened);
 
-  function save() {
-    run(async () => {
-      await saveStyles($state.snapshot(styles));
-      styles = $state.snapshot(app.styles.styles);
-      toast(styles.length
-        ? 'Plan styles saved. The next week you plan can use them.'
-        : 'Plan styles saved. Weeks are planned as the Classic week until you add one.');
-    });
+  /** Every style needs a name of its own, and the editor's number fields must hold numbers in range. */
+  function complete() {
+    const names = styles.map((style) => style.name.trim().toLowerCase());
+    return names.every(Boolean) && new Set(names).size === names.length && !editor?.querySelector(':invalid');
   }
+
+  // Names and numbers are typed in, so it waits a little longer for the typing to pause.
+  const saver = autosave(async () => {
+    const sending = current();
+    await saveStyles(JSON.parse(sending));
+    saved = sending;
+  }, { validate: complete, delay: 1000 });
+
+  $effect(() => {
+    if (current() !== saved) saver.schedule();
+  });
 </script>
 
 <h2>Plan styles</h2>
 <p class="muted">
   A plan style says which days you cook dinner, what else to plan, and rules for the recipes it picks. The default is
-  used for the weekly schedule and preselected when you plan a week; you can choose another each time.
+  used for the weekly schedule and preselected when you plan a week; you can choose another each time. With no
+  styles, weeks are planned as the Classic week.
 </p>
-<div class="card"><PlanStyleEditor bind:styles /></div>
-<div class="row-actions">
-  <button type="button" class="primary" disabled={!changed} onclick={save}>Save plan styles</button>
-  {#if changed}<button type="button" onclick={() => (styles = $state.snapshot(app.styles.styles))}>Undo changes</button>{/if}
+<div class="card" bind:this={editor}><PlanStyleEditor bind:styles /></div>
+<div class="row status-row">
+  <SaveStatus {saver} invalid="Not saved yet: give every style a name of its own, and keep the numbers in range." />
+  {#if changedSinceOpening}
+    <button type="button" class="small" onclick={() => (styles = JSON.parse(opened))}>Undo changes</button>
+  {/if}
 </div>
+
+<style>
+  .status-row { align-items: center; }
+</style>

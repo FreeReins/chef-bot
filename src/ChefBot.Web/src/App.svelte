@@ -20,6 +20,7 @@
   import Settings from './tabs/Settings.svelte';
   import Toasts from './components/Toasts.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
+  import ThemeToggle from './components/ThemeToggle.svelte';
   import CalendarDays from '@lucide/svelte/icons/calendar-days';
   import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
   import Refrigerator from '@lucide/svelte/icons/refrigerator';
@@ -36,7 +37,7 @@
     { key: 'recipes', label: 'Recipes', icon: ChefHat },
     { key: 'people', label: 'People', icon: Users, adminOnly: true },
     { key: 'settings', label: 'Settings', icon: SettingsIcon },
-  ];
+  ].map((tab) => ({ ...tab, area: `var(--area-${tab.key})` }));
   const GATES = { 'setup-account': SetupAccount, 'setup-https': SetupHttps, 'setup-recipes': SetupRecipes,
     'setup-styles': SetupPlanStyle, 'setup-stores': SetupStores, 'setup-samples': SetupSamples,
     'sign-in': SignIn, join: Join, reset: Reset };
@@ -60,8 +61,12 @@
 
 <svelte:head><title>{title ? `${title} · ChefBot` : 'ChefBot'}</title></svelte:head>
 
+<!-- Shown while something takes a moment to save or load, so a slow click doesn't look ignored. -->
+{#if app.busy}<div class="busy-bar" role="progressbar" aria-label="Working"></div>{/if}
+
 <header class="top">
-  <div>
+  <div class="brand">
+    <span class="mark" aria-hidden="true"><ChefHat size={22} /></span>
     <h1>ChefBot</h1>
     <p id="week" class="muted">
       {#if !inApp}
@@ -74,12 +79,13 @@
       {/if}
     </p>
   </div>
-  {#if inApp}
-    <div class="actions account">
+  <div class="actions account">
+    <ThemeToggle />
+    {#if inApp}
       <span class="muted name">{app.session.user.displayName}</span>
       <button onclick={signOut}>Sign out</button>
-    </div>
-  {/if}
+    {/if}
+  </div>
 </header>
 
 <Toasts />
@@ -88,7 +94,7 @@
 {#if inApp}
   <nav class="tabs" aria-label="Views">
     {#each tabs as tab (tab.key)}
-      <a href="/{tab.key}" aria-current={app.tab === tab.key ? 'page' : undefined}><tab.icon size={18} /><span class="tab-label">{tab.label}</span></a>
+      <a href="/{tab.key}" style="--area: {tab.area}" aria-current={app.tab === tab.key ? 'page' : undefined}><tab.icon size={18} /><span class="tab-label">{tab.label}</span></a>
     {/each}
   </nav>
 {/if}
@@ -125,14 +131,28 @@
 <style>
   .top { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-start; }
   .top > div:first-child { margin-right: auto; }
+  /* The logo mark and the name share the first line; the week is under the name. */
+  .brand { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: .6rem; align-items: center; }
+  .brand #week { grid-column: 2; }
+  .mark { grid-row: 1 / span 2; display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: .7rem;
+    color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 14%, var(--panel)); }
+  .account { align-items: center; }
   .name { align-self: center; }
+  .busy-bar { position: fixed; inset: 0 0 auto 0; z-index: 30; height: 3px; overflow: hidden; pointer-events: none;
+    background: color-mix(in srgb, var(--accent) 25%, transparent); animation: appear .3s step-end; }
+  .busy-bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    animation: slide 1.1s ease-in-out infinite; }
+  /* Hidden for its first moments, so quick actions don't flicker it. */
+  @keyframes appear { from { visibility: hidden; } }
+  @keyframes slide { from { left: -35%; } to { left: 100%; } }
+  @media (prefers-reduced-motion: reduce) { .busy-bar::after { animation: none; width: 100%; } }
   .tabs { display: flex; gap: .25rem; margin: 1.25rem 0 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
   .tabs a { display: inline-flex; align-items: center; gap: .45rem; border-bottom: 3px solid transparent; color: var(--muted);
     padding: .6rem .9rem; text-decoration: none; white-space: nowrap; }
-  .tabs a :global(svg) { flex: none; }
-  .tabs a:hover { color: var(--ink); }
+  .tabs a :global(svg) { flex: none; color: var(--area); }
+  .tabs a:hover { color: var(--ink); background: color-mix(in srgb, var(--area) 8%, transparent); }
   .tabs a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+  .tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--area); font-weight: 600; }
   /* Pinned to the bottom of the window; the body's bottom padding in styles.css keeps content clear of it. */
   .site-footer { position: fixed; inset: auto 0 0 0; z-index: 10; background: var(--bg); border-top: 1px solid var(--line);
     padding: .45rem 1rem calc(.45rem + env(safe-area-inset-bottom)); }
@@ -161,6 +181,7 @@
   @media (max-width: 40rem) {
     .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title account"; gap: .75rem; }
     .top > div:first-child { grid-area: title; margin: 0; }
+    .mark { width: 2.2rem; height: 2.2rem; }
     .account { grid-area: account; }
     .account .name { display: none; }
     .tabs { position: fixed; inset: auto 0 0 0; z-index: 10; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
@@ -168,7 +189,7 @@
       padding-bottom: env(safe-area-inset-bottom); }
     .tabs a { flex-direction: column; gap: .15rem; min-width: 0; padding: .45rem .1rem .4rem; font-size: .7rem;
       border-bottom: 0; border-top: 3px solid transparent; }
-    .tabs a[aria-current="page"] { border-top-color: var(--accent); }
+    .tabs a[aria-current="page"] { border-top-color: var(--area); background: color-mix(in srgb, var(--area) 10%, var(--bg)); }
     .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
     .site-footer { position: static; margin-top: 1.5rem; padding-bottom: .45rem; background: none; }
   }

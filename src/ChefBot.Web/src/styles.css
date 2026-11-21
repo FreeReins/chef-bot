@@ -1,16 +1,28 @@
 /* ChefBot's web page: the colours and the building blocks every component shares (buttons, cards, rows, chips,
    forms, lists). main.js imports it. Styles that only one component uses live in that component's <style>. */
+/* Each colour is light-dark(light, dark). The page follows the device's setting until someone picks one with the
+   sun and moon button (lib/theme.svelte.js), which sets data-theme on <html>; index.html applies it before the
+   first paint. Text colours keep at least 4.5:1 contrast on --bg, --panel and their own -bg tint; the tests check. */
 :root {
-  --bg: #f6f7f4; --panel: #ffffff; --ink: #1d2420; --muted: #5d6963; --line: #dfe4de;
-  --accent: #2f6b4f; --accent-ink: #ffffff; --warn: #9c5400; --bad: #a3322b; --good: #2f6b4f; --chip: #edf1ec;
+  color-scheme: light dark;
+  --bg: light-dark(#f6f7f4, #141816); --panel: light-dark(#ffffff, #1c2220); --ink: light-dark(#1d2420, #e7ece8);
+  --muted: light-dark(#5d6963, #9aa7a0); --line: light-dark(#dfe4de, #2d3632); --chip: light-dark(#edf1ec, #252d2a);
+  --accent: light-dark(#2f6b4f, #7fc8a3); --accent-ink: light-dark(#ffffff, #10201a); --accent-bg: light-dark(#e2efe7, #1e3329);
+  /* A warm second colour, for the logo mark and small highlights. */
+  --accent-2: light-dark(#a84d26, #f0a27a);
+  /* Status colours, each with a tint to sit on. */
+  --good: light-dark(#2f6b4f, #7fc8a3); --good-bg: light-dark(#e2efe7, #1e3329);
+  --warn: light-dark(#8a4b00, #e5a04c); --warn-bg: light-dark(#fbeedb, #33270f);
+  --bad: light-dark(#a3322b, #ee8a82); --bad-bg: light-dark(#fae6e3, #3a211f);
+  --info: light-dark(#1f5a99, #8cb8ee); --info-bg: light-dark(#e3edf9, #1b2a3d);
+  /* One colour per area of the app, for its tab icon and highlights. Not for body text. */
+  --area-plan: light-dark(#2f6b4f, #7fc8a3); --area-shopping: light-dark(#2563a8, #8cb8ee);
+  --area-pantry: light-dark(#a35f08, #e5a04c); --area-recipes: light-dark(#b4532a, #f0a27a);
+  --area-people: light-dark(#7048b0, #b9a0ec); --area-settings: light-dark(#556675, #a3b2bf);
+  --shadow: light-dark(rgb(29 36 32 / .1), rgb(0 0 0 / .4));
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #141816; --panel: #1c2220; --ink: #e7ece8; --muted: #9aa7a0; --line: #2d3632;
-    --accent: #7fc8a3; --accent-ink: #10201a; --warn: #e5a04c; --bad: #ee8a82; --good: #7fc8a3; --chip: #252d2a;
-    color-scheme: dark;
-  }
-}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 * { box-sizing: border-box; }
 /* The bottom padding keeps content clear of the footer pinned to the bottom of the window (App.svelte). Phones
    change this at the end of the file. */
@@ -34,20 +46,41 @@ a { color: var(--accent); }
 /* Buttons, and links that look like buttons (they keep an address you can open in a new tab). */
 button { font: inherit; padding: .4rem .8rem; border-radius: .4rem; border: 1px solid var(--line); background: var(--panel);
   color: var(--ink); cursor: pointer; }
-button:hover { border-color: var(--accent); }
+/* Hover tints a plain button and deepens a coloured one. :where() keeps these weak, so a component's own button
+   styles (a borderless toggle, a menu item) still win. */
+:where(button, a.button):where(:not(:disabled, [aria-disabled="true"])):hover { border-color: var(--accent); background: var(--accent-bg); }
+:where(button, a.button):where(.primary):where(:not(:disabled, [aria-disabled="true"])):hover {
+  background: color-mix(in srgb, var(--accent) 85%, var(--ink)); border-color: color-mix(in srgb, var(--accent) 85%, var(--ink)); }
+:where(button):where(.danger):where(:not(:disabled)):hover {
+  background: color-mix(in srgb, var(--bad) 85%, var(--ink)); border-color: color-mix(in srgb, var(--bad) 85%, var(--ink)); }
+/* A press nudges the button down, so a click feels like it landed. */
+:where(button, a.button):where(:not(:disabled, [aria-disabled="true"])):active { translate: 0 1px; }
+:where(button, a.button, input, select, textarea, .chip) { transition: background-color .15s, border-color .15s, color .15s, box-shadow .15s, translate .1s; }
+@media (prefers-reduced-motion: reduce) { :where(button, a.button, input, select, textarea, .chip) { transition: none; } }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 /* For confirming a change that loses data. */
 button.danger { background: var(--bad); color: var(--bg); border-color: var(--bad); }
 button.small { padding: .15rem .55rem; font-size: .85rem; }
 /* A borderless icon button or link, such as a meal's swap arrows. Add remove for a trash can that turns red on hover. */
-button.icon, a.icon { display: inline-flex; border: 0; background: none; padding: .2rem; line-height: 1; color: var(--muted); }
-button.icon:hover, a.icon:hover { color: var(--accent); }
-button.icon.remove:hover { color: var(--bad); }
-button:disabled { opacity: .5; cursor: default; }
+button.icon, a.icon { display: inline-flex; border: 0; border-radius: .4rem; background: none; padding: .2rem; line-height: 1; color: var(--muted); }
+button.icon:hover, a.icon:hover { color: var(--accent); background: var(--accent-bg); }
+button.icon.remove:hover { color: var(--bad); background: var(--bad-bg); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+/* A button whose action is under way (lib/pending.js): it shows a spinner and ignores more clicks. */
+button[aria-busy="true"] { cursor: progress; }
+button[aria-busy="true"]::before { content: ""; display: inline-block; width: .8em; height: .8em; margin-right: .4em; vertical-align: -.05em;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { button[aria-busy="true"]::before { animation: none; border-right-color: currentColor; } }
 a.button { display: inline-block; border: 1px solid var(--line); border-radius: .4rem; background: var(--panel); color: var(--ink);
   padding: .4rem .8rem; text-decoration: none; }
-a.button:hover { border-color: var(--accent); }
+/* A way back to the list a page belongs to, such as a recipe's "Back to recipes". The arrow leads the way on hover. */
+a.button.back { display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .3rem .85rem .3rem .65rem;
+  font-size: .9rem; color: var(--ink); }
+a.button.back :is(svg) { color: var(--accent); transition: translate .15s; }
+a.button.back:hover :is(svg) { translate: -3px 0; }
+@media (prefers-reduced-motion: reduce) { a.button.back:hover :is(svg) { translate: none; } }
 a.button.small { padding: .15rem .55rem; font-size: .85rem; }
 a.button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .actions, .row-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
@@ -58,6 +91,9 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); border-c
 .card.done { background: var(--bg); }
 .card.done, .card.done :is(h3, a) { color: var(--muted); }
 .empty { text-align: center; padding: 2.5rem 1rem; }
+/* An empty state's icon, in the colour of the area it belongs to (style="--area: var(--area-pantry)"). */
+.empty-icon { display: inline-grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; margin-bottom: .5rem;
+  color: var(--area, var(--accent)); background: color-mix(in srgb, var(--area, var(--accent)) 12%, var(--panel)); }
 .row { display: flex; flex-wrap: wrap; gap: .5rem 1rem; justify-content: space-between; align-items: baseline; }
 .row > :first-child { min-width: 0; flex: 1 1 14rem; }
 .grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr)); }
@@ -69,28 +105,46 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); border-c
 /* Chips and pills */
 .chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
 .chip { background: var(--chip); border-radius: 1rem; padding: .05rem .55rem; font-size: .8rem; color: var(--muted); white-space: nowrap; }
-.chip.good { color: var(--good); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--bad); }
+.chip.good { color: var(--good); background: var(--good-bg); } .chip.warn { color: var(--warn); background: var(--warn-bg); }
+.chip.bad { color: var(--bad); background: var(--bad-bg); } .chip.info { color: var(--info); background: var(--info-bg); }
 .pill { display: inline-block; border-radius: 1rem; padding: .1rem .6rem; font-size: .8rem; font-weight: 600; border: 1px solid currentColor; }
 /* A row of rounded buttons, one of them selected: tabs inside a picker. */
 .segmented { display: flex; flex-wrap: wrap; gap: .25rem; }
 .segmented button { font-size: .85rem; padding: .25rem .65rem; border-radius: 1rem; }
 .segmented button[aria-selected="true"], .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.pill.staged { color: var(--warn); } .pill.confirmed { color: var(--good); }
+.pill.staged { color: var(--warn); background: var(--warn-bg); } .pill.confirmed { color: var(--good); background: var(--good-bg); }
 
 /* Lists */
 ul.plain { list-style: none; margin: 0; padding: 0; }
 ul.plain li { padding: .35rem 0; border-top: 1px solid var(--line); }
 ul.plain li:first-child { border-top: 0; }
 /* A checkbox with a label and explanation beside it. */
-.check { display: flex; gap: .6rem; align-items: flex-start; padding: .45rem 0; border-top: 1px solid var(--line); color: var(--ink); font-size: 1rem; }
+.check { display: flex; gap: .6rem; align-items: flex-start; padding: .45rem .4rem; margin: 0 -.4rem; border-top: 1px solid var(--line);
+  border-radius: .3rem; color: var(--ink); font-size: 1rem; cursor: pointer; }
 .check:first-of-type { border-top: 0; }
-.check input { margin-top: .3rem; }
+.check:hover { background: var(--accent-bg); }
+.check input { margin-top: .3rem; flex: none; }
+/* An on/off switch. Still a checkbox underneath, so keys and screen readers treat it as one. */
+input[type="checkbox"].switch { appearance: none; width: 2.3rem; height: 1.3rem; margin-top: .15rem; border-radius: 999px; cursor: pointer;
+  background: var(--chip); border: 1px solid var(--muted); position: relative; transition: background-color .15s, border-color .15s; }
+input[type="checkbox"].switch::after { content: ""; position: absolute; top: 50%; left: .15rem; width: .9rem; height: .9rem; border-radius: 50%;
+  background: var(--muted); translate: 0 -50%; transition: left .15s, background-color .15s; }
+input[type="checkbox"].switch:checked { background: var(--accent); border-color: var(--accent); }
+input[type="checkbox"].switch:checked::after { left: calc(100% - 1.05rem); background: var(--accent-ink); }
+input[type="checkbox"].switch:disabled { opacity: .5; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { input[type="checkbox"].switch, input[type="checkbox"].switch::after { transition: none; } }
 
 /* Forms */
 form.stack { display: grid; gap: .5rem; }
 form.inline { display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; }
 label { display: grid; gap: .15rem; font-size: .85rem; color: var(--muted); }
 input:not([type="checkbox"]), select, textarea { font: inherit; padding: .35rem .5rem; border: 1px solid var(--line); border-radius: .4rem; background: var(--panel); color: var(--ink); min-width: 0; }
+:where(input:not([type="checkbox"], [type="radio"], [type="file"]), select, textarea):hover { border-color: var(--muted); }
+:where(input:not([type="checkbox"], [type="radio"], [type="file"]), select, textarea):focus { border-color: var(--accent); }
+/* A field the browser found wrong after someone left it, for example a required time cleared. */
+:where(input, select, textarea):user-invalid { border-color: var(--bad); }
+::placeholder { color: var(--muted); opacity: 1; }
+input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color: var(--accent); }
 input[type="number"] { width: 6rem; }
 textarea { min-height: 7rem; }
 
@@ -98,6 +152,27 @@ textarea { min-height: 7rem; }
 @media (pointer: coarse) {
   button.small, a.button.small { padding: .4rem .7rem; }
   button.icon, a.icon { padding: .5rem; }
+}
+
+/* Shown only on paper, or only on screen: a printed page's title, or controls that mean nothing once printed. */
+.print-only { display: none; }
+
+/* On paper: black on white whatever the screen's theme, with no tabs, header, footer, messages or buttons. A screen
+   with its own print layout (RecipeDetail, Shopping) adds to this in its <style>. */
+@media print {
+  :root {
+    --bg: #ffffff; --panel: #ffffff; --ink: #000000; --muted: #444444; --line: #cccccc;
+    --accent: #000000; --accent-ink: #ffffff; --warn: #000000; --bad: #000000; --good: #000000; --chip: #ffffff;
+    color-scheme: light;
+  }
+  body, body:has(nav.tabs) { max-width: none; padding: 0; font-size: 11pt; }
+  nav.tabs, footer.site-footer, .toasts, .no-print, button, select { display: none !important; }
+  /* Off the paper but kept in the page, so its heading still starts the outline. */
+  header.top { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .print-only { display: block; }
+  .card { border: 0; padding: 0; margin: .5rem 0; }
+  .chip { border: 1px solid var(--line); }
+  a { color: inherit; text-decoration: none; }
 }
 
 /* Phones. In the app the tabs are a bar pinned to the bottom (App.svelte), so the body keeps clear of it; the

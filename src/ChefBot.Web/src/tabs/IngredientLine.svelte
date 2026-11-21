@@ -15,16 +15,23 @@
   const stores = $derived(app.stores?.stores ?? []);
   const canMove = $derived(toBuy && stores.length > 0);
 
-  const buy = () => (manual ? buyManual(`${line.manualId}/purchase`) : planAction(`shopping/${line.shoppingItemId}/purchase`, {}));
+  // Struck through as soon as it is ticked; the line leaves the list once the purchase is saved.
+  let buying = $state(false);
+  const buy = async () => {
+    buying = true;
+    await (manual ? buyManual(`${line.manualId}/purchase`) : planAction(`shopping/${line.shoppingItemId}/purchase`, {}));
+    buying = false;
+  };
   const move = (store) => (manual ? setManualStore(line.manualId, store) : setShoppingStore(line.shoppingItemId, store));
 </script>
 
-<li class="line">
+<li class="line" class:buying class:tickable={canBuy}>
   {#if toBuy}
-    <input type="checkbox" class="tick" aria-label="Bought: {line.name}" disabled={!canBuy}
-           title={canBuy ? 'Tick off once bought' : 'Confirm the plan to tick this off'} onchange={buy}>
+    <input type="checkbox" class="tick" id="tick-{itemId}" aria-label="Bought: {line.name}" disabled={!canBuy || buying}
+           checked={buying} title={canBuy ? 'Tick off once bought' : 'Confirm the plan to tick this off'} onchange={buy}>
   {/if}
-  <div class="what">
+  <!-- The name ticks the box too, a bigger target than the box alone. -->
+  <svelte:element this={canBuy ? 'label' : 'div'} class="what" for={canBuy ? `tick-${itemId}` : undefined}>
     <strong>{line.name}</strong> <span class="amount">{amount(line.quantity, line.unit)}</span>
     {#if line.isOptional || line.expiresOn}
       <span class="chips">
@@ -33,7 +40,7 @@
       </span>
     {/if}
     {#if line.usedIn.length}<span class="muted for">For {line.usedIn.join(', ')}</span>{/if}
-  </div>
+  </svelte:element>
   <div class="row-actions">
     {#if canMove}
       <select class="store" aria-label="Where to buy {line.name}" title="Where to buy it" value={line.store ?? ''}
@@ -54,7 +61,10 @@
   .line { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .75rem; }
   .tick { width: 1.15rem; height: 1.15rem; margin: 0; flex: none; accent-color: var(--accent); cursor: pointer; }
   .tick:disabled { cursor: default; }
-  .what { flex: 1 1 12rem; min-width: 0; }
+  .what { display: block; flex: 1 1 12rem; min-width: 0; font-size: 1rem; color: var(--ink); }
+  .tickable .what { cursor: pointer; }
+  .tickable:hover strong { text-decoration: underline; text-decoration-color: var(--accent); }
+  .buying strong, .buying .amount { text-decoration: line-through; color: var(--muted); }
   .amount { color: var(--muted); }
   .what .chips { display: inline-flex; margin: 0 0 0 .25rem; vertical-align: middle; }
   .for { display: block; font-size: .82rem; }
@@ -64,4 +74,9 @@
   /* At least 16px on phones, so iPhones don't zoom in on it; bigger tick box for fingers. */
   @media (max-width: 40rem) { .store { font-size: 1rem; padding: .3rem .4rem; } }
   @media (pointer: coarse) { .tick { width: 1.4rem; height: 1.4rem; } }
+  /* On paper an empty box to tick with a pen, which a greyed-out checkbox wouldn't give. */
+  @media print {
+    .tick { appearance: none; width: .9rem; height: .9rem; border: 1px solid #000; border-radius: .15rem; opacity: 1; }
+    .line { break-inside: avoid; }
+  }
 </style>

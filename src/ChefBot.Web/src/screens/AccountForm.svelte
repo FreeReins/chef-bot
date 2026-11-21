@@ -1,6 +1,7 @@
 <!-- Shared by the setup wizard and the invite page: both create an account. -->
 <script>
   import { run } from '../lib/app.svelte.js';
+  import { pending } from '../lib/pending.js';
   import SetupProgress from '../components/SetupProgress.svelte';
 
   /** setup: true in the setup wizard, which shows its progress bar. submit receives { displayName, username, password }. */
@@ -9,11 +10,11 @@
   function onsubmit(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    run(() => submit({
+    pending(event, () => run(() => submit({
       displayName: form.get('displayName'),
       username: form.get('username'),
       password: form.get('password'),
-    }));
+    })));
   }
 </script>
 

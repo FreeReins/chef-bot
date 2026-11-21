@@ -10,6 +10,8 @@
   import NotificationsPanel from '../settings/NotificationsPanel.svelte';
   import BackupsPanel from '../settings/BackupsPanel.svelte';
   import LogsPanel from '../settings/LogsPanel.svelte';
+  import AppearancePanel from '../settings/AppearancePanel.svelte';
+  import Palette from '@lucide/svelte/icons/palette';
   import KeyRound from '@lucide/svelte/icons/key-round';
   import Lock from '@lucide/svelte/icons/lock';
   import Store from '@lucide/svelte/icons/store';
@@ -21,6 +23,7 @@
   /** The Settings sidebar: key, label, icon, who sees it, and what it shows. A wide section uses the full width. */
   const SECTIONS = [
     { key: 'login', label: 'Login', icon: KeyRound, visible: () => true, panel: LoginPanel },
+    { key: 'appearance', label: 'Appearance', icon: Palette, visible: () => true, panel: AppearancePanel },
     { key: 'https', label: 'HTTPS', icon: Lock, visible: () => true, panel: HttpsPanel, heading: 'Secure connection (HTTPS)' },
     { key: 'styles', label: 'Plan styles', icon: ListChecks, visible: () => Boolean(app.styles), panel: PlanStylesPanel },
     { key: 'stores', label: 'Stores', icon: Store, visible: () => isAdmin() && app.stores, panel: StoresPanel },
@@ -60,10 +63,11 @@
   .side-nav { display: grid; gap: .15rem; position: sticky; top: 1rem; }
   .side-nav a { display: flex; align-items: center; gap: .5rem; border-left: 3px solid transparent; border-radius: 0 .4rem .4rem 0;
     color: var(--muted); text-decoration: none; padding: .5rem .8rem; }
-  .side-nav a :global(svg) { flex: none; }
+  .side-nav a :global(svg) { flex: none; color: var(--area-settings); }
+  .side-nav a[aria-current="page"] :global(svg) { color: var(--accent); }
   .side-nav a:hover { color: var(--ink); background: var(--chip); }
   .side-nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .side-nav a[aria-current="page"] { color: var(--ink); border-left-color: var(--accent); background: var(--panel); font-weight: 600; }
+  .side-nav a[aria-current="page"] { color: var(--ink); border-left-color: var(--accent); background: var(--accent-bg); font-weight: 600; }
   .settings-body { max-width: 40rem; outline: none; }
   .settings-body.wide { max-width: none; }
   .settings-body > h2:first-child { margin-top: 0; }
@@ -71,6 +75,6 @@
     .settings { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
     .side-nav { display: flex; flex-wrap: wrap; gap: .35rem; position: static; }
     .side-nav a { border: 1px solid var(--line); border-radius: 999px; padding: .35rem .75rem; white-space: nowrap; }
-    .side-nav a[aria-current="page"] { border-color: var(--accent); background: var(--panel); }
+    .side-nav a[aria-current="page"] { border-color: var(--accent); background: var(--accent-bg); }
   }
 </style>

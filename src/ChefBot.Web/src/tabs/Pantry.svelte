@@ -5,11 +5,13 @@
   import { untrack, tick } from 'svelte';
   import { app, run, loadPantry, refreshAfterPantryChange, addToShoppingList, removePantryItem, updatePantryItem, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
+  import { pending } from '../lib/pending.js';
   import { amount, shortDate, parseDate, freshness, plural, DAYS, FOOD_GROUPS } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import ListPlus from '@lucide/svelte/icons/list-plus';
   import Pencil from '@lucide/svelte/icons/pencil';
+  import Refrigerator from '@lucide/svelte/icons/refrigerator';
 
   /** Above this many items, a box to find one by name is shown. */
   const FILTER_FROM = 8;
@@ -65,11 +67,18 @@
     document.getElementById(`edit-quantity-${item.id}`)?.focus();
   }
 
+  /** Closes the item's edit form and puts focus back on its pencil button. */
+  async function stopEditing(item) {
+    editing = null;
+    await tick();
+    document.getElementById(`edit-${item.id}`)?.focus();
+  }
+
   function save(event, item) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const quantity = data.get('quantity');
-    editing = null;
+    stopEditing(item);
     updatePantryItem(item.id, {
       quantity: quantity === '' ? null : Number(quantity),
       expiresOn: data.get('expiresOn') || null,
@@ -81,7 +90,7 @@
     const form = event.currentTarget;
     const data = new FormData(form);
     const name = data.get('name');
-    run(async () => {
+    pending(event, () => run(async () => {
       await api('POST', '/api/pantry', {
         name,
         quantity: data.get('quantity') ? Number(data.get('quantity')) : null,
@@ -92,7 +101,7 @@
       form.elements.name.focus();
       await refreshAfterPantryChange();
       toast(`${name} was added to the pantry.`);
-    });
+    }));
   }
 </script>
 
@@ -110,15 +119,16 @@
     {#each lines as { item, usedFor } (item.id)}
       <li>
         {#if editing === item.id}
+          {@const escape = (event) => { if (event.key === 'Escape') { event.preventDefault(); stopEditing(item); } }}
           <form class="inline" onsubmit={(event) => save(event, item)}>
             <strong class="edit-name">{item.name}</strong>
             <label>Amount{item.unit ? ` (${item.unit})` : ''}
-              <input id="edit-quantity-{item.id}" name="quantity" type="number" min="0" step="any" value={item.quantity ?? ''}>
+              <input id="edit-quantity-{item.id}" onkeydown={escape} name="quantity" type="number" min="0" step="any" value={item.quantity ?? ''}>
             </label>
-            <label>Expires <input name="expiresOn" type="date" value={item.expiresOn ?? ''}></label>
+            <label>Expires <input name="expiresOn" type="date" onkeydown={escape} value={item.expiresOn ?? ''}></label>
             <div class="row-actions">
               <button type="submit" class="small primary">Save</button>
-              <button type="button" class="small" onclick={() => (editing = null)}>Cancel</button>
+              <button type="button" class="small" onclick={() => stopEditing(item)}>Cancel</button>
             </div>
           </form>
         {:else}
@@ -133,7 +143,7 @@
               </div>
             </div>
             <div class="row-actions">
-              <button class="icon" aria-label="Change the amount or date of {item.name}" title="Change the amount or date"
+              <button class="icon" id="edit-{item.id}" aria-label="Change the amount or date of {item.name}" title="Change the amount or date"
                       onclick={() => edit(item)}><Pencil size={16} /></button>
               <button class="icon" aria-label="Add {item.name} to the shopping list" title="Add to the shopping list"
                       onclick={() => restock(item)}><ListPlus size={16} /></button>
@@ -157,7 +167,8 @@
   </form>
 
   {#if pantry.length === 0}
-    <div class="card">
+    <div class="card empty">
+      <span class="empty-icon" style="--area: var(--area-pantry)" aria-hidden="true"><Refrigerator size={26} /></span>
       <p class="muted">The pantry is empty. Items appear here when you mark shopping as bought, or add them above.</p>
     </div>
   {:else}

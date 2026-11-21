@@ -158,3 +158,77 @@ test('Swap opens a dialog of replacements; Escape closes it and choosing one rep
   await expect(dialog).toBeHidden();
   expect(api.requests).toContain(`PUT /api/plans/${data.ids.plan}/meals/${stew.id}`);
 });
+
+test('the sun and moon button switches the theme, and the choice survives a reload', async ({ page }) => {
+  await open(page, '/plan');
+  // What is painted: the page background is #141816 in dark mode and #f6f7f4 in light.
+  const dark = () => page.evaluate(() => (getComputedStyle(document.body).backgroundColor === 'rgb(20, 24, 22)' ? 'dark' : 'light'));
+  const startedDark = (await dark()) === 'dark';
+  await page.getByRole('button', { name: startedDark ? 'Switch to light mode' : 'Switch to dark mode' }).click();
+  const chosen = startedDark ? 'light' : 'dark';
+  await expect(page.locator('html')).toHaveAttribute('data-theme', chosen);
+
+  await open(page, '/plan');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', chosen);
+  expect(await dark()).toBe(chosen);
+
+  // Settings, Appearance goes back to following the device.
+  await open(page, '/settings/appearance');
+  await page.getByRole('button', { name: 'Match this device' }).click();
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme', /./);
+  expect(await dark()).toBe(startedDark ? 'dark' : 'light');
+});
+
+test('a settings change saves by itself, once, without a Save button', async ({ page, api }) => {
+  await open(page, '/settings/notifications');
+  await expect(page.getByRole('button', { name: 'Save' })).toHaveCount(0);
+  const saved = page.waitForRequest((request) => request.method() === 'PUT' && request.url().endsWith('/api/system/notifications'));
+  await page.getByRole('checkbox', { name: /^Today's meals/ }).click();
+  expect((await saved).postDataJSON()).toMatchObject({ mealsToday: true, dailyTime: '07:30' });
+  await expect(page.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+  expect(api.requests.filter((request) => request === 'PUT /api/system/notifications')).toHaveLength(1);
+});
+
+test('a change waiting to be saved is saved when another section opens', async ({ page, api }) => {
+  await open(page, '/settings/backups');
+  await page.getByLabel(/^Keep this many backups/).fill('7');
+  await page.getByLabel(/^Keep this many backups/).press('Tab');
+  // Straight to another section, before the pause before saving is over.
+  await page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Login' }).click();
+  await expect.poll(() => api.requests.filter((request) => request === 'PUT /api/system/backups').length).toBe(1);
+});
+
+test('Escape closes a pantry correction and puts focus back on its button', async ({ page, api }) => {
+  await open(page, '/pantry');
+  const button = page.getByRole('button', { name: 'Change the amount or date of eggs' });
+  await button.click();
+  await expect(page.getByRole('button', { name: 'Save' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Save' })).toHaveCount(0);
+  await expect(button).toBeFocused();
+  expect(api.requests.filter((request) => request.startsWith('PATCH') || request.startsWith('PUT'))).toEqual([]);
+});
+
+test('Back to recipes is a link to the list, and returns to it', async ({ page }) => {
+  await open(page, '/recipes');
+  await page.getByRole('link', { name: /Slaw Fish Tacos/ }).first().click();
+  const back = page.getByRole('link', { name: 'Back to recipes' });
+  await expect(back).toHaveAttribute('href', '/recipes');
+  await back.click();
+  await expect(page).toHaveURL(/\/recipes$/);
+  await expect(page.getByRole('heading', { name: /^Recipes/ })).toBeVisible();
+});
+
+test('a form sent twice quickly is only sent once', async ({ page, api }) => {
+  let answer;
+  api.set({ 'POST /api/shopping/items': () => new Promise((resolve) => { answer = resolve; }) });
+  await open(page, '/shopping');
+  await page.getByLabel('Add to the list').fill('milk');
+  const add = page.getByRole('button', { name: 'Add', exact: true });
+  await add.click();
+  await expect(add).toHaveAttribute('aria-busy', 'true');
+  await add.click();
+  answer(data.manualItems());
+  await expect(add).not.toHaveAttribute('aria-busy', 'true');
+  expect(api.requests.filter((request) => request === 'POST /api/shopping/items')).toHaveLength(1);
+});
