@@ -1,5 +1,5 @@
 namespace ChefBot.Core.Managers.Contracts;
 
-/// <summary>An outside recipe source such as Mealie couldn't be read.</summary>
+/// <summary>A recipe page or photo on the web couldn't be downloaded.</summary>
 public sealed class RecipeSourceException(string message, Exception? innerException = null)
     : ChefBotException(message, innerException);

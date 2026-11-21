@@ -2,7 +2,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ChefBot.Api.Https;
 using ChefBot.Api.Logging;
-using ChefBot.Api.Messaging;
 
 namespace ChefBot.Api;
 
@@ -13,7 +12,6 @@ namespace ChefBot.Api;
 /// </summary>
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
 [JsonSerializable(typeof(HealthResponse))]
-[JsonSerializable(typeof(ImportStatus))]
 [JsonSerializable(typeof(NewCertificateRequest))]
 [JsonSerializable(typeof(HttpsStatusResponse))]
 [JsonSerializable(typeof(LogsResponse))]

@@ -4,7 +4,7 @@ import { test, open, reply } from './fixtures.js';
 import { expectAccessible } from './axe.js';
 import * as data from './data.js';
 
-const signedOut = { 'GET /api/session': { setupRequired: false, user: null, mealieConfigured: false } };
+const signedOut = { 'GET /api/session': { setupRequired: false, user: null } };
 const noPlan = { 'GET /api/plans': [] };
 /** Answers for weeks with these plans: the list of weeks, and each plan by its id. */
 const weeks = (...plans) => ({
@@ -19,7 +19,7 @@ const VIEWS = [
   { name: 'sign in', path: '/', answers: signedOut },
   { name: 'join from an invite', path: '/?invite=invite-token', answers: signedOut },
   { name: 'choose a new password', path: '/?reset=reset-token', answers: signedOut },
-  { name: 'setup: create the account', path: '/', answers: { 'GET /api/session': { setupRequired: true, user: null, mealieConfigured: false } } },
+  { name: 'setup: create the account', path: '/', answers: { 'GET /api/session': { setupRequired: true, user: null } } },
 
   // The plan
   { name: 'plan, confirmed week', path: '/plan' },
@@ -88,7 +88,6 @@ const VIEWS = [
     name: 'settings: a store open for editing', path: '/settings/stores',
     act: (page) => page.getByRole('button', { name: 'Edit' }).nth(1).click(),
   },
-  { name: 'settings: mealie', path: '/settings/mealie' },
   { name: 'settings: notifications', path: '/settings/notifications' },
   {
     name: 'settings: backups with one opened', path: '/settings/backups',
@@ -139,7 +138,7 @@ for (const view of VIEWS) {
 
 test('setup wizard, every step', async ({ page, api }) => {
   api.set({
-    'GET /api/session': { setupRequired: true, user: null, mealieConfigured: false },
+    'GET /api/session': { setupRequired: true, user: null },
     'POST /api/setup/account': data.admin(),
     'GET /api/recipes': [],
     'GET /api/plan-styles': { ...data.planStyles(), styles: [] },

@@ -4,7 +4,6 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Id">The recipe's id.</param>
 /// <param name="Name">The recipe's name.</param>
 /// <param name="Course">The kind of dish it is.</param>
-/// <param name="Origin">Where it came from.</param>
 /// <param name="IsSlowCooker">True when it is made in a slow cooker.</param>
 /// <param name="Servings">How many servings it makes.</param>
 /// <param name="Ingredients">Its ingredient lines as written, ready to show or edit.</param>
@@ -24,7 +23,6 @@ public sealed record RecipeResponse(
     Guid Id,
     string Name,
     RecipeCourse Course,
-    RecipeOrigin Origin,
     bool IsSlowCooker,
     decimal Servings,
     IReadOnlyList<string> Ingredients,

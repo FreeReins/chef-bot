@@ -111,7 +111,7 @@ public class WebRecipeTests
     public async Task A_site_reader_comes_before_the_one_for_any_site()
     {
         var engine = new TransformationEngine(
-            TestData.Catalog, TestData.Options, TestData.Classifier, [], [new FakeSitePage(TestData.Schema), new SchemaOrgPage(TestData.Schema)]);
+            TestData.Catalog, [], [new FakeSitePage(TestData.Schema), new SchemaOrgPage(TestData.Schema)]);
         var fussy = new Uri("https://www.fussy.example/soup/");
 
         var reader = engine.PageReader(fussy);
@@ -136,7 +136,6 @@ public class WebRecipeTests
         await Assert.That(core.Web.Requested.Single().AbsoluteUri).IsEqualTo(SoupUrl);
         await Assert.That(result.ReadWith).IsEqualTo("Any site (schema.org)");
         await Assert.That(result.Recipe.Name).IsEqualTo("Tomato & Basil Soup");
-        await Assert.That(saved.Origin).IsEqualTo(RecipeOrigin.Local);
         await Assert.That(saved.SourceUrl).IsEqualTo(SoupUrl);
         await Assert.That(saved.Images.Count).IsEqualTo(2);
         await Assert.That(core.Messages.Published.OfType<FetchRecipeImages>().Single().RecipeId).IsEqualTo(saved.Id);
@@ -173,22 +172,6 @@ public class WebRecipeTests
 
         await Assert.That(error).IsNotNull();
         await Assert.That(core.Web.Requested.Count).IsEqualTo(0);
-    }
-
-    [Test]
-    public async Task Only_photos_from_the_mealie_server_may_be_on_a_private_network()
-    {
-        var core = new TestCore();
-        core.Settings.Mealie = new MealieSettings { Url = "http://mealie.lan:9000", ApiToken = "token" };
-        var recipe = TestData.NewRecipe("Stew", RecipeCourse.Main, false, "1 lb beef");
-        recipe.Images.Add(new RecipeImage { SourceUrl = "http://mealie.lan:9000/api/media/recipes/1/images/original.webp" });
-        recipe.Images.Add(new RecipeImage { SourceUrl = "http://mealie.lan/elsewhere.png" });
-        core.Recipes.Rows.Add(recipe);
-
-        await core.RecipeManager().FetchImagesAsync(new FetchRecipeImages(recipe.Id), CancellationToken.None);
-
-        await Assert.That(core.Images.Requested.Count).IsEqualTo(2);
-        await Assert.That(core.Images.PrivateAllowed.Single()).IsEqualTo("http://mealie.lan:9000/api/media/recipes/1/images/original.webp");
     }
 
     [Test]

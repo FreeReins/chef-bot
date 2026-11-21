@@ -73,14 +73,6 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
             LastResult = settings.LastResult,
         }, cancellationToken);
 
-    public async Task<MealieSettings> GetMealieAsync(CancellationToken cancellationToken) =>
-        await RowAsync<MealieSettingsEntity>(cancellationToken) is { } row
-            ? new MealieSettings { Url = row.Url, ApiToken = row.ApiToken }
-            : new MealieSettings();
-
-    public Task SaveMealieAsync(MealieSettings settings, CancellationToken cancellationToken) =>
-        SaveRowAsync(new MealieSettingsEntity { Url = settings.Url, ApiToken = settings.ApiToken }, cancellationToken);
-
     public async Task<ScheduleState> GetScheduleAsync(CancellationToken cancellationToken) =>
         await RowAsync<ScheduleStateEntity>(cancellationToken) is { } row
             ? new ScheduleState { LastStagedWeek = row.LastStagedWeek }

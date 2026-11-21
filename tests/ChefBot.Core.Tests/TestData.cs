@@ -54,7 +54,7 @@ internal static class TestData
     // Registered in the same order as CoreRegistration: the specific Mealie backup before general JSON, and site
     // readers before the one for any site.
     public static readonly TransformationEngine Transformation =
-        new(Catalog, Options, Classifier, [new MealieBackupFormat(Classifier), new JsonRecipeFormat(Schema)], [new SchemaOrgPage(Schema)]);
+        new(Catalog, [new MealieBackupFormat(Classifier), new JsonRecipeFormat(Schema)], [new SchemaOrgPage(Schema)]);
 
     public static readonly PlanningEngine Planning = new(Catalog, Options, new WeeklyScheduleOptions());
 

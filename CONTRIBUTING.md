@@ -55,7 +55,7 @@ Managers/          one per area of use: orchestrate a use case, own the transact
    ▼          ▼
 Engines/  ─►  ResourceAccess/   engines do the work (verbs); accessors read and save
                  ▼
-            PostgreSQL (EF Core), Mealie, the webhook, recipe pages and photos on the web, the backup folder,
+            PostgreSQL (EF Core), the webhook, recipe pages and photos on the web, the backup folder,
             config/sample-recipes.json, config/stores.json, config/plan-styles.json
 
 Utilities/   the ingredient catalog, text and units, clock, settings options, password hashing: any layer
@@ -71,9 +71,9 @@ managers' contracts are public; the engines' and accessors' are internal.
 | `Managers/Contracts/Messages/` | The managers' requests and responses (these are the HTTP JSON bodies), the commands and events sent through the message bus, and the enums they use | Plain records. Changing one changes the API |
 | `Managers/Contracts/` | `ChefBotException` and the exceptions built on it (`NotFoundException`, `RuleViolationException`, ...), which the API turns into problem responses; `ContractJsonContext` | |
 | `Managers/` | The manager classes and `Mapping.cs` (data contracts to messages) | Call engines and accessors, never another manager. Commit once through `IMessageAccess.CommitAsync`, which also sends what they published |
-| `Engines/` | `PlanningEngine`, `ShoppingEngine`, `SuggestionEngine`, `TransformationEngine` (recipe files, recipe web pages, Mealie recipes, typed-in recipes and pantry items), `ValidationEngine`, `SecurityEngine`, `NotificationEngine`, the recipe file formats and web page readers (`Transformation/`, site-specific readers in `Transformation/Sites/`), the `SchemaRecipe` and `Microdata` helpers they share, and the calculations several of them use (`MealRequirements`, `PantrySnapshot`, `PantryFreshness`, `WeekScorer`, `WeekSelector`, `RecipeMatcher`). Those calculations are plain functions and value types, not engines, so using one doesn't make one engine call another | Never call a manager or another engine. Only `ValidationEngine` reads through accessors, for rules that depend on what is stored; the others take everything as arguments and can be tested without a database |
+| `Engines/` | `PlanningEngine`, `ShoppingEngine`, `SuggestionEngine`, `TransformationEngine` (recipe files, recipe web pages, typed-in recipes and pantry items), `ValidationEngine`, `SecurityEngine`, `NotificationEngine`, the recipe file formats and web page readers (`Transformation/`, site-specific readers in `Transformation/Sites/`), the `SchemaRecipe` and `Microdata` helpers they share, and the calculations several of them use (`MealRequirements`, `PantrySnapshot`, `PantryFreshness`, `WeekScorer`, `WeekSelector`, `RecipeMatcher`). Those calculations are plain functions and value types, not engines, so using one doesn't make one engine call another | Never call a manager or another engine. Only `ValidationEngine` reads through accessors, for rules that depend on what is stored; the others take everything as arguments and can be tested without a database |
 | `Engines/Contracts/Services/` | `IRecipeFileFormat`, which each kind of recipe file implements, and `IRecipePageReader`, which each way of reading recipe web pages implements | |
-| `Engines/Contracts/Messages/` | The records engines take and return: `PlanRequest`, `PlanDraft`, `ShoppingDraft`, `Suggestions`, `ImportChanges`, `RequiredIngredient`, ... | Plain records |
+| `Engines/Contracts/Messages/` | The records engines take and return: `PlanRequest`, `PlanDraft`, `ShoppingDraft`, `Suggestions`, `RequiredIngredient`, ... | Plain records |
 | `ResourceAccess/Contracts/Services/` | The accessor interfaces: `IRecipeAccess`, `IPlanAccess`, ..., `IMessageAccess` (the Wolverine outbox that publishes messages and commits) | |
 | `ResourceAccess/Contracts/Messages/` | The plain data contracts the accessors take and return (`Recipe`, `MealPlan`, `PantryItem`, ...) | Plain data, no EF Core |
 | `ResourceAccess/` | The accessor implementations, and the EF Core entities and `ChefBotDbContext` (`Persistence/`) | Return copies, never tracked entities. Never call each other. The entities don't leave this folder. The database accessors read through the change tracker, so a row saved earlier in the same request is seen before the commit. Backups are the entities serialized as JSON, so renaming an entity property changes the backup format: keep old names readable |
@@ -91,7 +91,7 @@ Rules of thumb:
   `IMessageAccess.PublishAsync`, and a handler in `ChefBot.Api/Messaging/` calls the other. For example,
   `PantryManager` publishes `PantryChanged` and its handler calls `IPlanManager.RefreshOpenPlansAsync`.
 - Messages are kept in PostgreSQL (the `wolverine` schema) and only sent once the transaction that published
-  them commits. Handlers log expected problems, such as Mealie being down, rather than throwing; there is no
+  them commits. Handlers log expected problems, such as a photo that can't be downloaded, rather than throwing; there is no
   retry logic to keep in mind.
 - One way to do each thing. Ingredient needs come only from `MealRequirements`. Every change to a plan goes
   through `PlanManager`, which ends each change by placing the leftover lunches and rebuilding the shopping list,
@@ -158,7 +158,7 @@ groundwork for Native AOT.
   The API uses it for request and response bodies, and the message bus uses it for the commands and events it stores.
 - `ApiJsonContext` (`ChefBot.Api/ApiJsonContext.cs`) covers the bodies defined in the API project.
 - Each accessor that reads a file or talks to another service has its own private context next to its JSON types:
-  backups, Mealie, the webhook, the sample recipes, the known stores and the ingredient catalog.
+  backups, the webhook, the sample recipes, the known stores and the ingredient catalog.
 
 A new request, response, command or event needs a `[JsonSerializable]` line in its context. Records used inside a
 listed one are included automatically. `JsonShapeTests` fails when something in `Managers/Contracts/Messages/` is missing.
@@ -191,12 +191,12 @@ has none.
 
 - `src/lib/app.svelte.js` holds everything the page shows (`app`) and every action that loads or changes it.
   Components read `app` and call those actions; Svelte redraws what changed.
-- Every view has its own address (`/recipes/{id}`, `/settings/mealie`, ...) so it can be bookmarked. The list
+- Every view has its own address (`/recipes/{id}`, `/settings/backups`, ...) so it can be bookmarked. The list
   is at the top of `src/lib/addresses.js`. Move between views with plain `<a href>` links or `go(path)` from
   there, not by setting `app.tab`; the server answers any path that isn't a file or `/api` with `index.html`.
 - `src/App.svelte` is the header, tabs and footer. Each screen is a component: `screens/` for setup and
   sign-in, `tabs/` for the tabs, `settings/` for the Settings sections, and `components/` for pieces used in
-  more than one place (the sample picker, file import, Mealie connection, setup progress bar).
+  more than one place (the sample picker, file import, setup progress bar).
 - `src/styles.css` holds the colours and the shared building blocks: buttons, cards, rows, chips, forms and
   lists. Styles only one component uses go in that component's `<style>` block, where Svelte scopes them.
 - `./dev.sh web` builds the page once into `src/ChefBot.Api/wwwroot`, which is build output and not in git.

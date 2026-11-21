@@ -6,10 +6,6 @@ internal sealed class RecipeEntity
 {
     public Guid Id { get; set; }
 
-    public RecipeOrigin Origin { get; set; }
-
-    public string? ExternalId { get; set; }
-
     public string Name { get; set; } = string.Empty;
 
     public decimal Servings { get; set; }

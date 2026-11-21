@@ -29,7 +29,6 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
     {
         // Enums are stored by name so the tables stay readable and survive reordering.
         configurationBuilder.Properties<RecipeCourse>().HaveConversion<string>().HaveMaxLength(20);
-        configurationBuilder.Properties<RecipeOrigin>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<MealSlot>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<MealStatus>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<PlanStatus>().HaveConversion<string>().HaveMaxLength(20);
@@ -43,7 +42,6 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         modelBuilder.Entity<RecipeEntity>(recipe =>
         {
             recipe.ToTable("Recipes");
-            recipe.HasIndex(r => r.ExternalId).IsUnique();
             recipe.HasMany(r => r.Ingredients).WithOne().HasForeignKey(i => i.RecipeId).OnDelete(DeleteBehavior.Cascade);
             recipe.HasMany(r => r.Images).WithOne().HasForeignKey(i => i.RecipeId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -101,7 +99,6 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         modelBuilder.Entity<SecuritySettingsEntity>().ToTable("SecuritySettings");
         modelBuilder.Entity<NotificationSettingsEntity>().ToTable("NotificationSettings");
         modelBuilder.Entity<BackupSettingsEntity>().ToTable("BackupSettings");
-        modelBuilder.Entity<MealieSettingsEntity>().ToTable("MealieSettings");
         modelBuilder.Entity<ScheduleStateEntity>().ToTable("ScheduleState");
 
         UseKeysGeneratedInCode(modelBuilder);

@@ -5,7 +5,7 @@ namespace ChefBot.Core.Managers.Contracts.Services;
 /// <summary>First-run setup, signing in, passwords, lockout, inviting or removing people, and the sign-in rules.</summary>
 public interface IAccountManager
 {
-    /// <summary>Whether setup is needed, who is signed in, and whether Mealie can be used.</summary>
+    /// <summary>Whether setup is needed and who is signed in.</summary>
     Task<SessionResponse> DescribeSessionAsync(Guid? userId, CancellationToken cancellationToken);
 
     /// <summary>The current state of an account, to check a sign-in cookie against. Null when it no longer exists.</summary>

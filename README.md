@@ -31,8 +31,8 @@ It is a self-hosted web app: one container for the app, one for PostgreSQL.
   and the shopping list together.
 - **Keeps its own recipes.** Recipes live in ChefBot's database: their ingredients, steps, prep and cook times,
   description, tags, notes, source link and photos. Add them in the web page, paste a link to a recipe on a
-  website, or import them from [Mealie](https://mealie.io). Mealie is optional and only ever read from. Imported photos are downloaded once,
-  in the background, so they still show when Mealie or the recipe's website is down.
+  website, or import a recipe file such as a [Mealie](https://mealie.io) backup .zip. Photos from a website are
+  downloaded once, in the background, so they still show when the recipe's website is down.
 - **Has accounts.** A setup wizard creates the first (admin) account, who can invite the rest of the
   household with single-use links. Everyone shares the same recipes, plan and pantry.
 - **Runs on a schedule.** Next week's plan is staged automatically (Saturday 09:00 by default).
@@ -93,7 +93,7 @@ Open <http://localhost:8080>. The first visit starts the setup wizard:
    download it, and choose to always use HTTPS.
 3. **Add your recipes.** Pick one or both:
    - **Import my recipes** from a recipe file (JSON in ChefBot's own shape, a Mealie backup .zip with its
-     photos or the `database.json` from one, a Mealie recipe export or schema.org recipes from a website), as many files as you like, or connect Mealie once and import from it.
+     photos or the `database.json` from one, a Mealie recipe export or schema.org recipes from a website), as many files as you like.
    - **Start with sample recipes**: tick the ones you want from the 25 samples. You can come back to this
      list later from the Recipes tab.
 
@@ -104,9 +104,8 @@ Open <http://localhost:8080>. The first visit starts the setup wizard:
 
 Then press **Plan** on the Plan tab.
 
-To use your own recipes, an admin enters Mealie's address and an API token under **Settings → Mealie**, then
-presses **Import from Mealie** on the Recipes tab. `Mealie__Url` and `Mealie__ApiToken` in `chefbot.env` can
-set the starting values instead; anything saved on the Settings tab takes their place.
+To bring recipes over from Mealie, make a backup in Mealie (**Settings → Backups**) and import the .zip from
+the Recipes tab. Importing a newer backup later adds only the recipes that aren't in ChefBot yet.
 
 ### Adding people
 
@@ -307,13 +306,12 @@ try each call. Both need you to be signed in.
 | `GET /api/plan-styles`, `PUT /api/plan-styles` | The household's plan styles, the starter styles, and the recipe tags and ingredient names rules can use. `PUT` replaces the styles: `{"styles": [{"name": "Crockpot week", "isDefault": true, "cookingDays": ["Sunday", "Wednesday"], "leftoverLunches": true, "breakfasts": 0, "snacks": 2, "sweets": 0, "drinks": 1, "rules": [{"limit": "AtLeast", "count": 2, "slot": "Dinner", "match": "SlowCooker"}]}]}`. A rule's `limit` is `AtLeast`, `AtMost`, `Exactly` or `None`; `match` is `SlowCooker`, `Tag` or `Ingredient` (with `values`) or `ReadyWithin` (with `minutes`); `day` puts matching dinners on a day first |
 | `GET` `POST /api/pantry`, `PATCH` `DELETE /api/pantry/{id}` | Read and correct the pantry |
 | `GET` `POST /api/recipes`, `PUT` `DELETE /api/recipes/{id}` | Manage local recipes. A recipe has `name`, `course`, `servings`, `isSlowCooker` and `ingredients` (lines such as `"2 cups kale"`), and optionally `description`, `instructions` (a list of steps), `prepMinutes`, `cookMinutes`, `totalMinutes`, `sourceUrl`, `author`, `yieldText`, `notes` and `tags`. Responses add `images` and `ingredientDetails` (each line's quantity, unit and food) |
-| `POST /api/recipes/{id}/images` | Add a photo: `{"data": "<base64>"}`, a JPEG, PNG, WebP or GIF of up to 5 MB, at most 10 per recipe. Makes an imported recipe a local one |
+| `POST /api/recipes/{id}/images` | Add a photo: `{"data": "<base64>"}`, a JPEG, PNG, WebP or GIF of up to 5 MB, at most 10 per recipe |
 | `GET` `DELETE /api/recipes/{id}/images/{imageId}` | Get a photo as an image file, or remove it |
 | `POST /api/recipes/import/file` | Import a recipe file: `{"fileName": "recipes.json", "content": "..."}`. Names already in the library are skipped |
 | `POST /api/recipes/import/archive?fileName=backup.zip` | Import a Mealie backup .zip, sent as the raw body (`Content-Type: application/zip`, up to 200 MB), with its photos. Names already in the library are skipped, but one with no photos gets the backup's. The answer adds `photosAdded` |
 | `GET /api/recipes/import/formats` | The kinds of recipe file that can be imported, with their file name endings |
 | `POST /api/recipes/import/web` | Add the recipe on a web page: `{"url": "https://example.com/recipes/soup"}`. Answers `{"recipe": {...}, "readWith": "Any site (schema.org)"}` naming the reader used. Photos download in the background. 409 when that page or name is already in the library, 502 when the page can't be downloaded |
-| `POST /api/recipes/import/mealie` | Start a background import. Poll `GET /api/recipes/import/status` |
 | `GET /api/session` | Whether setup is needed and who is signed in |
 | `POST /api/setup/account`, `POST /api/account/sign-in`, `POST /api/account/sign-out` | First account, signing in and out |
 | `GET` `POST /api/setup/samples` | Review the sample recipes and add chosen ones by name (admin) |
@@ -325,7 +323,6 @@ try each call. Both need you to be signed in.
 | `GET` `PUT /api/system/security` | Lockout rules and "always use HTTPS" (admin) |
 | `GET /api/system/https`, `GET` `POST /api/system/https/certificate` | HTTPS status, download or recreate the certificate |
 | `POST /api/plans/{planId}/regenerate`, `DELETE /api/plans/{planId}` | Rebuild a plan around the pantry in the style it was made in, or clear it |
-| `GET` `PUT /api/system/mealie` | Mealie's address and API token. The token is never returned (admin) |
 | `GET` `PUT /api/system/notifications`, `POST .../test`, `POST .../send-today` | Reminder settings, and sending now (admin) |
 | `GET` `PUT` `POST /api/system/backups` | Backup settings and list, or back up now (admin) |
 | `GET` `DELETE /api/system/backups/{name}`, `GET .../{name}/summary`, `POST .../{name}/restore` | Download, delete, see what it holds or restore a backup (admin) |
@@ -361,12 +358,10 @@ using `__` between levels (for example `Planner__DinnerPortions=4`). With the Po
 | `Planner:DinnerPortions`, `LunchPortions`, `BreakfastPortions` | `2` | People eating each meal |
 | `Planner:ExpiringSoonDays` | `3` | Pantry food expiring this soon is planned first |
 | `Planner:AvoidRepeatDays` | `28` | Don't repeat a recipe planned this recently |
-| `Planner:ImportFromMealieBeforePlanning` | `false` | Refresh from Mealie before the weekly schedule stages a plan. Staging by hand uses the saved recipes |
 | `Planner:Weights` | see file | How strongly sharing, season, pantry use and variety count |
 | `Schedule:Enabled`, `Day`, `Time` | `true`, `Saturday`, `09:00` | When next week is staged automatically |
 | `Classifier` | see file | Tag words that sort imported recipes into courses |
 | `Notifications:WebhookUrl` | empty | The starting webhook address, until one is saved on the Settings tab |
-| `Mealie:Url`, `Mealie:ApiToken` | empty | The starting Mealie connection, until one is saved on the Settings tab |
 | `Planner:Weights:RegeneratePantryBoost` | `4` | How much more pantry food counts in "Replan from pantry" |
 | `Data:Backups` | `backups` | The folder backups are written to |
 | `Https:Mode` | `Off` (`SelfSigned` in the container image) | `Off`, `SelfSigned` or `Certificate` |
@@ -499,7 +494,7 @@ the time, how many to keep, a maximum age in days, make a backup immediately, do
 
 ```
 src/ChefBot.Core             The core, in layers: managers, engines, resource accessors and utilities, behind
-                             public contracts. PostgreSQL via EF Core, backups, Mealie, the webhook.
+                             public contracts. PostgreSQL via EF Core, backups, the webhook.
 src/ChefBot.Api              Wolverine HTTP endpoints and message handlers, sign-in, HTTPS. Serves the web page.
 src/ChefBot.Web              The web page: Svelte 5, built with Vite.
 tests/ChefBot.Core.Tests     TUnit tests for the logic and the layering.
@@ -508,11 +503,11 @@ config/                     The ingredient catalog and sample recipes.
 
 - **The core is layered by what changes for different reasons.** Five managers (plans, pantry, recipes,
   accounts, maintenance) run each use case; engines do the planning, shopping, suggestion, validation, security
-  and notification work; resource accessors are the only code that reads or writes the database, Mealie, the
-  webhook or the backup folder. Calls only go down, and the API sees only the managers' interfaces.
+  and notification work; resource accessors are the only code that reads or writes the database, the web,
+  the webhook or the backup folder. Calls only go down, and the API sees only the managers' interfaces.
 - **[Wolverine](https://wolverinefx.net)** serves the HTTP endpoints (`Endpoints/`) and carries messages between
   managers (`Messaging/`): `PlanStaged` sends the "plan ready" notification, `PantryChanged` refreshes the open
-  plans' shopping lists, and the Mealie import runs in the background. Messages are stored in PostgreSQL, in the
+  plans' shopping lists, and `FetchRecipeImages` downloads imported photos in the background. Messages are stored in PostgreSQL, in the
   `wolverine` schema, and are only sent once the change that caused them is saved, so a restart doesn't lose them.
 - **Every 10 minutes** a timer asks for the scheduled jobs: next week's plan, the daily reminders and the daily
   backup. Each one runs only when its time has come and it hasn't run yet.
@@ -544,8 +539,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions.
 - **Recipe links need a site that describes its recipes.** Most recipe sites include schema.org data for search
   engines, and that is what ChefBot reads. Sites without it, behind a sign-in, or that turn away programs get a
   message saying so; type those recipes in, or add a reader for the site (CONTRIBUTING.md). ChefBot only
-  downloads pages and photos from the public internet, never from addresses on your own network, except photos
-  from the Mealie server you set up.
+  downloads pages and photos from the public internet, never from addresses on your own network.
 - **Seasons are guesses** from the catalog, and stores only know what you tell them. Neither is live store data.
 
 ## License

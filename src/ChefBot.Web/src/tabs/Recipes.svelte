@@ -1,5 +1,5 @@
 <script>
-  import { app, run, toast, isAdmin, importFromMealie, loadRecipes } from '../lib/app.svelte.js';
+  import { app, run, toast, isAdmin, loadRecipes } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { go } from '../lib/addresses.js';
   import Chip from '../components/Chip.svelte';
@@ -51,9 +51,6 @@
           {#if isAdmin()}
             <a class="button small" href="/recipes/samples">Browse sample recipes</a>
           {/if}
-          {#if app.session.mealieConfigured}
-            <button class="small" onclick={importFromMealie}>Import from Mealie</button>
-          {/if}
         </div>
       </div>
       {#each groups as { course, recipes } (course)}
@@ -64,7 +61,6 @@
               <li>
                 <a href="/recipes/{recipe.id}"><strong>{recipe.name}</strong></a>
                 {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
-                {#if recipe.origin === 'Mealie'}<Chip>From Mealie</Chip>{/if}
                 <p class="muted">{recipe.ingredients.join(', ')}</p>
               </li>
             {/each}

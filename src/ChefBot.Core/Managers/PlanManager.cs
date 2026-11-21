@@ -349,24 +349,12 @@ internal sealed class PlanManager(
         // Recorded first, so a week that can't be planned (say, no recipes yet) isn't tried again every few minutes.
         state.LastStagedWeek = week;
         await settings.SaveScheduleAsync(state, cancellationToken);
-
-        if (options.ImportFromMealieBeforePlanning && (await settings.GetMealieAsync(cancellationToken)).IsConfigured)
-        {
-            await messages.PublishAsync(new ImportMealieRecipes(StageWeekAfter: week));
-            await messages.CommitAsync(cancellationToken);
-            return;
-        }
-
         await messages.CommitAsync(cancellationToken);
-        await StageScheduledWeekAsync(new StageScheduledWeek(week), cancellationToken);
-    }
 
-    public async Task StageScheduledWeekAsync(StageScheduledWeek command, CancellationToken cancellationToken)
-    {
-        if (await plans.FindByWeekAsync(command.WeekStart, cancellationToken) is null)
+        if (await plans.FindByWeekAsync(week, cancellationToken) is null)
         {
             var style = await StyleAsync(id: null, cancellationToken);
-            await StageAsync(command.WeekStart, replace: false, favorPantry: false, "schedule", style, [], cancellationToken);
+            await StageAsync(week, replace: false, favorPantry: false, "schedule", style, [], cancellationToken);
         }
     }
 

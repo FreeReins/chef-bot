@@ -1,22 +1,18 @@
-using System.Globalization;
 using AngleSharp.Html.Parser;
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Engines.Contracts.Services;
 using ChefBot.Core.Managers.Contracts;
-using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines.Transformation;
 
 /// <summary>
-/// Turns outside data into ChefBot's own: recipe files, recipe web pages, typed-in recipes and Mealie recipes into stored recipes,
+/// Turns outside data into ChefBot's own: recipe files, recipe web pages, typed-in recipes into stored recipes,
 /// ingredient names into pantry items and free-form meals. Reads and saves nothing.
 /// </summary>
 internal sealed class TransformationEngine(
     IngredientCatalog catalog,
-    PlannerOptions options,
-    RecipeClassifier classifier,
     IEnumerable<IRecipeFileFormat> formats,
     IEnumerable<IRecipePageReader> pageReaders)
 {
@@ -149,55 +145,6 @@ internal sealed class TransformationEngine(
         return true;
     }
 
-    /// <summary>
-    /// Works out what a Mealie import changes: new recipes are added, imported ones refreshed, ones edited in
-    /// ChefBot left alone, and imported ones that Mealie no longer has archived. Only a complete read may archive:
-    /// a partial one must not hide recipes that are still there.
-    /// </summary>
-    public ImportChanges MergeImport(RecipeSourceResult fetched, IReadOnlyList<Recipe> library, DateTimeOffset now)
-    {
-        var existing = library
-            .Where(r => r.ExternalId is not null)
-            .ToDictionary(r => r.ExternalId!, StringComparer.Ordinal);
-
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var changed = new List<Recipe>();
-        int added = 0, updated = 0, keptLocal = 0, archived = 0;
-
-        foreach (var incoming in fetched.Recipes.Where(r => seen.Add(r.ExternalId)))
-        {
-            if (!existing.TryGetValue(incoming.ExternalId, out var recipe))
-            {
-                recipe = new Recipe { Origin = RecipeOrigin.Mealie, ExternalId = incoming.ExternalId };
-                added++;
-            }
-            else if (recipe.Origin == RecipeOrigin.Local)
-            {
-                keptLocal++;
-                continue;
-            }
-            else
-            {
-                updated++;
-            }
-
-            ApplyImported(incoming, recipe, now);
-            changed.Add(recipe);
-        }
-
-        if (fetched.Skipped == 0)
-        {
-            foreach (var missing in existing.Values.Where(r => r.Origin == RecipeOrigin.Mealie && !r.IsArchived && !seen.Contains(r.ExternalId!)))
-            {
-                missing.IsArchived = true;
-                changed.Add(missing);
-                archived++;
-            }
-        }
-
-        return new ImportChanges(changed, new ImportResult(added, updated, keptLocal, archived, fetched.Skipped));
-    }
-
     /// <summary>A new pantry item, with its expiration estimated from the catalog's shelf life unless one is given.</summary>
     /// <param name="ingredient">What was bought.</param>
     /// <param name="quantity">How much, when known.</param>
@@ -243,31 +190,9 @@ internal sealed class TransformationEngine(
     public List<RecipeIngredient> FromLines(IEnumerable<string> lines) =>
         Number(lines.Where(line => !string.IsNullOrWhiteSpace(line)).Select(FromLine));
 
-    private void ApplyImported(SourceRecipe incoming, Recipe recipe, DateTimeOffset now)
-    {
-        var (course, isSlowCooker) = classifier.Classify(incoming.Name, incoming.Labels);
-        recipe.Name = incoming.Name.Trim();
-        recipe.Course = course;
-        recipe.IsSlowCooker = isSlowCooker;
-        recipe.Servings = incoming.Servings is > 0m ? incoming.Servings.Value : options.DefaultServings;
-        recipe.Description = Tidy(incoming.Description);
-        recipe.Instructions = TidyList(incoming.Instructions);
-        recipe.PrepMinutes = DurationParser.Minutes(incoming.PrepTime);
-        recipe.CookMinutes = DurationParser.Minutes(incoming.CookTime);
-        recipe.TotalMinutes = DurationParser.Minutes(incoming.TotalTime);
-        recipe.SourceUrl = Tidy(incoming.SourceUrl);
-        recipe.YieldText = Tidy(incoming.YieldText);
-        recipe.Notes = Tidy(incoming.Notes);
-        recipe.Tags = Tags(incoming.Labels);
-        recipe.IsArchived = false;
-        recipe.UpdatedAt = now;
-        ReplaceIngredients(recipe, Number(incoming.Ingredients.Select(FromSourceRow).OfType<RecipeIngredient>()));
-        ReplaceImageSources(recipe, incoming.ImageUrls ?? []);
-    }
-
     /// <summary>
-    /// Makes the recipe's downloaded photos match the source's list. A photo whose address is still listed keeps
-    /// its stored bytes, new addresses wait to be downloaded, and ones the source dropped go. Uploaded photos stay.
+    /// Makes the recipe's downloaded photos match the given list. A photo whose address is still listed keeps
+    /// its stored bytes, new addresses wait to be downloaded, and ones no longer listed go. Uploaded photos stay.
     /// </summary>
     private static void ReplaceImageSources(Recipe recipe, IEnumerable<string> urls)
     {
@@ -328,29 +253,6 @@ internal sealed class TransformationEngine(
         var ingredient = Create(parsed.Name, parsed.Quantity, parsed.Unit);
         ingredient.Text = line.Trim();
         return ingredient;
-    }
-
-    /// <summary>An ingredient from an outside source, using its parsed food when it has one.</summary>
-    private RecipeIngredient? FromSourceRow(SourceIngredient row)
-    {
-        if (!string.IsNullOrWhiteSpace(row.FoodName))
-        {
-            var ingredient = Create(row.FoodName, row.Quantity > 0 ? row.Quantity : null, row.Unit);
-            ingredient.Note = Tidy(row.Note);
-            ingredient.Text = Tidy(row.Text) ?? Written(ingredient);
-            return ingredient;
-        }
-
-        // Section headings and empty rows have no text at all.
-        return string.IsNullOrWhiteSpace(row.Text) ? null : FromLine(row.Text);
-    }
-
-    /// <summary>A parsed ingredient written as a line: "1.5 lb chicken thigh, skin removed".</summary>
-    private static string Written(RecipeIngredient ingredient)
-    {
-        var amount = ingredient.Quantity is decimal quantity ? quantity.ToString("0.###", CultureInfo.InvariantCulture) : string.Empty;
-        var line = string.Join(' ', new[] { amount, ingredient.Unit, ingredient.DisplayName }.Where(part => part.Length > 0));
-        return ingredient.Note is { } note ? $"{line}, {note}" : line;
     }
 
     private RecipeIngredient Create(string name, decimal? quantity, string? unit)

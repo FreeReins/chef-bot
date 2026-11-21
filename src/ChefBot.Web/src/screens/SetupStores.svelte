@@ -16,17 +16,14 @@
       if (chosen.length || app.stores?.stores.length) await saveStores(chosen);
       app.storeDraft = null;
       const total = app.recipes.length;
-      const stillImporting = app.mealieImport?.state === 'Running';
       await enterApp();
-      await go(total && !stillImporting ? '/plan' : '/recipes');
+      await go(total ? '/plan' : '/recipes');
       const shopping = chosen.length
         ? 'Shopping lists are split between your stores.'
         : 'Shopping lists are grouped by food group. Add stores under Settings, Stores at any time.';
-      toast(stillImporting
-        ? `Setup is done. Your Mealie recipes are still importing and will appear on the Recipes tab when it finishes. ${shopping}`
-        : total
-          ? `Setup is done and you have ${total} recipes. ${shopping} Plan your first week here when you are ready.`
-          : `Setup is done. ${shopping} Add recipes here, then plan a week on the Plan tab.`);
+      toast(total
+        ? `Setup is done and you have ${total} recipes. ${shopping} Plan your first week here when you are ready.`
+        : `Setup is done. ${shopping} Add recipes here, then plan a week on the Plan tab.`);
     });
   }
 </script>

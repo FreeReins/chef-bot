@@ -40,7 +40,6 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
             Security = await db.Set<SecuritySettingsEntity>().AsNoTracking().ToListAsync(cancellationToken),
             Notifications = await db.Set<NotificationSettingsEntity>().AsNoTracking().ToListAsync(cancellationToken),
             Backups = await db.Set<BackupSettingsEntity>().AsNoTracking().ToListAsync(cancellationToken),
-            Mealie = await db.Set<MealieSettingsEntity>().AsNoTracking().ToListAsync(cancellationToken),
             Schedule = await db.Set<ScheduleStateEntity>().AsNoTracking().ToListAsync(cancellationToken),
             GroceryStores = await db.GroceryStores.AsNoTracking().ToListAsync(cancellationToken),
             PlanStyles = await db.PlanStyles.AsNoTracking().ToListAsync(cancellationToken),
@@ -124,7 +123,6 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         await db.Set<SecuritySettingsEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.Set<NotificationSettingsEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.Set<BackupSettingsEntity>().ExecuteDeleteAsync(cancellationToken);
-        await db.Set<MealieSettingsEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.Set<ScheduleStateEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.GroceryStores.ExecuteDeleteAsync(cancellationToken);
         await db.PlanStyles.ExecuteDeleteAsync(cancellationToken);
@@ -139,7 +137,6 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         db.AddRange(contents.Security);
         db.AddRange(contents.Notifications);
         db.AddRange(contents.Backups);
-        db.AddRange(contents.Mealie);
         db.AddRange(contents.Schedule);
         db.AddRange(contents.GroceryStores);
         db.AddRange(contents.PlanStyles);
@@ -176,9 +173,6 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         public List<NotificationSettingsEntity> Notifications { get; set; } = [];
 
         public List<BackupSettingsEntity> Backups { get; set; } = [];
-
-        /// <summary>Empty in backups made before Mealie could be set up on the Settings tab.</summary>
-        public List<MealieSettingsEntity> Mealie { get; set; } = [];
 
         /// <summary>Empty in backups made before the weekly schedule remembered what it staged.</summary>
         public List<ScheduleStateEntity> Schedule { get; set; } = [];

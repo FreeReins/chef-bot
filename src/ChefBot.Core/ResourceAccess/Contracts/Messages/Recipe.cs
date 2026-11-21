@@ -7,11 +7,6 @@ internal sealed class Recipe
 {
     public Guid Id { get; set; } = Guid.CreateVersion7();
 
-    public RecipeOrigin Origin { get; set; }
-
-    /// <summary>The id in the system it was imported from, if any.</summary>
-    public string? ExternalId { get; set; }
-
     public string Name { get; set; } = string.Empty;
 
     public decimal Servings { get; set; } = 4;

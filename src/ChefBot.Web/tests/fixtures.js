@@ -36,7 +36,6 @@ function defaults() {
     'GET /api/stores': data.stores(),
     'GET /api/system/https': data.https(),
     'GET /api/system/security': data.security(),
-    'GET /api/system/mealie': data.mealie(),
     'GET /api/system/notifications': data.notifications(),
     'GET /api/system/backups': data.backups(),
     'GET /api/system/backups/*/summary': data.backupSummary(),

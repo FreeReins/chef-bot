@@ -1,4 +1,3 @@
-using ChefBot.Api.Messaging;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +7,7 @@ using Wolverine.Http;
 
 namespace ChefBot.Api.Endpoints;
 
-/// <summary>The recipe library kept in ChefBot's own database, and importing into it from a file, a web page, samples or Mealie.</summary>
+/// <summary>The recipe library kept in ChefBot's own database, and importing into it from a file, a web page or samples.</summary>
 public static class RecipeEndpoints
 {
     /// <summary>The largest archive <see cref="ImportArchive"/> takes. Mealie backups with photos run to tens of MB.</summary>
@@ -106,23 +105,6 @@ public static class RecipeEndpoints
         WebRecipeRequest request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.ImportFromWebAsync(request, cancellationToken);
 
-    /// <summary>Starts a Mealie import in the background. Poll the status endpoint for the outcome.</summary>
-    [WolverinePost("/api/recipes/import/mealie")]
-    public static async Task<IResult> ImportFromMealie(
-        [FromServices] IRecipeManager recipes,
-        [FromServices] ImportStatusTracker status,
-        [FromServices] TimeProvider clock,
-        CancellationToken cancellationToken)
-    {
-        await recipes.RequestMealieImportAsync(cancellationToken);
-        var queued = new ImportStatus("Running", clock.GetUtcNow());
-        status.Set(queued);
-        return Results.Accepted("/api/recipes/import/status", queued);
-    }
-
-    [WolverineGet("/api/recipes/import/status")]
-    public static ImportStatus GetImportStatus([FromServices] ImportStatusTracker status) => status.Current;
-
     /// <summary>Setup wizard: the sample recipes, with their ingredients, marked when already in the library. Admins only.</summary>
     [Authorize(Policy = Sessions.AdminPolicy)]
     [WolverineGet("/api/setup/samples")]
@@ -135,20 +117,4 @@ public static class RecipeEndpoints
     public static Task<AddSamplesResponse> AddSamples(
         AddSamplesRequest request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.AddSamplesAsync(request, cancellationToken);
-
-    /// <summary>How ChefBot reaches Mealie. The token is never sent back. Admins only.</summary>
-    [Authorize(Policy = Sessions.AdminPolicy)]
-    [WolverineGet("/api/system/mealie")]
-    public static Task<MealieSettingsResponse> GetMealieSettings([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
-        recipes.GetMealieSettingsAsync(cancellationToken);
-
-    /// <summary>
-    /// Saves Mealie's address and API token. Leave the token empty to keep the saved one, or send an empty
-    /// address to stop using Mealie. Mealie__Url and Mealie__ApiToken give the starting values. Admins only.
-    /// </summary>
-    [Authorize(Policy = Sessions.AdminPolicy)]
-    [WolverinePut("/api/system/mealie")]
-    public static Task<MealieSettingsResponse> UpdateMealieSettings(
-        MealieSettingsRequest request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
-        recipes.UpdateMealieSettingsAsync(request, cancellationToken);
 }

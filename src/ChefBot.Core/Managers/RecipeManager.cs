@@ -5,15 +5,12 @@ using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
-using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Managers;
 
 /// <inheritdoc cref="IRecipeManager"/>
 internal sealed class RecipeManager(
     IRecipeAccess recipes,
-    ISettingsAccess settings,
-    IRecipeSourceAccess mealie,
     IImageSourceAccess images,
     IWebPageAccess web,
     ISampleRecipeAccess samples,
@@ -22,8 +19,6 @@ internal sealed class RecipeManager(
     ValidationEngine validation,
     TimeProvider clock) : IRecipeManager
 {
-    private const string MealieNotSetUp = "Mealie isn't set up. Enter its address and an API token on the Settings tab.";
-
     public async Task<IReadOnlyList<RecipeResponse>> ListAsync(CancellationToken cancellationToken) =>
         (await recipes.ListActiveAsync(cancellationToken)).Select(recipe => recipe.ToResponse()).ToList();
 
@@ -32,7 +27,7 @@ internal sealed class RecipeManager(
         var text = draft.ToText();
         ValidationEngine.Recipe(text);
 
-        var recipe = new Recipe { Origin = RecipeOrigin.Local };
+        var recipe = new Recipe();
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
         await messages.CommitAsync(cancellationToken);
@@ -45,7 +40,6 @@ internal sealed class RecipeManager(
         var text = draft.ToText();
         ValidationEngine.Recipe(text);
 
-        recipe.Origin = RecipeOrigin.Local;
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
         await messages.CommitAsync(cancellationToken);
@@ -56,7 +50,6 @@ internal sealed class RecipeManager(
     {
         var recipe = await validation.RecipeAsync(id, cancellationToken);
         recipe.IsArchived = true;
-        recipe.Origin = RecipeOrigin.Local;
         await recipes.SaveAsync(recipe, cancellationToken);
         await messages.CommitAsync(cancellationToken);
     }
@@ -74,7 +67,6 @@ internal sealed class RecipeManager(
         ValidationEngine.RoomForImage(recipe);
         var contentType = ValidationEngine.Image(request.Data);
 
-        recipe.Origin = RecipeOrigin.Local;
         var image = TransformationEngine.AddUploadedImage(recipe, contentType, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
         await recipes.SaveImageFileAsync(new RecipeImageFile(image.Id, contentType, request.Data!), cancellationToken);
@@ -87,7 +79,6 @@ internal sealed class RecipeManager(
         var recipe = await validation.RecipeAsync(id, cancellationToken);
         ValidationEngine.ImageOn(recipe, imageId);
 
-        recipe.Origin = RecipeOrigin.Local;
         TransformationEngine.RemoveImage(recipe, imageId, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
         await messages.CommitAsync(cancellationToken);
@@ -102,15 +93,12 @@ internal sealed class RecipeManager(
             return [];
         }
 
-        // Mealie is often on the home network, so its photos may come from a private address; no other photos may.
-        var mealie = (await settings.GetMealieAsync(cancellationToken)).Url;
         var problems = new List<string>();
         foreach (var image in TransformationEngine.PendingImages(recipe))
         {
             try
             {
-                var fromMealie = WebAddress.SameServer(image.SourceUrl, mealie);
-                var data = await images.DownloadAsync(image.SourceUrl!, ValidationEngine.MaxImageBytes, fromMealie, cancellationToken);
+                var data = await images.DownloadAsync(image.SourceUrl!, ValidationEngine.MaxImageBytes, cancellationToken);
                 image.ContentType = ValidationEngine.Image(data);
                 await recipes.SaveImageFileAsync(new RecipeImageFile(image.Id, image.ContentType, data), cancellationToken);
             }
@@ -170,7 +158,7 @@ internal sealed class RecipeManager(
         ValidationEngine.Recipe(text);
         ValidationEngine.NameNotInLibrary(text, library);
 
-        var recipe = new Recipe { Origin = RecipeOrigin.Local };
+        var recipe = new Recipe();
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
         await RequestImagesAsync(recipe);
@@ -195,72 +183,6 @@ internal sealed class RecipeManager(
         return new AddSamplesResponse(await AddNewAsync(chosen, cancellationToken));
     }
 
-    public async Task<MealieSettingsResponse> GetMealieSettingsAsync(CancellationToken cancellationToken) =>
-        (await settings.GetMealieAsync(cancellationToken)).ToResponse();
-
-    public async Task<MealieSettingsResponse> UpdateMealieSettingsAsync(MealieSettingsRequest request, CancellationToken cancellationToken)
-    {
-        var current = await settings.GetMealieAsync(cancellationToken);
-        (current.Url, current.ApiToken) = ValidationEngine.MealieConnection(request.Url, request.ApiToken, current.ApiToken);
-        await settings.SaveMealieAsync(current, cancellationToken);
-        await messages.CommitAsync(cancellationToken);
-        return current.ToResponse();
-    }
-
-    public async Task UseDefaultMealieConnectionAsync(string? url, string? apiToken, CancellationToken cancellationToken)
-    {
-        var current = await settings.GetMealieAsync(cancellationToken);
-        if (current.Url.Length == 0 && !string.IsNullOrWhiteSpace(url) && !string.IsNullOrWhiteSpace(apiToken))
-        {
-            current.Url = url.Trim();
-            current.ApiToken = apiToken.Trim();
-            await settings.SaveMealieAsync(current, cancellationToken);
-        }
-
-        await messages.CommitAsync(cancellationToken);
-    }
-
-    public async Task RequestMealieImportAsync(CancellationToken cancellationToken)
-    {
-        ValidationEngine.MealieIsSetUp(await settings.GetMealieAsync(cancellationToken));
-        await messages.PublishAsync(new ImportMealieRecipes());
-        await messages.CommitAsync(cancellationToken);
-    }
-
-    public async Task<RecipeImportFinished> ImportFromMealieAsync(ImportMealieRecipes command, CancellationToken cancellationToken)
-    {
-        RecipeImportFinished finished;
-        var connection = await settings.GetMealieAsync(cancellationToken);
-        if (!connection.IsConfigured)
-        {
-            finished = new RecipeImportFinished(false, null, MealieNotSetUp, command.StageWeekAfter);
-        }
-        else
-        {
-            try
-            {
-                var fetched = await mealie.FetchAllAsync(connection, cancellationToken);
-                var changes = transformation.MergeImport(fetched, await recipes.ListAllAsync(cancellationToken), clock.GetUtcNow());
-                foreach (var recipe in changes.Changed)
-                {
-                    await recipes.SaveAsync(recipe, cancellationToken);
-                    await RequestImagesAsync(recipe);
-                }
-
-                finished = new RecipeImportFinished(true, changes.Result, null, command.StageWeekAfter);
-            }
-            catch (RecipeSourceException exception)
-            {
-                // An unreachable Mealie is an expected outcome: planning carries on from the saved recipes.
-                finished = new RecipeImportFinished(false, null, exception.Message, command.StageWeekAfter);
-            }
-        }
-
-        await messages.PublishAsync(finished);
-        await messages.CommitAsync(cancellationToken);
-        return finished;
-    }
-
     /// <summary>Adds the recipes whose names aren't in the library yet.</summary>
     /// <returns>How many were added.</returns>
     private async Task<int> AddNewAsync(IReadOnlyList<RecipeText> candidates, CancellationToken cancellationToken) =>
@@ -278,7 +200,7 @@ internal sealed class RecipeManager(
         foreach (var text in fresh)
         {
             ValidationEngine.Recipe(text);
-            var recipe = new Recipe { Origin = RecipeOrigin.Local };
+            var recipe = new Recipe();
             transformation.ApplyText(text, recipe, clock.GetUtcNow());
             var photo = photos.TryGetValue(recipe.Name, out var data) ? PhotoFile(recipe, data) : null;
             await recipes.SaveAsync(recipe, cancellationToken);

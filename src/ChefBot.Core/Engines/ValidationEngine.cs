@@ -241,37 +241,6 @@ internal sealed class ValidationEngine(
         recipe.Images.FirstOrDefault(image => image.Id == imageId)
             ?? throw new NotFoundException($"{recipe.Name} has no photo with id {imageId}.");
 
-    /// <summary>The address and token to save for Mealie. An empty address turns Mealie off; an empty token keeps the saved one.</summary>
-    public static (string Url, string ApiToken) MealieConnection(string? url, string? apiToken, string savedToken)
-    {
-        var address = url?.Trim() ?? string.Empty;
-        if (address.Length == 0)
-        {
-            return (string.Empty, string.Empty);
-        }
-
-        if (!WebAddress.IsHttp(address))
-        {
-            throw new RuleViolationException("Enter Mealie's full address, starting with http:// or https://.");
-        }
-
-        var token = string.IsNullOrWhiteSpace(apiToken) ? savedToken : apiToken.Trim();
-        if (token.Length == 0)
-        {
-            throw new RuleViolationException("Enter an API token. Create one in Mealie under your user profile, API Tokens.");
-        }
-
-        return (address, token);
-    }
-
-    public static void MealieIsSetUp(MealieSettings settings)
-    {
-        if (!settings.IsConfigured)
-        {
-            throw new RuleViolationException("Mealie isn't set up. An admin can enter its address and an API token on the Settings tab.");
-        }
-    }
-
     // ---------- pantry ----------
 
     public static void PantryItemName(string? name)

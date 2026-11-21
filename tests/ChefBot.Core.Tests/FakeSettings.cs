@@ -11,8 +11,6 @@ internal sealed class FakeSettings : ISettingsAccess
 
     public BackupSettings Backups { get; set; } = new();
 
-    public MealieSettings Mealie { get; set; } = new();
-
     public ScheduleState Schedule { get; set; } = new();
 
     public List<GroceryStore> Stores { get; set; } = [];
@@ -30,10 +28,6 @@ internal sealed class FakeSettings : ISettingsAccess
     public Task<BackupSettings> GetBackupsAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Backups));
 
     public Task SaveBackupsAsync(BackupSettings settings, CancellationToken cancellationToken) => Set(() => Backups = Copies.Of(settings));
-
-    public Task<MealieSettings> GetMealieAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Mealie));
-
-    public Task SaveMealieAsync(MealieSettings settings, CancellationToken cancellationToken) => Set(() => Mealie = Copies.Of(settings));
 
     public Task<ScheduleState> GetScheduleAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Schedule));
 

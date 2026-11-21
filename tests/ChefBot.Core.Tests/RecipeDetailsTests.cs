@@ -7,8 +7,6 @@ namespace ChefBot.Core.Tests;
 /// <summary>Steps, times, metadata and photos on recipes: typed in, uploaded and imported.</summary>
 public class RecipeDetailsTests
 {
-    private const string Address = "http://mealie.local:9000";
-
     private static readonly byte[] Png = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3];
 
     private static RecipeDraft Draft(string name = "Chili") => new(
@@ -116,32 +114,16 @@ public class RecipeDetailsTests
     }
 
     [Test]
-    public async Task Uploading_a_photo_makes_an_imported_recipe_a_local_one()
-    {
-        var core = new TestCore();
-        var recipes = core.RecipeManager();
-        await ImportAsync(core, Source("1", "Stew"));
-        var stew = core.Recipes.Rows.Single();
-
-        var updated = await recipes.AddImageAsync(stew.Id, new AddRecipeImageRequest(Png), CancellationToken.None);
-
-        await Assert.That(updated.Origin).IsEqualTo(RecipeOrigin.Local);
-    }
-
-    [Test]
-    public async Task An_import_asks_for_its_photos_and_they_are_downloaded_afterwards()
+    public async Task Photos_waiting_from_an_import_are_downloaded_afterwards()
     {
         var core = new TestCore();
         core.Images.Files["https://img/stew.png"] = Png;
-        await ImportAsync(core, Source("1", "Stew", "https://img/stew.png", "https://img/missing.png"));
-        var stew = core.Recipes.Rows.Single();
+        var stew = TestData.NewRecipe("Stew", RecipeCourse.Main, false, "1 lb beef");
+        stew.Images.Add(new RecipeImage { SourceUrl = "https://img/stew.png" });
+        stew.Images.Add(new RecipeImage { SourceUrl = "https://img/missing.png" });
+        core.Recipes.Rows.Add(stew);
 
-        var request = core.Messages.Published.OfType<FetchRecipeImages>().Single();
-        await Assert.That(request.RecipeId).IsEqualTo(stew.Id);
-        await Assert.That(stew.Images.Count).IsEqualTo(2);
-        await Assert.That(stew.Images.Any(image => image.IsStored)).IsFalse();
-
-        var problems = await core.RecipeManager().FetchImagesAsync(request, CancellationToken.None);
+        var problems = await core.RecipeManager().FetchImagesAsync(new FetchRecipeImages(stew.Id), CancellationToken.None);
 
         var stored = core.Recipes.Rows.Single();
         await Assert.That(problems.Single()).Contains("missing.png");
@@ -150,61 +132,4 @@ public class RecipeDetailsTests
         var listed = (await core.RecipeManager().ListAsync(CancellationToken.None)).Single();
         await Assert.That(listed.Images.Count).IsEqualTo(1);
     }
-
-    [Test]
-    public async Task A_new_import_keeps_downloaded_photos_and_drops_ones_mealie_no_longer_has()
-    {
-        var core = new TestCore();
-        core.Images.Files["https://img/a.png"] = Png;
-        await ImportAsync(core, Source("1", "Stew", "https://img/a.png", "https://img/b.png"));
-        await core.RecipeManager().FetchImagesAsync(new FetchRecipeImages(core.Recipes.Rows.Single().Id), CancellationToken.None);
-        var kept = core.Recipes.Rows.Single().Images.Single(image => image.SourceUrl == "https://img/a.png");
-        core.Messages.Published.Clear();
-        core.Images.Requested.Clear();
-
-        await ImportAsync(core, Source("1", "Stew", "https://img/a.png", "https://img/c.png"));
-
-        var stew = core.Recipes.Rows.Single();
-        await Assert.That(stew.Images.Select(image => image.SourceUrl!)).IsEquivalentTo(["https://img/a.png", "https://img/c.png"]);
-        await Assert.That(stew.Images[0].Id).IsEqualTo(kept.Id);
-        await Assert.That(stew.Images[0].IsStored).IsTrue();
-        await Assert.That(core.Recipes.ImageFiles.ContainsKey(kept.Id)).IsTrue();
-        await Assert.That(core.Messages.Published.OfType<FetchRecipeImages>().Count()).IsEqualTo(1);
-    }
-
-    [Test]
-    public async Task Imported_details_and_ingredient_notes_are_kept()
-    {
-        var core = new TestCore();
-        var source = Source("1", "Stew") with
-        {
-            Ingredients = [new SourceIngredient("beef", 2, "lb", "2 lb beef, cubed", "cubed")],
-            Instructions = ["Brown.", "Simmer."],
-            PrepTime = "PT15M",
-            CookTime = "2 hours",
-            SourceUrl = "https://example.com/stew",
-        };
-
-        await ImportAsync(core, source);
-
-        var stew = core.Recipes.Rows.Single();
-        await Assert.That(stew.Instructions).IsEquivalentTo(["Brown.", "Simmer."]);
-        await Assert.That(stew.PrepMinutes).IsEqualTo(15);
-        await Assert.That(stew.CookMinutes).IsEqualTo(120);
-        await Assert.That(stew.SourceUrl).IsEqualTo("https://example.com/stew");
-        await Assert.That(stew.Tags).IsEquivalentTo(["Winter"]);
-        await Assert.That(stew.Ingredients.Single().Text).IsEqualTo("2 lb beef, cubed");
-        await Assert.That(stew.Ingredients.Single().Note).IsEqualTo("cubed");
-    }
-
-    private static async Task ImportAsync(TestCore core, params SourceRecipe[] recipes)
-    {
-        var manager = core.RecipeManager();
-        await manager.UpdateMealieSettingsAsync(new MealieSettingsRequest(Address, "token"), CancellationToken.None);
-        core.Mealie.Recipes = [.. recipes];
-        await manager.ImportFromMealieAsync(new ImportMealieRecipes(), CancellationToken.None);
-    }
-
-    private static SourceRecipe Source(string id, string name, params string[] images) =>
-        new(id, name, 4, ["Winter"], [new SourceIngredient("kale", 1, "bunch", null)], ImageUrls: images);
 }

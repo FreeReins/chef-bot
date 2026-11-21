@@ -1,6 +1,5 @@
 using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.Managers.Contracts.Messages;
-using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Tests;
@@ -135,22 +134,6 @@ public class PlanManagerTests
         await core.PlanManager().CheckWeeklyScheduleAsync(default);
 
         await Assert.That(core.Plans.Rows.Count).IsEqualTo(0);
-    }
-
-    [Test]
-    public async Task With_import_first_the_schedule_asks_for_a_Mealie_import_and_stages_after_it()
-    {
-        var core = WithLibrary(new PlannerOptions { ImportFromMealieBeforePlanning = true });
-        core.Settings.Mealie = new MealieSettings { Url = "http://mealie.local", ApiToken = "token" };
-
-        await core.PlanManager().CheckWeeklyScheduleAsync(default);
-
-        await Assert.That(core.Messages.Published.OfType<ImportMealieRecipes>().Single().StageWeekAfter).IsEqualTo(NextSunday);
-        await Assert.That(core.Plans.Rows.Count).IsEqualTo(0);
-
-        // What follows RecipeImportFinished, whether the import worked or not.
-        await core.PlanManager().StageScheduledWeekAsync(new StageScheduledWeek(NextSunday), default);
-        await Assert.That(core.Plans.Rows.Single().WeekStart).IsEqualTo(NextSunday);
     }
 
     [Test]

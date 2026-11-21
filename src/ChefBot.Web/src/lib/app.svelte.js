@@ -10,12 +10,11 @@ const query = new URLSearchParams(location.search);
 
 export const app = $state({
   screen: 'loading',   // loading | setup-account | setup-https | setup-recipes | setup-styles | setup-stores | setup-samples | sign-in | join | reset | app
-  session: null,       // SessionResponse: { setupRequired, user, mealieConfigured }
+  session: null,       // SessionResponse: { setupRequired, user }
   linkToken: query.get('invite') ?? query.get('reset'),
   link: null,          // LinkDetails for linkToken: { purpose, username, expiresAt }
   https: null,         // HttpsStatusResponse
   security: null,      // SecurityResponse (admins only)
-  mealie: null,        // MealieSettingsResponse: { url, hasApiToken, isConfigured } (admins only)
   notifications: null, // NotificationSettings (admins only)
   backups: null,       // BackupsResponse (admins only)
   samples: [],         // sample recipes offered by the setup wizard
@@ -24,7 +23,6 @@ export const app = $state({
   styles: null,        // PlanStylesResponse: { styles, known, tags, ingredients }
   styleDraft: null,    // the plan styles chosen in setup but not saved yet
   fileFormats: [],     // RecipeFileFormatResponse[]: the kinds of recipe file that can be imported
-  mealieImport: null,  // the latest Mealie import this page started: { state, result?, message? }
   people: { users: [], links: [], newLink: null },
   tab: 'plan',         // the open tab; the address bar says which (see addresses.js)
   recipeId: null,      // the recipe shown on its own page, from /recipes/{id}
@@ -307,48 +305,6 @@ export const setManualStore = (id, store) => run(async () => {
 
 export const loadRecipes = async () => { app.recipes = await api('GET', '/api/recipes'); };
 
-/** Describes a finished Mealie import in one sentence. */
-export function describeMealieImport({ added, updated, keptLocal, archived, skipped }) {
-  return `Mealie import finished: ${added} added, ${updated} updated, ${keptLocal} kept as edited here, ${archived} archived, ${skipped} skipped.`;
-}
-
-/**
- * Starts a Mealie import and follows it to the end. Progress is kept in `app.mealieImport`, which the setup
- * wizard shows in place; inside the app it is also reported in the page's messages.
- */
-export function importFromMealie() {
-  return run(async () => {
-    await api('POST', '/api/recipes/import/mealie');
-    app.mealieImport = { state: 'Running' };
-    if (app.screen === 'app') importingToast = toast('Importing from Mealie in the background. This page will update when it finishes.');
-    await pollImport();
-  });
-}
-
-// The "importing" note, closed when the import finishes so it never sits beside the result.
-let importingToast = null;
-
-async function pollImport() {
-  for (let attempt = 0; attempt < 60; attempt++) {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const status = await api('GET', '/api/recipes/import/status').catch(() => null);
-    if (!status || status.state === 'Running') continue;
-
-    app.mealieImport = status;
-    const inApp = app.screen === 'app';
-    dismissToast(importingToast);
-    if (status.state === 'Succeeded') {
-      if (inApp) toast(describeMealieImport(status.result));
-      await loadRecipes().catch(() => {});
-    } else {
-      app.mealieImport.message = status.message || 'The Mealie import failed. Check the address and token, then try again.';
-      if (inApp) toast(app.mealieImport.message, 'error');
-    }
-    return;
-  }
-  app.mealieImport = { state: 'Failed', message: 'The Mealie import is taking longer than expected. Check the Recipes tab later to see what arrived.' };
-}
-
 /**
  * Imports one recipe file. A .zip, such as a Mealie backup, is sent as it is so its photos come too; other files are
  * sent as text. Returns what happened: { added, alreadyInLibrary, skipped, photosAdded }.
@@ -404,7 +360,7 @@ export function moveSetup(offset) {
   return next ? openSetupStep(next.screen) : Promise.resolve();
 }
 
-/** Setup: choose how to fill the recipe library. A Mealie import already running keeps its progress. */
+/** Setup: choose how to fill the recipe library. */
 async function openSetupRecipes() {
   const [samples] = await Promise.all([api('GET', '/api/setup/samples'), loadFileFormats(), loadRecipes()]);
   app.samples = samples;
@@ -476,27 +432,15 @@ export async function saveSecurity(changes) {
   }
 }
 
-/** Keeps the saved Mealie settings, and whether importing is possible, in step everywhere on the page. */
-export function applyMealie(settings) {
-  app.mealie = settings;
-  app.session.mealieConfigured = settings.isConfigured;
-}
-
-/** Saves Mealie's address and token. An empty token keeps the saved one; an empty address stops using Mealie. */
-export async function saveMealie(url, apiToken) {
-  applyMealie(await api('PUT', '/api/system/mealie', { url, apiToken: apiToken || null }));
-}
-
 export async function loadSystem() {
   const admin = (path) => (isAdmin() ? api('GET', path) : null);
-  const [https, security, mealie, notifications, backups] = await Promise.all([
+  const [https, security, notifications, backups] = await Promise.all([
     api('GET', '/api/system/https'),
     admin('/api/system/security'),
-    admin('/api/system/mealie'),
     admin('/api/system/notifications'),
     admin('/api/system/backups'),
   ]);
-  Object.assign(app, { https, security, mealie, notifications, backups });
+  Object.assign(app, { https, security, notifications, backups });
 }
 
 // ---------- people ----------

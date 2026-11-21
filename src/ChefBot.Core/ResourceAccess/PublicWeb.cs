@@ -12,12 +12,6 @@ namespace ChefBot.Core.ResourceAccess;
 /// </summary>
 internal static class PublicWeb
 {
-    /// <summary>
-    /// Set to true on a request whose address an admin chose, such as a photo on the configured Mealie server,
-    /// to allow private addresses for it.
-    /// </summary>
-    public static readonly HttpRequestOptionsKey<bool> AllowPrivateAddresses = new("ChefBot.AllowPrivateAddresses");
-
     public static SocketsHttpHandler Handler() => new()
     {
         // A proxy would make the connection, so the address check would only ever see the proxy's.
@@ -67,8 +61,7 @@ internal static class PublicWeb
     {
         var host = context.DnsEndPoint.Host;
         var addresses = IPAddress.TryParse(host, out var literal) ? [literal] : await Dns.GetHostAddressesAsync(host, cancellationToken);
-        var allowPrivate = context.InitialRequestMessage.Options.TryGetValue(AllowPrivateAddresses, out var allowed) && allowed;
-        var usable = allowPrivate ? addresses : addresses.Where(IsPublic).ToArray();
+        var usable = addresses.Where(IsPublic).ToArray();
         if (usable.Length == 0)
         {
             throw new RecipeSourceException(

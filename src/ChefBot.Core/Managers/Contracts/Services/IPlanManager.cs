@@ -121,13 +121,10 @@ public interface IPlanManager
     Task<PlanStylesResponse> SaveStylesAsync(SavePlanStylesRequest request, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Stages next week's plan when the weekly schedule's time has come, once per week. When the planner is set to
-    /// import from Mealie first, this sends <see cref="ImportMealieRecipes"/> instead and staging follows the import.
+    /// Stages next week's plan when the weekly schedule's time has come, once per week, unless that week already
+    /// has a plan.
     /// </summary>
     Task CheckWeeklyScheduleAsync(CancellationToken cancellationToken);
-
-    /// <summary>Stages a week for the weekly schedule unless it already has a plan.</summary>
-    Task StageScheduledWeekAsync(StageScheduledWeek command, CancellationToken cancellationToken);
 
     /// <summary>When the weekly schedule next stages a plan, or null when it is switched off.</summary>
     DateTimeOffset? NextScheduledStaging();

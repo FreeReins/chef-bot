@@ -64,7 +64,7 @@ app.MapGet("/health", () => Results.Ok(new HealthResponse("ok"))).ExcludeFromDes
 // Every API endpoint needs a signed-in user unless it is marked [AllowAnonymous].
 app.MapWolverineEndpoints(endpoints => endpoints.RequireAuthorizeOnAll());
 
-// Addresses such as /recipes/{id} or /settings/mealie belong to the web page, so bookmarks and reloads work: any
+// Addresses such as /recipes/{id} or /settings/backups belong to the web page, so bookmarks and reloads work: any
 // path that isn't a file gets index.html, which shows the matching view. Unknown /api paths still get a 404.
 app.MapFallbackToFile("index.html", webPage).AllowAnonymous();
 app.MapFallback("/api/{**rest}", () => Results.NotFound()).AllowAnonymous().ExcludeFromDescription();

@@ -13,8 +13,6 @@ internal static partial class EntityMapping
     public static Recipe ToContract(this RecipeEntity entity) => new()
     {
         Id = entity.Id,
-        Origin = entity.Origin,
-        ExternalId = entity.ExternalId,
         Name = entity.Name,
         Servings = entity.Servings,
         Course = entity.Course,
@@ -184,8 +182,6 @@ internal static partial class EntityMapping
     public static RecipeEntity ToEntity(this Recipe recipe) => new()
     {
         Id = recipe.Id,
-        Origin = recipe.Origin,
-        ExternalId = recipe.ExternalId,
         Name = recipe.Name,
         Servings = recipe.Servings,
         Course = recipe.Course,

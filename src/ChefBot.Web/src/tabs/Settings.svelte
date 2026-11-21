@@ -5,7 +5,6 @@
   import { followLink } from '../lib/addresses.js';
   import LoginPanel from '../settings/LoginPanel.svelte';
   import HttpsPanel from '../settings/HttpsPanel.svelte';
-  import MealiePanel from '../settings/MealiePanel.svelte';
   import StoresPanel from '../settings/StoresPanel.svelte';
   import PlanStylesPanel from '../settings/PlanStylesPanel.svelte';
   import NotificationsPanel from '../settings/NotificationsPanel.svelte';
@@ -15,7 +14,6 @@
   import Lock from '@lucide/svelte/icons/lock';
   import Store from '@lucide/svelte/icons/store';
   import ListChecks from '@lucide/svelte/icons/list-checks';
-  import Plug from '@lucide/svelte/icons/plug';
   import Bell from '@lucide/svelte/icons/bell';
   import Archive from '@lucide/svelte/icons/archive';
   import ScrollText from '@lucide/svelte/icons/scroll-text';
@@ -26,7 +24,6 @@
     { key: 'https', label: 'HTTPS', icon: Lock, visible: () => true, panel: HttpsPanel, heading: 'Secure connection (HTTPS)' },
     { key: 'styles', label: 'Plan styles', icon: ListChecks, visible: () => Boolean(app.styles), panel: PlanStylesPanel },
     { key: 'stores', label: 'Stores', icon: Store, visible: () => isAdmin() && app.stores, panel: StoresPanel },
-    { key: 'mealie', label: 'Mealie', icon: Plug, visible: () => isAdmin() && app.mealie, panel: MealiePanel },
     { key: 'notifications', label: 'Notifications', icon: Bell, visible: () => isAdmin() && app.notifications, panel: NotificationsPanel },
     { key: 'backups', label: 'Backups', icon: Archive, visible: () => isAdmin() && app.backups, panel: BackupsPanel },
     { key: 'logs', label: 'Logs', icon: ScrollText, visible: () => isAdmin(), panel: LogsPanel, wide: true },

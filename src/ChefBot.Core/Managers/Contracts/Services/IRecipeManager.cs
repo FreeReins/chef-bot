@@ -2,7 +2,7 @@ using ChefBot.Core.Managers.Contracts.Messages;
 
 namespace ChefBot.Core.Managers.Contracts.Services;
 
-/// <summary>The recipe library in ChefBot's own database, and importing into it from files, samples and Mealie.</summary>
+/// <summary>The recipe library in ChefBot's own database, and importing into it from files, web pages and samples.</summary>
 public interface IRecipeManager
 {
     /// <summary>Recipes that can be planned, by name.</summary>
@@ -10,7 +10,7 @@ public interface IRecipeManager
 
     Task<RecipeResponse> CreateAsync(RecipeDraft draft, CancellationToken cancellationToken);
 
-    /// <summary>Saves an edit. An imported recipe becomes a local one, so later imports leave the edit alone.</summary>
+    /// <summary>Saves an edit.</summary>
     Task<RecipeResponse> UpdateAsync(Guid id, RecipeDraft draft, CancellationToken cancellationToken);
 
     /// <summary>Stops a recipe from being planned. Past plans keep showing it.</summary>
@@ -20,16 +20,16 @@ public interface IRecipeManager
     /// <exception cref="NotFoundException">The recipe, or a stored photo with that id on it, doesn't exist.</exception>
     Task<RecipeImageContent> GetImageAsync(Guid id, Guid imageId, CancellationToken cancellationToken);
 
-    /// <summary>Adds an uploaded photo after the recipe's others. Like an edit, this makes an imported recipe a local one.</summary>
+    /// <summary>Adds an uploaded photo after the recipe's others.</summary>
     /// <exception cref="RuleViolationException">The file isn't a JPEG, PNG, WebP or GIF image, is too large, or the recipe has too many photos.</exception>
     Task<RecipeResponse> AddImageAsync(Guid id, AddRecipeImageRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Removes a photo. Like an edit, this makes an imported recipe a local one.</summary>
+    /// <summary>Removes a photo.</summary>
     Task<RecipeResponse> RemoveImageAsync(Guid id, Guid imageId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Downloads the photos an import found for a recipe and keeps copies. A photo that can't be downloaded stays
-    /// waiting, and the next import tries it again.
+    /// Downloads the photos an import found for a recipe and keeps copies. Only public internet addresses are
+    /// downloaded. A photo that can't be downloaded stays waiting.
     /// </summary>
     /// <returns>What went wrong with each photo that couldn't be downloaded; empty when all of them worked.</returns>
     Task<IReadOnlyList<string>> FetchImagesAsync(FetchRecipeImages command, CancellationToken cancellationToken);
@@ -65,25 +65,4 @@ public interface IRecipeManager
 
     /// <summary>Adds the chosen samples. Names already in the library are skipped.</summary>
     Task<AddSamplesResponse> AddSamplesAsync(AddSamplesRequest request, CancellationToken cancellationToken);
-
-    Task<MealieSettingsResponse> GetMealieSettingsAsync(CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Saves how to reach Mealie. An empty address turns Mealie off and forgets the token. An empty token keeps
-    /// the saved one, so the address can be changed without entering the token again.
-    /// </summary>
-    Task<MealieSettingsResponse> UpdateMealieSettingsAsync(MealieSettingsRequest request, CancellationToken cancellationToken);
-
-    /// <summary>Uses the address and token from the configuration as the starting value, when none has been saved.</summary>
-    Task UseDefaultMealieConnectionAsync(string? url, string? apiToken, CancellationToken cancellationToken);
-
-    /// <summary>Queues a background Mealie import by sending <see cref="ImportMealieRecipes"/>.</summary>
-    /// <exception cref="RuleViolationException">Mealie isn't set up.</exception>
-    Task RequestMealieImportAsync(CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Copies recipes from Mealie, so planning never depends on Mealie being up. Publishes
-    /// <see cref="RecipeImportFinished"/> whether it worked or not, and returns the same event.
-    /// </summary>
-    Task<RecipeImportFinished> ImportFromMealieAsync(ImportMealieRecipes command, CancellationToken cancellationToken);
 }

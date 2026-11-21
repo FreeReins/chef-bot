@@ -93,7 +93,6 @@ internal static class Mapping
             recipe.Id,
             recipe.Name,
             recipe.Course,
-            recipe.Origin,
             recipe.IsSlowCooker,
             recipe.Servings,
             ingredients.Select(Written).ToList(),
@@ -134,9 +133,6 @@ internal static class Mapping
         draft.YieldText,
         draft.Notes,
         draft.Tags);
-
-    public static MealieSettingsResponse ToResponse(this MealieSettings settings) =>
-        new(settings.Url, settings.ApiToken.Length > 0, settings.IsConfigured);
 
     public static UserResponse ToResponse(this UserAccount user) =>
         new(user.Id, user.Username, user.DisplayName, user.IsAdmin, user.CreatedAt, user.LockedUntil);

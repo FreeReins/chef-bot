@@ -110,9 +110,6 @@
   </div>
 {:else if editing}
   <h2>Edit {recipe.name}</h2>
-  {#if recipe.origin === 'Mealie'}
-    <p class="muted">Saving makes this a ChefBot recipe, so later Mealie imports leave your changes alone.</p>
-  {/if}
   <RecipeForm {recipe} button="Save changes" {save} cancel={() => (editing = false)} />
 {:else}
   <div class="row" style="margin-top:1rem">
@@ -127,7 +124,6 @@
     <Chip>Serves {recipe.servings}</Chip>
     {#each times as [label, minutes] (label)}<Chip>{label} {duration(minutes)}</Chip>{/each}
     {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
-    {#if recipe.origin === 'Mealie'}<Chip>From Mealie</Chip>{/if}
     {#each recipe.tags as tag (tag)}<Chip>#{tag}</Chip>{/each}
   </div>
 
@@ -156,9 +152,6 @@
       <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onchange={addPhoto} disabled={uploading}>
       <ImagePlus size={16} />{uploading ? 'Adding…' : 'Add photo'}
     </label>
-    {#if recipe.origin === 'Mealie'}
-      <p class="muted">Adding or removing a photo makes this a ChefBot recipe, so later Mealie imports leave it alone.</p>
-    {/if}
   </div>
 
   <div class="columns">

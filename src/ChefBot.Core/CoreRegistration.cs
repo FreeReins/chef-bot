@@ -55,7 +55,7 @@ public static class CoreRegistration
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<PlanWriteLock>();
 
-        // Resource access: PostgreSQL, Mealie, the webhook, recipe pages and photos on the web, the backup folder, and the sample recipe, known store and starter plan style files.
+        // Resource access: PostgreSQL, the webhook, recipe pages and photos on the web, the backup folder, and the sample recipe, known store and starter plan style files.
         services.AddDbContext<ChefBotDbContext>(options => options.UseNpgsql(ConnectionString(configuration)));
         services.AddScoped<IRecipeAccess, RecipeAccess>();
         services.AddScoped<IPlanAccess, PlanAccess>();
@@ -69,8 +69,6 @@ public static class CoreRegistration
         services.AddSingleton<ISampleRecipeAccess>(new SampleRecipeAccess(DataPath(configuration, "Data:SampleRecipes", "config/sample-recipes.json")));
         services.AddSingleton<IKnownStoreAccess>(new KnownStoreAccess(DataPath(configuration, "Data:KnownStores", "config/stores.json")));
         services.AddSingleton<IKnownPlanStyleAccess>(new KnownPlanStyleAccess(DataPath(configuration, "Data:PlanStyles", "config/plan-styles.json")));
-        // Mealie's address and token are saved settings, passed in with each import.
-        services.AddHttpClient<IRecipeSourceAccess, RecipeSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<INotificationAccess, NotificationAccess>(client => client.Timeout = TimeSpan.FromSeconds(10));
         // Photos and recipe pages come from addresses people or web pages choose, so they only reach the public internet.
         services.AddHttpClient<IImageSourceAccess, ImageSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(20))

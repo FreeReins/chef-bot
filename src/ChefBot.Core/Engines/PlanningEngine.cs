@@ -219,7 +219,7 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
 
         if (run.Pool(RecipeCourse.Main).Count == 0)
         {
-            throw new RuleViolationException("There are no main-course recipes to plan. Add some, or import them from Mealie.");
+            throw new RuleViolationException("There are no main-course recipes to plan. Add some on the Recipes tab, or import a recipe file there.");
         }
 
         var picks = Fill(run, MealSlot.Dinner, RecipeCourse.Main, days, KeptRecipes(kept), day => day)

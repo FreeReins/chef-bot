@@ -8,7 +8,7 @@ namespace ChefBot.Core.ResourceAccess;
 /// <remarks>Its <see cref="HttpClient"/> uses <see cref="PublicWeb.Handler"/>, set up in <c>CoreRegistration</c>.</remarks>
 internal sealed class ImageSourceAccess(HttpClient http) : IImageSourceAccess
 {
-    public async Task<byte[]> DownloadAsync(string url, int maxBytes, bool allowPrivateAddresses, CancellationToken cancellationToken)
+    public async Task<byte[]> DownloadAsync(string url, int maxBytes, CancellationToken cancellationToken)
     {
         if (!WebAddress.IsHttp(url))
         {
@@ -18,7 +18,6 @@ internal sealed class ImageSourceAccess(HttpClient http) : IImageSourceAccess
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Options.Set(PublicWeb.AllowPrivateAddresses, allowPrivateAddresses);
             using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {

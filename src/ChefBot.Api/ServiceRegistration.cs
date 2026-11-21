@@ -18,7 +18,6 @@ public static class ServiceRegistration
     public static IServiceCollection AddChefBot(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddChefBotCore(configuration);
-        services.AddSingleton<ImportStatusTracker>();
         services.AddHostedService<MaintenanceTimer>();
         return services;
     }
@@ -226,12 +225,9 @@ public static class ServiceRegistration
         var configuration = services.GetRequiredService<IConfiguration>();
         var loggers = services.GetRequiredService<ILoggerFactory>();
 
-        // A webhook and a Mealie connection in the configuration are the starting values until something
-        // is saved on the Settings tab.
+        // A webhook in the configuration is the starting value until one is saved on the Settings tab.
         await scope.ServiceProvider.GetRequiredService<IMaintenanceManager>()
             .UseDefaultWebhookAsync(configuration["Notifications:WebhookUrl"], CancellationToken.None);
-        await scope.ServiceProvider.GetRequiredService<IRecipeManager>()
-            .UseDefaultMealieConnectionAsync(configuration["Mealie:Url"], configuration["Mealie:ApiToken"], CancellationToken.None);
 
         if (scope.ServiceProvider.GetRequiredService<IPlanManager>().NextScheduledStaging() is { } next)
         {

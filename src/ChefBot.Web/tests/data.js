@@ -29,7 +29,7 @@ export const member = () => ({
 });
 
 /** SessionResponse */
-export const session = (user = admin()) => ({ setupRequired: false, user, mealieConfigured: true });
+export const session = (user = admin()) => ({ setupRequired: false, user });
 
 /** MealResponse */
 const meal = (id, day, date, slot, title, recipeId, extra = {}) => ({
@@ -162,7 +162,7 @@ export const ingredients = () => {
 
 /** RecipeResponse */
 const recipe = (id, name, course, extra = {}) => ({
-  id, name, course, origin: 'Local', isSlowCooker: false, servings: 4, ingredients: ['oats', 'milk'],
+  id, name, course, isSlowCooker: false, servings: 4, ingredients: ['oats', 'milk'],
   description: null, instructions: [], prepMinutes: null, cookMinutes: null, totalMinutes: null, sourceUrl: null,
   author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], ...extra,
 });
@@ -170,7 +170,6 @@ const recipe = (id, name, course, extra = {}) => ({
 /** RecipeResponse[]: the first has everything filled in, for the recipe page. */
 export const recipes = () => [
   recipe(ids.tacos, 'Slaw Fish Tacos', 'Main', {
-    origin: 'Mealie',
     ingredients: ['600 g fish fillets', '1/2 head cabbage', '3 limes', '8 tortillas'],
     description: 'Crisp fish and a sharp lime slaw. The slaw keeps for lunch the next day.',
     instructions: ['Shred the cabbage and dress it with lime and salt.', 'Season and pan-fry the fish.', 'Warm the tortillas and fill them.'],
@@ -211,9 +210,6 @@ export const https = () => ({
 /** SecurityResponse */
 export const security = () => ({ maxFailedSignIns: 5, lockoutMinutes: 15, requireHttps: false });
 
-/** MealieSettingsResponse */
-export const mealie = () => ({ url: 'http://mealie.local:9000', hasApiToken: true, isConfigured: true });
-
 /** NotificationSettingsResponse */
 export const notifications = () => ({
   webhookUrl: 'https://ntfy.example.com/chefbot', planReady: true, slowCooker: true, mealsToday: false,
@@ -240,7 +236,7 @@ export const logs = () => ({
   capacity: 1000,
   entries: [
     { sequence: 1, time: '2026-11-20T03:00:00Z', level: 'Information', category: 'ChefBot.Backups', message: 'Backup made.', exception: null },
-    { sequence: 2, time: '2026-11-20T03:05:00Z', level: 'Warning', category: 'ChefBot.Mealie', message: 'Mealie took 9 seconds to answer.', exception: null },
+    { sequence: 2, time: '2026-11-20T03:05:00Z', level: 'Warning', category: 'ChefBot.Backups', message: 'The backup folder took 9 seconds to answer.', exception: null },
     { sequence: 3, time: '2026-11-20T03:10:00Z', level: 'Error', category: 'ChefBot.Notifications', message: 'The webhook failed.', exception: 'System.Net.Http.HttpRequestException: Connection refused' },
     { sequence: 4, time: '2026-11-20T03:15:00Z', level: 'Information', category: 'ChefBot.Planning', message: 'Line one\nLine two\nLine three\nLine four\nLine five', exception: null },
   ],

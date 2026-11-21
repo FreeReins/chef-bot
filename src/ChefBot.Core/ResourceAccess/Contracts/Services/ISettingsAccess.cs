@@ -17,10 +17,6 @@ internal interface ISettingsAccess
 
     Task SaveBackupsAsync(BackupSettings settings, CancellationToken cancellationToken);
 
-    Task<MealieSettings> GetMealieAsync(CancellationToken cancellationToken);
-
-    Task SaveMealieAsync(MealieSettings settings, CancellationToken cancellationToken);
-
     Task<ScheduleState> GetScheduleAsync(CancellationToken cancellationToken);
 
     Task SaveScheduleAsync(ScheduleState state, CancellationToken cancellationToken);

@@ -21,10 +21,7 @@ internal sealed class AccountManager(
     public async Task<SessionResponse> DescribeSessionAsync(Guid? userId, CancellationToken cancellationToken)
     {
         var user = userId is Guid id ? await accounts.FindUserAsync(id, cancellationToken) : null;
-        return new SessionResponse(
-            !await accounts.AnyUsersAsync(cancellationToken),
-            user?.ToResponse(),
-            (await settings.GetMealieAsync(cancellationToken)).IsConfigured);
+        return new SessionResponse(!await accounts.AnyUsersAsync(cancellationToken), user?.ToResponse());
     }
 
     public async Task<SessionInfo?> FindSessionAsync(Guid userId, CancellationToken cancellationToken) =>

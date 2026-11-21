@@ -21,8 +21,6 @@ internal sealed class TestCore
 
     public FakeSettings Settings { get; } = new();
 
-    public FakeSource Mealie { get; } = new();
-
     public FakeImageSource Images { get; } = new();
 
     public FakeWebPages Web { get; } = new();
@@ -53,7 +51,7 @@ internal sealed class TestCore
 
     public PantryManager PantryManager() => new(Pantry, Messages, TestData.Transformation, Validation, TestData.Catalog, Options, Clock);
 
-    public RecipeManager RecipeManager() => new(Recipes, Settings, Mealie, Images, Web, new NoSamples(), Messages, TestData.Transformation, Validation, Clock);
+    public RecipeManager RecipeManager() => new(Recipes, Images, Web, new NoSamples(), Messages, TestData.Transformation, Validation, Clock);
 
     public AccountManager AccountManager() => new(Accounts, Settings, Messages, Validation, new SecurityEngine(), new PlainHasher(), Clock);
 }

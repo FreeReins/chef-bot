@@ -32,12 +32,6 @@ internal sealed class PlannerOptions
     /// <summary>Ingredients that keep no longer than this are worth sharing between meals.</summary>
     public int PerishableWithinDays { get; set; } = 21;
 
-    /// <summary>
-    /// Import from Mealie before the weekly schedule stages a plan. Planning continues from saved recipes if Mealie
-    /// is down. Staging a plan by hand never waits for an import.
-    /// </summary>
-    public bool ImportFromMealieBeforePlanning { get; set; }
-
     public ScoreWeights Weights { get; set; } = new();
 
     public int PortionsFor(MealSlot slot) => slot switch

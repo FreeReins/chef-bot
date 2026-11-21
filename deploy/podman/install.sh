@@ -22,7 +22,7 @@ fi
 if [[ ! -f "$settings" ]]; then
     mkdir -p "$(dirname "$settings")"
     cp "$here/chefbot.env.example" "$settings"
-    echo "Created $settings. Edit it to connect Mealie or a webhook."
+    echo "Created $settings. Edit it to set a webhook or HTTPS options."
 fi
 
 mkdir -p "$units"
