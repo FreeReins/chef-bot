@@ -27,6 +27,10 @@ const VIEWS = [
   { name: 'schedule, confirmed plan', path: '/schedule' },
   { name: 'schedule, staged plan', path: '/schedule', answers: { 'GET /api/plans/current': data.plan('Staged') } },
   { name: 'shopping', path: '/shopping' },
+  { name: 'shopping, staged plan with hand-added items', path: '/shopping',
+    answers: { 'GET /api/plans/current': data.plan('Staged'), 'GET /api/shopping/items': data.manualItems() } },
+  { name: 'shopping without a plan', path: '/shopping', answers: { ...noPlan, 'GET /api/shopping/items': data.manualItems() } },
+  { name: 'shopping without a plan, empty list', path: '/shopping', answers: { ...noPlan, 'GET /api/pantry': [] } },
   { name: 'pantry with a plan', path: '/pantry' },
   { name: 'pantry without a plan', path: '/pantry', answers: noPlan },
 

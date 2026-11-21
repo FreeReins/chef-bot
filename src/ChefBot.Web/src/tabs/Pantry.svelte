@@ -3,11 +3,12 @@
      Each list is grouped by food group, in shop order. -->
 <script>
   import { untrack } from 'svelte';
-  import { app, run, loadPantry, refreshAfterPantryChange } from '../lib/app.svelte.js';
+  import { app, run, loadPantry, refreshAfterPantryChange, addToShoppingList, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { amount, shortDate, parseDate, DAYS, FOOD_GROUPS } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import ListPlus from '@lucide/svelte/icons/list-plus';
 
   const TONES = { Expired: 'bad', ExpiringSoon: 'warn', Fresh: 'good', Unknown: '' };
   const LABELS = { Expired: 'Expired', ExpiringSoon: 'Use soon', Fresh: 'Fresh', Unknown: 'No date' };
@@ -39,6 +40,13 @@
   function mealLabel({ title, date, slot }) {
     const when = date ? `${DAYS[parseDate(date).getDay()].slice(0, 3)} ${slot.toLowerCase()}` : slot;
     return `${when}: ${title}`;
+  }
+
+  /** Puts a pantry item on the shopping list, to buy more of it. */
+  async function restock(item) {
+    if (await addToShoppingList({ name: item.name, unit: item.unit || null })) {
+      toast(`${item.name} was added to the shopping list.`);
+    }
   }
 
   const remove = (id) => run(async () => {
@@ -76,7 +84,11 @@
             {#each usedFor as meal (meal.mealId)}<Chip>{mealLabel(meal)}</Chip>{/each}
           </div>
         </div>
-        <button class="icon remove" aria-label="Remove {item.name}" title="Remove" onclick={() => remove(item.id)}><Trash2 size={16} /></button>
+        <div class="row-actions">
+          <button class="icon" aria-label="Add {item.name} to the shopping list" title="Add to the shopping list"
+                  onclick={() => restock(item)}><ListPlus size={16} /></button>
+          <button class="icon remove" aria-label="Remove {item.name}" title="Remove" onclick={() => remove(item.id)}><Trash2 size={16} /></button>
+        </div>
       </li>
     {/each}
   </ul>

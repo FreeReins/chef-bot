@@ -5,7 +5,7 @@ namespace ChefBot.Core.Managers.Contracts.Services;
 /// <summary>
 /// Plans weeks and keeps each plan, its leftover lunches and its shopping list in step. Every change to a plan
 /// goes through here: staging, confirming, swapping or cooking meals, recording purchases, and choosing the stores
-/// the shopping list is split between.
+/// the shopping list is split between. It also keeps the items put on the shopping list by hand, which need no plan.
 /// </summary>
 public interface IPlanManager
 {
@@ -53,7 +53,10 @@ public interface IPlanManager
     /// <summary>Ticks one shopping item off and puts it in the pantry with an expiration date.</summary>
     Task<PlanResponse> PurchaseAsync(Guid planId, Guid itemId, PurchaseDetails details, CancellationToken cancellationToken);
 
-    /// <summary>Marks everything still on the list as bought on the same day.</summary>
+    /// <summary>
+    /// Marks everything still on the plan's list as bought on the same day, together with everything added to the
+    /// shopping list by hand.
+    /// </summary>
     Task<PlanResponse> PurchaseAllAsync(Guid planId, PurchaseAllRequest request, CancellationToken cancellationToken);
 
     /// <summary>
@@ -61,6 +64,34 @@ public interface IPlanManager
     /// whose week hasn't ended to match.
     /// </summary>
     Task<PlanResponse> SetShoppingStoreAsync(Guid planId, Guid itemId, ShoppingStoreRequest request, CancellationToken cancellationToken);
+
+    /// <summary>What was put on the shopping list by hand, each with the store it is bought at.</summary>
+    Task<IReadOnlyList<ManualShoppingItemResponse>> ListManualItemsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Puts something on the shopping list by hand, with or without a plan. Adding the same thing in the same unit
+    /// again adds to the amount already listed. Returns the whole hand-added list.
+    /// </summary>
+    Task<IReadOnlyList<ManualShoppingItemResponse>> AddManualItemAsync(NewShoppingItem request, CancellationToken cancellationToken);
+
+    /// <summary>Takes a hand-added item off the shopping list without buying it. Returns the whole hand-added list.</summary>
+    Task<IReadOnlyList<ManualShoppingItemResponse>> RemoveManualItemAsync(Guid itemId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Buys a hand-added item: it leaves the list and goes into the pantry, and open plans' shopping lists drop what it
+    /// covers. Works whether or not a plan is confirmed. Returns the whole hand-added list.
+    /// </summary>
+    Task<IReadOnlyList<ManualShoppingItemResponse>> PurchaseManualItemAsync(Guid itemId, PurchaseDetails details, CancellationToken cancellationToken);
+
+    /// <summary>Buys every hand-added item on the same day. Returns the hand-added list, which is then empty.</summary>
+    Task<IReadOnlyList<ManualShoppingItemResponse>> PurchaseAllManualItemsAsync(PurchaseAllRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Buys a hand-added item's ingredient at another store from now on, like <see cref="SetShoppingStoreAsync"/>.
+    /// Returns the whole hand-added list.
+    /// </summary>
+    Task<IReadOnlyList<ManualShoppingItemResponse>> SetManualItemStoreAsync(
+        Guid itemId, ShoppingStoreRequest request, CancellationToken cancellationToken);
 
     /// <summary>The household's stores, the known stores that can be added, and the ingredient names a store can list.</summary>
     Task<GroceryStoresResponse> GetStoresAsync(CancellationToken cancellationToken);

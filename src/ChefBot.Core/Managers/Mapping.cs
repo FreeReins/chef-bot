@@ -77,6 +77,15 @@ internal static class Mapping
         item.FreshnessOn(today, expiringSoonDays),
         catalog.Get(item.CatalogName)?.Group);
 
+    /// <summary>A hand-added shopping item, with the store it is bought at.</summary>
+    public static ManualShoppingItemResponse ToResponse(this ManualShoppingItem item, string store, IngredientCatalog catalog) => new(
+        item.Id,
+        item.DisplayName,
+        item.Quantity,
+        item.Unit,
+        store,
+        catalog.Get(item.CatalogName)?.Group ?? IngredientGroup.Other);
+
     public static RecipeResponse ToResponse(this Recipe recipe)
     {
         var ingredients = recipe.Ingredients.OrderBy(ingredient => ingredient.Position).ToList();
@@ -179,7 +188,7 @@ internal static class Mapping
 
     public static BackupSummary ToResponse(this BackupCounts counts) => new(
         counts.Recipes, counts.RecipePhotos, counts.MealPlans, counts.PlannedMeals,
-        counts.ShoppingItems, counts.PantryItems, counts.Users, counts.GroceryStores);
+        counts.ShoppingItems, counts.PantryItems, counts.ManualShoppingItems, counts.Users, counts.GroceryStores);
 
     public static DeliveryResult ToResponse(this Delivery delivery) => new(delivery.Delivered, delivery.Problem);
 

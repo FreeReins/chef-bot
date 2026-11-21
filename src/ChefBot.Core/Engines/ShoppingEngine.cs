@@ -75,6 +75,30 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
     }
 
     /// <summary>
+    /// Puts something typed in on the hand-added list. When the same ingredient in the same unit is already there,
+    /// that line grows instead of a second one appearing. Returns the line to save.
+    /// </summary>
+    public static ManualShoppingItem AddToList(
+        IReadOnlyList<ManualShoppingItem> list, IIngredientRef ingredient, decimal? quantity, string unit, DateOnly today)
+    {
+        if (list.FirstOrDefault(item => item.Key == ingredient.Key && Units.Same(item.Unit, unit)) is { } existing)
+        {
+            existing.Quantity = existing.Quantity is decimal had && quantity is decimal more ? had + more : existing.Quantity ?? quantity;
+            return existing;
+        }
+
+        return new ManualShoppingItem
+        {
+            Key = ingredient.Key,
+            CatalogName = ingredient.CatalogName,
+            DisplayName = ingredient.DisplayName,
+            Quantity = quantity,
+            Unit = unit,
+            AddedOn = today,
+        };
+    }
+
+    /// <summary>
     /// Where to buy an ingredient: the first store that lists it, else a seasonal store for in-season produce during
     /// its months, else the main store. Empty when none of those apply.
     /// </summary>

@@ -35,6 +35,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
                 .AsSplitQuery()
                 .ToListAsync(cancellationToken),
             PantryItems = await db.PantryItems.AsNoTracking().ToListAsync(cancellationToken),
+            ManualShoppingItems = await db.ManualShoppingItems.AsNoTracking().ToListAsync(cancellationToken),
             Users = await db.Users.AsNoTracking().ToListAsync(cancellationToken),
             Security = await db.Set<SecuritySettingsEntity>().AsNoTracking().ToListAsync(cancellationToken),
             Notifications = await db.Set<NotificationSettingsEntity>().AsNoTracking().ToListAsync(cancellationToken),
@@ -87,6 +88,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
             outline.MealPlans.Sum(plan => plan.Meals.Count),
             outline.MealPlans.Sum(plan => plan.ShoppingItems.Count),
             outline.PantryItems.Count,
+            outline.ManualShoppingItems.Count,
             outline.Users.Count,
             outline.GroceryStores.Count);
     }
@@ -115,6 +117,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         await db.MealPlans.ExecuteDeleteAsync(cancellationToken);
         await db.Recipes.ExecuteDeleteAsync(cancellationToken);
         await db.PantryItems.ExecuteDeleteAsync(cancellationToken);
+        await db.ManualShoppingItems.ExecuteDeleteAsync(cancellationToken);
         await db.Users.ExecuteDeleteAsync(cancellationToken);
         await db.Set<SecuritySettingsEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.Set<NotificationSettingsEntity>().ExecuteDeleteAsync(cancellationToken);
@@ -128,6 +131,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         db.AddRange(contents.RecipeImageData);
         db.AddRange(contents.MealPlans);
         db.AddRange(contents.PantryItems);
+        db.AddRange(contents.ManualShoppingItems);
         db.AddRange(contents.Users);
         db.AddRange(contents.Security);
         db.AddRange(contents.Notifications);
@@ -157,6 +161,9 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         public List<MealPlanEntity> MealPlans { get; set; } = [];
 
         public List<PantryItemEntity> PantryItems { get; set; } = [];
+
+        /// <summary>Empty in backups made before things could be added to the shopping list by hand.</summary>
+        public List<ManualShoppingItemEntity> ManualShoppingItems { get; set; } = [];
 
         public List<UserEntity> Users { get; set; } = [];
 
@@ -189,6 +196,8 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         public List<PlanOutline> MealPlans { get; init => field = value ?? []; } = [];
 
         public List<Counted> PantryItems { get; init => field = value ?? []; } = [];
+
+        public List<Counted> ManualShoppingItems { get; init => field = value ?? []; } = [];
 
         public List<Counted> Users { get; init => field = value ?? []; } = [];
 

@@ -76,6 +76,12 @@ export const pantry = () => [
   pantryItem('04', 'cream', { unit: 'cup', group: 'Dairy', expiresOn: '2026-11-19', daysLeft: -1, freshness: 'Expired' }),
 ];
 
+/** ManualShoppingItemResponse[]: things put on the shopping list by hand, one at a store and one without. */
+export const manualItems = () => [
+  { id: '00000000-0000-4000-8000-000000000401', name: 'milk', quantity: 2, unit: 'l', store: 'Corner Market', group: 'Dairy' },
+  { id: '00000000-0000-4000-8000-000000000402', name: 'dish soap', quantity: null, unit: '', store: '', group: 'Other' },
+];
+
 /** IngredientsResponse: the shopping list and the pantry for the plan. */
 export const ingredients = () => {
   const [cabbage, eggs, barley, cream] = pantry();
@@ -168,7 +174,7 @@ export const backups = () => ({
 
 /** BackupSummary */
 export const backupSummary = () => ({
-  recipes: 6, recipePhotos: 2, mealPlans: 3, plannedMeals: 24, shoppingItems: 40, pantryItems: 4, users: 2, groceryStores: 2,
+  recipes: 6, recipePhotos: 2, mealPlans: 3, plannedMeals: 24, shoppingItems: 40, pantryItems: 4, manualShoppingItems: 2, users: 2, groceryStores: 2,
 });
 
 /** LogsResponse (src/ChefBot.Api/Logging/): a long message, a warning and an error with details. */

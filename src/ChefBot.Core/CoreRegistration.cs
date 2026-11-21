@@ -60,6 +60,7 @@ public static class CoreRegistration
         services.AddScoped<IRecipeAccess, RecipeAccess>();
         services.AddScoped<IPlanAccess, PlanAccess>();
         services.AddScoped<IPantryAccess, PantryAccess>();
+        services.AddScoped<IShoppingListAccess, ShoppingListAccess>();
         services.AddScoped<IAccountAccess, AccountAccess>();
         services.AddScoped<ISettingsAccess, SettingsAccess>();
         services.AddScoped<IMessageAccess, MessageAccess>();

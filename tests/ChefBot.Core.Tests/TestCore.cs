@@ -15,6 +15,8 @@ internal sealed class TestCore
 
     public FakePantry Pantry { get; } = new();
 
+    public FakeShoppingList ShoppingList { get; } = new();
+
     public FakeAccounts Accounts { get; } = new();
 
     public FakeSettings Settings { get; } = new();
@@ -40,10 +42,10 @@ internal sealed class TestCore
 
     public WeeklyScheduleOptions Schedule { get; }
 
-    private ValidationEngine Validation => new(Plans, Recipes, Pantry, Accounts, new NoBackups());
+    private ValidationEngine Validation => new(Plans, Recipes, Pantry, ShoppingList, Accounts, new NoBackups());
 
     public PlanManager PlanManager() => new(
-        Plans, Recipes, Pantry, Settings, KnownStores, Messages,
+        Plans, Recipes, Pantry, ShoppingList, Settings, KnownStores, Messages,
         new PlanningEngine(TestData.Catalog, Options, Schedule), TestData.Shopping, TestData.Suggestions, TestData.Transformation,
         Validation, TestData.Catalog, Options, new PlanWriteLock(), Clock);
 

@@ -20,6 +20,7 @@ function defaults() {
       return data.alternatives(data.plan().meals.find((meal) => meal.id === mealId));
     },
     'GET /api/pantry': data.pantry(),
+    'GET /api/shopping/items': [],
     'GET /api/stores': data.stores(),
     'GET /api/system/https': data.https(),
     'GET /api/system/security': data.security(),

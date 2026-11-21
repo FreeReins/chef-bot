@@ -8,5 +8,6 @@ internal sealed record BackupCounts(
     int PlannedMeals,
     int ShoppingItems,
     int PantryItems,
+    int ManualShoppingItems,
     int Users,
     int GroceryStores);

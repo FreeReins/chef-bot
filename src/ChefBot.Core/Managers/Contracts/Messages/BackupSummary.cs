@@ -8,5 +8,6 @@ public sealed record BackupSummary(
     int PlannedMeals,
     int ShoppingItems,
     int PantryItems,
+    int ManualShoppingItems,
     int Users,
     int GroceryStores);

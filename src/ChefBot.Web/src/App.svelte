@@ -41,8 +41,9 @@
   const GATES = { 'setup-account': SetupAccount, 'setup-https': SetupHttps, 'setup-recipes': SetupRecipes,
     'setup-stores': SetupStores, 'setup-samples': SetupSamples,
     'sign-in': SignIn, join: Join, reset: Reset };
-  const PLAN_TABS = { meals: Meals, schedule: Schedule, shopping: Shopping };
-  const OTHER_TABS = { pantry: Pantry, recipes: Recipes, people: People, settings: Settings };
+  const PLAN_TABS = { meals: Meals, schedule: Schedule };
+  // Shopping works without a plan too: things can be added to the list by hand.
+  const OTHER_TABS = { shopping: Shopping, pantry: Pantry, recipes: Recipes, people: People, settings: Settings };
 
   const inApp = $derived(app.screen === 'app');
   const tabs = $derived(TABS.filter((tab) => !tab.adminOnly || isAdmin()));

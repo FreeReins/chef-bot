@@ -16,7 +16,8 @@ It is a self-hosted web app: one container for the app, one for PostgreSQL.
   and which meals use it.
 - **Builds the shopping list.** Quantities are totalled and scaled to portions, staples are left off,
   pantry stock is subtracted, and the list is split between the stores you shop at, or grouped by food group
-  if you haven't chosen any.
+  if you haven't chosen any. Anything else can be added to the list by hand, with or without a plan, and
+  pantry items that are expiring can be put back on it in one click.
 - **Tracks the pantry.** Marking an item as bought puts it in the pantry with an expiration date, estimated
   from the ingredient's shelf life unless you enter the date on the package. The *Pantry* tab lists what you
   have, which planned meals will use each item, and what no meal uses yet.
@@ -282,8 +283,11 @@ try each call. Both need you to be signed in.
 | `PUT /api/plans/{planId}/meals/{mealId}` | Replace a meal: `{"recipeId": "..."}` or `{"custom": {"title": "...", "ingredients": ["..."]}}` |
 | `POST /api/plans/{planId}/meals/{mealId}/status` | `{"status": "Cooked"}`, `"Skipped"` or `"Planned"` |
 | `POST /api/plans/{planId}/shopping/{itemId}/purchase` | Mark bought. Body `{}` or `{"expiresOn": "2026-11-20", "quantity": 2}` |
-| `POST /api/plans/{planId}/shopping/purchase-all` | Mark everything bought. Body `{}` |
+| `POST /api/plans/{planId}/shopping/purchase-all` | Mark everything bought, including the items added by hand. Body `{}` |
 | `POST /api/plans/{planId}/shopping/{itemId}/store` | Buy this ingredient at another store from now on: `{"store": "Costco"}`, or `{"store": ""}` for no particular store |
+| `GET` `POST /api/shopping/items` | The items added to the shopping list by hand, which need no plan, or add one: `{"name": "milk", "quantity": 2, "unit": "l"}` (amount and unit optional; adding the same thing again adds to its amount) |
+| `POST /api/shopping/items/{itemId}/purchase`, `POST /api/shopping/items/purchase-all`, `DELETE /api/shopping/items/{itemId}` | Mark a hand-added item (or all of them) bought, which puts it in the pantry, or take it off the list. Body `{}` or, for one item, `{"expiresOn": "2026-11-20", "quantity": 2}` |
+| `POST /api/shopping/items/{itemId}/store` | Buy a hand-added item's ingredient at another store from now on, as for a plan's item |
 | `GET /api/stores`, `PUT /api/stores` | The household's stores, the known stores and the ingredient names they can list. `PUT` replaces the stores (admin) |
 | `GET` `POST /api/pantry`, `PATCH` `DELETE /api/pantry/{id}` | Read and correct the pantry |
 | `GET` `POST /api/recipes`, `PUT` `DELETE /api/recipes/{id}` | Manage local recipes. A recipe has `name`, `course`, `servings`, `isSlowCooker` and `ingredients` (lines such as `"2 cups kale"`), and optionally `description`, `instructions` (a list of steps), `prepMinutes`, `cookMinutes`, `totalMinutes`, `sourceUrl`, `author`, `yieldText`, `notes` and `tags`. Responses add `images` and `ingredientDetails` (each line's quantity, unit and food) |

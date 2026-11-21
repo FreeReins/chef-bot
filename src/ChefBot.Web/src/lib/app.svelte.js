@@ -28,6 +28,7 @@ export const app = $state({
   plan: null,          // PlanResponse, or null when nothing is staged yet
   ingredients: null,   // IngredientsResponse for the plan
   pantry: [],          // PantryItemResponse[], loaded by the Pantry tab when there is no plan to read it from
+  manualItems: [],     // ManualShoppingItemResponse[]: what was put on the shopping list by hand, plan or not
   recipes: [],
   swap: null,          // { mealId, options } while a meal's alternatives are open
   toasts: [],          // { id, text, kind: 'note' | 'error' } shown in the corner by Toasts.svelte
@@ -174,6 +175,53 @@ export async function refreshAfterPantryChange() {
 /** Loads the pantry on its own. With a plan, the pantry comes with the plan's ingredients view instead. */
 export const loadPantry = async () => { app.pantry = await api('GET', '/api/pantry'); };
 
+// ---------- hand-added shopping items ----------
+
+export const loadManualItems = async () => { app.manualItems = await api('GET', '/api/shopping/items'); };
+
+/** Puts something on the shopping list by hand: { name, quantity?, unit? }. Resolves to true once it is there. */
+export function addToShoppingList(item) {
+  let added = false;
+  return run(async () => {
+    app.manualItems = await api('POST', '/api/shopping/items', item);
+    added = true;
+  }).then(() => added);
+}
+
+/** Takes a hand-added item off the list without buying it. */
+export const removeManualItem = (id) => run(async () => {
+  app.manualItems = await api('DELETE', `/api/shopping/items/${id}`);
+});
+
+/**
+ * Buys hand-added items: `path` is `{id}/purchase` or `purchase-all`. What was bought goes into the pantry, so the
+ * plan's shopping list and the pantry are reloaded too.
+ */
+export const buyManual = (path) => run(async () => {
+  app.manualItems = await api('POST', `/api/shopping/items/${path}`, {});
+  await refreshAfterPantryChange();
+});
+
+/**
+ * Marks everything on the shopping list as bought. With a confirmed plan one request covers the plan's items and the
+ * hand-added ones; otherwise only the hand-added items can be bought.
+ */
+export const buyEverything = () => run(async () => {
+  if (isConfirmed()) {
+    await applyPlan(await api('POST', `/api/plans/${app.plan.id}/shopping/purchase-all`, {}));
+    await loadManualItems();
+  } else {
+    app.manualItems = await api('POST', '/api/shopping/items/purchase-all', {});
+    await refreshAfterPantryChange();
+  }
+});
+
+/** Buys a hand-added item's ingredient at another store from now on. Open plans' lists follow, so they reload too. */
+export const setManualStore = (id, store) => run(async () => {
+  app.manualItems = await api('POST', `/api/shopping/items/${id}/store`, { store });
+  await Promise.all([loadStores(), loadPlan()]);
+});
+
 // ---------- recipes ----------
 
 export const loadRecipes = async () => { app.recipes = await api('GET', '/api/recipes'); };
@@ -297,14 +345,14 @@ export async function loadStores() {
 /** Saves the household's stores. Open shopping lists are rebuilt to match, so the plan is reloaded too. */
 export async function saveStores(stores) {
   app.stores = await api('PUT', '/api/stores', { stores });
-  await loadPlan();
+  await Promise.all([loadPlan(), loadManualItems()]);
 }
 
 /** Buys a shopping item's ingredient at another store from now on. An empty name means no particular store. */
 export function setShoppingStore(itemId, store) {
   return run(async () => {
     await applyPlan(await api('POST', `/api/plans/${app.plan.id}/shopping/${itemId}/store`, { store }));
-    await loadStores();
+    await Promise.all([loadStores(), loadManualItems()]);
   });
 }
 
@@ -360,7 +408,7 @@ export async function enterApp() {
     history.replaceState(null, '', location.pathname);
     app.linkToken = null;
   }
-  await Promise.all([loadRecipes(), loadPlan(), loadSystem(), loadStores(), isAdmin() ? loadPeople() : null]);
+  await Promise.all([loadRecipes(), loadPlan(), loadManualItems(), loadSystem(), loadStores(), isAdmin() ? loadPeople() : null]);
   await showAddress();
 }
 

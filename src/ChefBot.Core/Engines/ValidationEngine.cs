@@ -12,7 +12,8 @@ namespace ChefBot.Core.Engines;
 /// Rules that depend on what is stored (does the plan exist, is the username taken, is setup done) read it through
 /// the resource accessors; this is the only engine that does.
 /// </summary>
-internal sealed class ValidationEngine(IPlanAccess plans, IRecipeAccess recipes, IPantryAccess pantry, IAccountAccess accounts, IBackupAccess backups)
+internal sealed class ValidationEngine(
+    IPlanAccess plans, IRecipeAccess recipes, IPantryAccess pantry, IShoppingListAccess shoppingList, IAccountAccess accounts, IBackupAccess backups)
 {
     public const int MinimumPasswordLength = 8;
 
@@ -43,6 +44,10 @@ internal sealed class ValidationEngine(IPlanAccess plans, IRecipeAccess recipes,
 
     public async Task<PantryItem> PantryItemAsync(Guid id, CancellationToken cancellationToken) =>
         await pantry.FindAsync(id, cancellationToken) ?? throw new NotFoundException($"There is no pantry item with id {id}.");
+
+    public async Task<ManualShoppingItem> ManualShoppingItemAsync(Guid id, CancellationToken cancellationToken) =>
+        await shoppingList.FindAsync(id, cancellationToken)
+        ?? throw new NotFoundException("That item is no longer on the shopping list. Reload the page to see the current list.");
 
     public async Task<UserAccount> UserAsync(Guid id, CancellationToken cancellationToken) =>
         await accounts.FindUserAsync(id, cancellationToken) ?? throw new NotFoundException("That account no longer exists.");
@@ -262,6 +267,20 @@ internal sealed class ValidationEngine(IPlanAccess plans, IRecipeAccess recipes,
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new RuleViolationException("A pantry item needs a name.");
+        }
+    }
+
+    /// <summary>Something typed in for the shopping list: it needs a name, and an amount above zero if it has one.</summary>
+    public static void ShoppingRequest(NewShoppingItem request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            throw new RuleViolationException("Type what to buy, for example \"milk\".");
+        }
+
+        if (request.Quantity is <= 0m)
+        {
+            throw new RuleViolationException("An amount must be more than zero. Leave it empty if it doesn't matter.");
         }
     }
 

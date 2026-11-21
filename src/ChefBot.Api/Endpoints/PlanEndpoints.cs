@@ -83,7 +83,7 @@ public static class PlanEndpoints
         PurchaseDetails request, Guid planId, Guid itemId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
         plans.PurchaseAsync(planId, itemId, request, cancellationToken);
 
-    /// <summary>Marks everything still on the list as bought.</summary>
+    /// <summary>Marks everything still on the list as bought, including what was added to the list by hand.</summary>
     [WolverinePost("/api/plans/{planId}/shopping/purchase-all")]
     public static Task<PlanResponse> PurchaseAll(
         PurchaseAllRequest request, Guid planId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
