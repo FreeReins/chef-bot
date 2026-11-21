@@ -1,6 +1,7 @@
 <!-- The sample recipes, one course at a time so the list stays short. Used by setup step three and by the
      sample page reached from the Recipes tab. -->
 <script>
+  import { tick } from 'svelte';
   import { app, run, loadRecipes } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { SLOT_TITLES } from '../lib/format.js';
@@ -24,6 +25,19 @@
   const picked = $derived(available.filter((sample) => chosen[sample.name]));
   const pickedIn = (group) => group.samples.filter((sample) => !sample.alreadyAdded && chosen[sample.name]).length;
 
+  // The course tabs work like any tab list: Tab reaches only the selected tab, and the arrow keys, Home and End
+  // move between them, opening each on the way.
+  let tablist = $state();
+  async function moveTab(event) {
+    const index = groups.findIndex((group) => group.course === shown.course);
+    const next = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: groups.length - 1 }[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    course = groups[(next + groups.length) % groups.length].course;
+    await tick();
+    tablist.querySelector('[aria-selected="true"]')?.focus();
+  }
+
   function setShown(checked) {
     for (const sample of shown.samples) if (!sample.alreadyAdded) chosen[sample.name] = checked;
   }
@@ -40,9 +54,11 @@
 
 {#if shown}
   <div class="row picker-head">
-    <div class="segmented" role="tablist" aria-label="Courses">
+    <div class="segmented" role="tablist" aria-label="Courses" tabindex="-1" bind:this={tablist} onkeydown={moveTab}>
       {#each groups as group (group.course)}
-        <button type="button" role="tab" aria-selected={String(group.course === shown.course)} onclick={() => (course = group.course)}>
+        {@const selected = group.course === shown.course}
+        <button type="button" role="tab" id="samples-tab-{group.course}" aria-controls="samples-panel"
+                aria-selected={String(selected)} tabindex={selected ? 0 : -1} onclick={() => (course = group.course)}>
           {group.title} <span class="count">{pickedIn(group)}/{group.samples.length}</span>
         </button>
       {/each}
@@ -53,7 +69,7 @@
     </div>
   </div>
 
-  <div class="sample-grid" role="tabpanel">
+  <div class="sample-grid" role="tabpanel" id="samples-panel" aria-labelledby="samples-tab-{shown.course}">
     {#each shown.samples as sample (sample.name)}
       <label class="sample" class:added={sample.alreadyAdded}>
         {#if sample.alreadyAdded}
@@ -81,11 +97,11 @@
 <style>
   /* Course tabs over a two-column list. */
   .picker-head { align-items: center; margin-bottom: .5rem; }
-  .count { opacity: .75; font-size: .8em; }
+  .count { font-size: .8em; }
   .sample-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: 0 1.25rem; }
   .sample { display: flex; gap: .55rem; align-items: flex-start; padding: .4rem 0; border-top: 1px solid var(--line); color: var(--ink); font-size: .95rem; }
   .sample input { margin-top: .3rem; }
-  .sample.added { opacity: .6; }
+  .sample.added { color: var(--muted); }
   .sample-text { min-width: 0; flex: 1; }
   .sample-text .clip { font-size: .8rem; }
 </style>

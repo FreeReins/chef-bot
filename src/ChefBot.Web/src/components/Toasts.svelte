@@ -7,22 +7,30 @@
   import X from '@lucide/svelte/icons/x';
 </script>
 
-<div class="toasts" aria-live="polite">
-  {#each app.toasts as item (item.id)}
-    <div class="toast {item.kind}" role={item.kind === 'error' ? 'alert' : 'status'}
-         animate:flip={{ duration: 200 }} transition:fly={{ y: 16, duration: 200 }}>
+{#snippet messages(kind)}
+  {#each app.toasts.filter((item) => item.kind === kind) as item (item.id)}
+    <div class="toast {item.kind}" animate:flip={{ duration: 200 }} transition:fly={{ y: 16, duration: 200 }}>
       <p>{item.text}</p>
       <button class="close" aria-label="Close this message" title="Close" onclick={() => dismissToast(item.id)}>
         <X size={16} />
       </button>
     </div>
   {/each}
+{/snippet}
+
+<!-- Two live regions that are always on the page, so screen readers hear what is added to them: errors at once,
+     notes when the reader is next idle. A live region added together with its text is often not read at all. -->
+<div class="toasts">
+  <div class="stack" role="alert">{@render messages('error')}</div>
+  <div class="stack" role="status">{@render messages('note')}</div>
 </div>
 
 <style>
   /* Above the footer pinned to the bottom of the window (App.svelte). */
   .toasts { position: fixed; z-index: 20; right: 1rem; bottom: calc(3.5rem + env(safe-area-inset-bottom));
     display: grid; gap: .5rem; width: min(24rem, calc(100vw - 2rem)); pointer-events: none; }
+  .stack { display: grid; gap: .5rem; }
+  .stack:empty { display: none; }
   /* Phones: full width, above the tab bar pinned to the bottom (App.svelte). */
   @media (max-width: 40rem) {
     .toasts { left: .75rem; right: .75rem; width: auto; bottom: calc(4.75rem + env(safe-area-inset-bottom)); }

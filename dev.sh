@@ -5,6 +5,8 @@
 #   ./dev.sh          start the dev database if needed, then run the app with dotnet watch and the web page
 #                     with live reload (Vite)
 #   ./dev.sh web      build the web page once into src/ChefBot.Api/wwwroot, for a plain `dotnet run`
+#   ./dev.sh web-test run the web page's accessibility tests in a Playwright container, then exit; arguments go
+#                     to `playwright test`, for example ./dev.sh web-test --project desktop-dark
 #   ./dev.sh test     run the tests again on every save
 #   ./dev.sh db       start the dev database only
 #   ./dev.sh psql     open a SQL prompt on the dev database
@@ -26,6 +28,7 @@ app_output=src/ChefBot.Api/bin/Debug/net10.0
 web=src/ChefBot.Web
 web_output=src/ChefBot.Api/wwwroot
 web_container=chefbot-dev-web
+web_test_modules=chefbot-web-test-modules
 node_image=docker.io/library/node:24-alpine
 
 port_in_use() {
@@ -100,6 +103,23 @@ build_web() {
     web_npm run build -- --logLevel warn
 }
 
+# The web page's accessibility tests (src/ChefBot.Web/tests), always in Playwright's image: it has Node, Chromium and
+# the libraries Chromium needs, at the version package.json pins. The image is Ubuntu, while node_modules in the
+# source folder may come from the Alpine Node container, whose native Vite packages don't run there; so the tests
+# keep their own node_modules in a volume. Rootless Podman runs the container's root as you, so results belong to you.
+web_test() {
+    local version
+    version="$(sed -n 's/.*"@playwright\/test": "\([0-9.]*\)".*/\1/p' "$web/package.json")"
+    if [[ -z "$version" ]]; then
+        echo "Pin @playwright/test to an exact version in $web/package.json, so the container image can match it." >&2
+        exit 1
+    fi
+    podman run --rm --init --ipc=host --env NPM_CONFIG_UPDATE_NOTIFIER=false --env CI=1 \
+        --volume "$PWD/$web:/source/$web:z" --volume "$web_test_modules:/source/$web/node_modules" \
+        --workdir "/source/$web" "mcr.microsoft.com/playwright:v$version-noble" \
+        sh -c 'npm install --no-audit --no-fund --loglevel=error && exec npx playwright test "$@"' web-test "$@"
+}
+
 run_app() {
     start_db
 
@@ -157,6 +177,10 @@ case "${1:-run}" in
         build_web
         echo "Built into $web_output."
         ;;
+    web-test)
+        shift
+        web_test "$@"
+        ;;
     test)
         exec dotnet watch --project tests/ChefBot.Core.Tests run
         ;;
@@ -185,7 +209,7 @@ case "${1:-run}" in
         run_app
         ;;
     *)
-        sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
         exit 1
         ;;
 esac

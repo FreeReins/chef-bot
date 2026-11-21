@@ -73,9 +73,9 @@ internal sealed class PlanManager(
     {
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var plan = await validation.PlanAsync(planId, cancellationToken);
-        var notes = await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken);
+        await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken);
         await messages.CommitAsync(cancellationToken);
-        return plan.ToResponse(notes);
+        return plan.ToResponse([]);
     }
 
     public async Task RefreshOpenPlansAsync(CancellationToken cancellationToken)
@@ -123,9 +123,9 @@ internal sealed class PlanManager(
             planning.UseCustom(meal, request.Custom.Title.Trim(), ingredients);
         }
 
-        var notes = await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken);
+        await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken);
         await messages.CommitAsync(cancellationToken);
-        return plan.ToResponse(notes);
+        return plan.ToResponse([]);
     }
 
     public async Task<PlanResponse> SetMealStatusAsync(Guid planId, Guid mealId, MealStatusRequest request, CancellationToken cancellationToken)
@@ -159,9 +159,9 @@ internal sealed class PlanManager(
 
         meal.Status = request.Status;
         var stock = new PantrySnapshot(items, clock.Today(), options.ExpiringSoonDays);
-        var notes = await ReconcileAsync(plan, stock, cancellationToken);
+        await ReconcileAsync(plan, stock, cancellationToken);
         await messages.CommitAsync(cancellationToken);
-        return plan.ToResponse(notes);
+        return plan.ToResponse([]);
     }
 
     public async Task<PlanResponse> PurchaseAsync(Guid planId, Guid itemId, PurchaseDetails details, CancellationToken cancellationToken)
@@ -203,9 +203,9 @@ internal sealed class PlanManager(
         ShoppingEngine.SendTo(stores, item, ValidationEngine.StoreNamed(stores, request.Store));
 
         await settings.SaveStoresAsync(stores, cancellationToken);
-        var notes = await ReconcileOpenPlansAsync(stores, plan, cancellationToken);
+        await ReconcileOpenPlansAsync(stores, plan, cancellationToken);
         await messages.CommitAsync(cancellationToken);
-        return plan.ToResponse(notes);
+        return plan.ToResponse([]);
     }
 
     public async Task<GroceryStoresResponse> GetStoresAsync(CancellationToken cancellationToken) =>
@@ -279,11 +279,11 @@ internal sealed class PlanManager(
             await messages.CommitAsync(cancellationToken);
         }
 
-        var notes = await ReconcileAsync(draft.Plan, stock, cancellationToken);
+        await ReconcileAsync(draft.Plan, stock, cancellationToken);
         await messages.PublishAsync(new PlanStaged(draft.Plan.Id, trigger));
         await messages.CommitAsync(cancellationToken);
 
-        return draft.Plan.ToResponse([.. draft.Warnings, .. notes]);
+        return draft.Plan.ToResponse(draft.Warnings);
     }
 
     /// <summary>
@@ -294,8 +294,7 @@ internal sealed class PlanManager(
     /// <param name="stock">The pantry.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <param name="stores">The stores to shop at. Read from the settings when not given.</param>
-    /// <returns>Notes on what was left off the shopping list.</returns>
-    private async Task<IReadOnlyList<string>> ReconcileAsync(
+    private async Task ReconcileAsync(
         MealPlan plan, PantrySnapshot stock, CancellationToken cancellationToken, IReadOnlyList<GroceryStore>? stores = null)
     {
         stores ??= await settings.ListStoresAsync(cancellationToken);
@@ -303,15 +302,13 @@ internal sealed class PlanManager(
         var list = shopping.BuildList(plan, stock, stores);
         shopping.ApplyList(plan, list);
         await plans.SaveAsync(plan, cancellationToken);
-        return list.Notes().ToList();
     }
 
     /// <summary>
     /// Reconciles every plan whose week hasn't ended with these stores, and <paramref name="changed"/> too when it is
     /// given, whatever its week.
     /// </summary>
-    /// <returns>The notes for <paramref name="changed"/>, or none.</returns>
-    private async Task<IReadOnlyList<string>> ReconcileOpenPlansAsync(
+    private async Task ReconcileOpenPlansAsync(
         IReadOnlyList<GroceryStore> stores, MealPlan? changed, CancellationToken cancellationToken)
     {
         var stock = await SnapshotAsync(cancellationToken);
@@ -323,7 +320,10 @@ internal sealed class PlanManager(
             }
         }
 
-        return changed is null ? [] : await ReconcileAsync(changed, stock, cancellationToken, stores);
+        if (changed is not null)
+        {
+            await ReconcileAsync(changed, stock, cancellationToken, stores);
+        }
     }
 
     private GroceryStoresResponse DescribeStores(IReadOnlyList<GroceryStore> stores) => new(

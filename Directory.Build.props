@@ -1,6 +1,9 @@
 <Project>
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <!-- MSBuild's default is obj\ with a backslash, which dotnet watch 10.0 puts unchanged into the path of
+         staticwebassets.development.json, so on Linux it can't read that file and static file hot reload fails. -->
+    <BaseIntermediateOutputPath>obj/</BaseIntermediateOutputPath>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

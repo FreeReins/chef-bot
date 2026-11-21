@@ -9,19 +9,4 @@ namespace ChefBot.Core.Engines.Contracts.Messages;
 internal sealed record ShoppingDraft(
     IReadOnlyList<ShoppingItem> Items,
     IReadOnlyList<string> CoveredByPantry,
-    IReadOnlyList<string> AssumedStaples)
-{
-    /// <summary>Plain sentences explaining what was left off the list.</summary>
-    public IEnumerable<string> Notes()
-    {
-        if (CoveredByPantry.Count > 0)
-        {
-            yield return $"Already in your pantry: {string.Join(", ", CoveredByPantry)}.";
-        }
-
-        if (AssumedStaples.Count > 0)
-        {
-            yield return $"Assumed to be on hand: {string.Join(", ", AssumedStaples)}.";
-        }
-    }
-}
+    IReadOnlyList<string> AssumedStaples);

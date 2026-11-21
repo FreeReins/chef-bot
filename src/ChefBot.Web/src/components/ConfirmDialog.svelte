@@ -16,7 +16,7 @@
   const clickedOutside = (event) => { if (event.target === dialog) answer(false); };
 </script>
 
-<dialog bind:this={dialog} aria-labelledby="confirm-title" aria-describedby="confirm-message"
+<dialog bind:this={dialog} aria-labelledby="confirm-title" aria-describedby={current?.message ? 'confirm-message' : undefined}
         onclose={closed} onclick={clickedOutside}>
   {#if current}
     <div class="box">

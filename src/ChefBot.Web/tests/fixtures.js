@@ -1,0 +1,103 @@
+// The `test` every spec uses: a page whose /api requests are answered from data.js, plus `api` to change answers.
+// A request with no answer gets a 500 and fails the test once it ends, so the stubs can't fall behind the page.
+import { test as base, expect } from '@playwright/test';
+import * as data from './data.js';
+
+const REPLY = Symbol('reply');
+
+/** An answer other than 200 with JSON, for example `reply(500, { detail: 'The server is down.' })`. */
+export const reply = (status, body = null, contentType = 'application/json') => ({ [REPLY]: true, status, body, contentType });
+
+/** What every test starts with: an admin signed in, a confirmed plan, and everything the Settings tab loads. */
+function defaults() {
+  return {
+    'GET /api/session': data.session(),
+    'GET /api/recipes': data.recipes(),
+    'GET /api/plans/current': data.plan(),
+    'GET /api/plans/*/ingredients': data.ingredients(),
+    'GET /api/plans/*/meals/*/alternatives': (request) => {
+      const mealId = new URL(request.url()).pathname.split('/')[5];
+      return data.alternatives(data.plan().meals.find((meal) => meal.id === mealId));
+    },
+    'GET /api/pantry': data.pantry(),
+    'GET /api/stores': data.stores(),
+    'GET /api/system/https': data.https(),
+    'GET /api/system/security': data.security(),
+    'GET /api/system/mealie': data.mealie(),
+    'GET /api/system/notifications': data.notifications(),
+    'GET /api/system/backups': data.backups(),
+    'GET /api/system/backups/*/summary': data.backupSummary(),
+    'GET /api/system/logs': data.logs(),
+    'GET /api/users': data.users(),
+    'GET /api/links': data.links(),
+    'GET /api/setup/samples': data.samples(),
+    'GET /api/recipes/import/formats': data.fileFormats(),
+    'GET /api/account/link': (request) =>
+      data.linkDetails(new URL(request.url()).searchParams.get('token') === 'reset-token' ? 'PasswordReset' : 'Invite'),
+    'GET /api/test-images/*': reply(200, data.png, 'image/png'),
+  };
+}
+
+/** 'GET /api/plans/*' matches any one path segment where the * is. */
+const pattern = (key) => new RegExp(`^${key.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replaceAll('*', '[^/]+')}$`);
+
+class ApiStub {
+  /** Requests that had no answer, as 'METHOD /path?query'. */
+  unknown = [];
+  /** Every request made, as 'METHOD /path?query', in order. */
+  requests = [];
+  #routes = new Map();
+
+  constructor(page) {
+    this.page = page;
+    this.set(defaults());
+  }
+
+  /**
+   * Answers requests matching each 'METHOD /path' key from now on. A value is sent as JSON; a function gets the
+   * Playwright request and returns the value (or a promise of it); `reply()` sends another status or content type.
+   */
+  set(routes) {
+    for (const [key, value] of Object.entries(routes)) this.#routes.set(key, { match: pattern(key), value });
+    return this;
+  }
+
+  async install() {
+    await this.page.route('**/api/**', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const key = `${request.method()} ${url.pathname}`;
+      this.requests.push(key + url.search);
+      // The newest matching route wins, so set() can narrow a default.
+      const found = [...this.#routes.values()].reverse().find((entry) => entry.match.test(key));
+      if (!found) {
+        this.unknown.push(key + url.search);
+        return route.fulfill({ status: 500, json: { detail: `The test has no answer for ${key}.` } });
+      }
+      const value = typeof found.value === 'function' ? await found.value(request) : found.value;
+      if (value?.[REPLY]) {
+        const body = Buffer.isBuffer(value.body) ? value.body : value.body == null ? '' : JSON.stringify(value.body);
+        return route.fulfill({ status: value.status, contentType: value.contentType, body });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value ?? null) });
+    });
+  }
+}
+
+export const test = base.extend({
+  // Automatic, so a test that never names `api` still gets the stubbed answers.
+  api: [async ({ page }, use) => {
+    const stub = new ApiStub(page);
+    await stub.install();
+    await use(stub);
+    expect(stub.unknown, 'requests the test had no answer for; add them to tests/fixtures.js').toEqual([]);
+  }, { auto: true }],
+});
+
+export { expect };
+
+/** Opens an address and waits until the page has left its loading screen. */
+export async function open(page, path) {
+  await page.goto(path);
+  await expect(page.locator('#view')).not.toHaveText('Loading…');
+}

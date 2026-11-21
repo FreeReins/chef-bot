@@ -11,10 +11,12 @@ dotnet build ChefBot.slnx -v q -nologo                                  # about 
 dotnet run --project tests/ChefBot.Core.Tests                           # all tests, under 1s
 dotnet run --project tests/ChefBot.Core.Tests -- --treenode-filter "/*/*/ShoppingTests/*"   # one class
 ./dev.sh web                                                            # build the web page; exits
+./dev.sh web-test                                                       # web page accessibility tests, ~30s; exits
 ```
 
 A change is done when the build has no warnings and the tests pass. A change to `src/ChefBot.Web` is done when
-`./dev.sh web` builds it with no warnings.
+`./dev.sh web` builds it with no warnings and `./dev.sh web-test` passes; a new screen or state gets a row in
+`VIEWS` in `src/ChefBot.Web/tests/a11y.spec.js` (CONTRIBUTING.md's "Accessibility tests").
 
 Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for changes and never exit. Do not use
 `podman build --target test` to check work; it runs the same tests much more slowly.

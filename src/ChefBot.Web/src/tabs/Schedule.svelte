@@ -18,7 +18,7 @@
 <div class="grid">
   {#each days as day (day.name)}
     <section class="card">
-      <h3>{day.name} <span class="muted">{dayMonth(day.date)}</span></h3>
+      <h2>{day.name} <span class="muted">{dayMonth(day.date)}</span></h2>
       {#each day.meals as meal (meal.id)}
         <ScheduleLine {meal} />
       {:else}
@@ -29,10 +29,15 @@
 </div>
 {#if anyDay.length}
   <section class="card">
-    <h3>Any day: snacks and sweets</h3>
+    <h2>Any day: snacks and sweets</h2>
     {#each anyDay as meal (meal.id)}<ScheduleLine {meal} />{/each}
   </section>
 {/if}
 {#if !isConfirmed()}
   <p class="muted">Confirm the plan to start marking meals as cooked.</p>
 {/if}
+
+<style>
+  /* The days are the sections of the page, so they are h2, sized like the cards' headings elsewhere. */
+  h2 { margin: 0; font-size: 1rem; }
+</style>

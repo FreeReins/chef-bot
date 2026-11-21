@@ -432,3 +432,7 @@ evals/agents-md/context/with/AGENTS.md
 
 # Wolverine's generated code (dotnet run -- codegen write): written from the source before each Release build
 src/ChefBot.Api/Internal/Generated/
+
+# Playwright's results for the web page's accessibility tests (./dev.sh web-test)
+src/ChefBot.Web/test-results/
+src/ChefBot.Web/playwright-report/

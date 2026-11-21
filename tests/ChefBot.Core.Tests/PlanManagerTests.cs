@@ -66,6 +66,22 @@ public class PlanManagerTests
     }
 
     [Test]
+    public async Task Plan_changes_do_not_list_what_the_pantry_and_staples_cover()
+    {
+        // The Shopping tab shows these under "From your pantry" and "Staples assumed on hand", so the page
+        // doesn't repeat them as messages after every change.
+        var core = WithLibrary();
+        core.Pantry.Rows.Add(TestData.Stocked("stew meat", 10, "lb"));
+        var plans = core.PlanManager();
+
+        var plan = await plans.StageAsync(new StagePlanRequest(), default);
+        var refreshed = await plans.RefreshAsync(plan.Id, default);
+
+        await Assert.That(plan.Notes.Any(note => note.StartsWith("Already in your pantry") || note.StartsWith("Assumed to be on hand"))).IsFalse();
+        await Assert.That(refreshed.Notes).IsEmpty();
+    }
+
+    [Test]
     public async Task Purchases_need_a_confirmed_plan_and_go_into_the_pantry()
     {
         var core = WithLibrary();

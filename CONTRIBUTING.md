@@ -177,6 +177,27 @@ has none.
 - `./dev.sh web` builds the page once into `src/ChefBot.Api/wwwroot`, which is build output and not in git.
   Use it before a plain `dotnet run`, and to check that the page still builds.
 
+### Accessibility tests
+
+`./dev.sh web-test` checks every screen of the page with [axe](https://github.com/dequelabs/axe-core) (WCAG 2.2
+A and AA, plus axe's best practices) in real Chromium, in light mode, dark mode and at phone width, and tests
+the keyboard behaviour axe can't see. It takes about half a minute and exits. Arguments go to `playwright test`:
+`./dev.sh web-test --project desktop-dark -g schedule`.
+
+- The tests are in `src/ChefBot.Web/tests/`: `a11y.spec.js` has one row per screen or state in `VIEWS`, and
+  `keyboard.spec.js` checks focus and keys. To cover a new screen, add a row to `VIEWS`.
+- No ChefBot or database runs. `fixtures.js` answers every `/api` request from `data.js`, one realistic
+  household whose shapes match the C# response records. Use `api.set({ 'POST /api/invites': ... })` in a
+  test to change an answer, and `reply(status, body)` for a failure. A request with no answer fails the test,
+  so when the page starts calling a new endpoint, add a default answer for it.
+- Colour contrast is checked, so fade things with the muted colours, not `opacity`: text under `opacity` loses
+  contrast. Don't turn axe rules off. If one is genuinely wrong for an element, pass `disable` at that one call
+  and say why.
+- The tests always run in Playwright's container, whose version must match the exact `@playwright/test`
+  version pinned in `package.json`. Bump both together. The container is Ubuntu, and `node_modules` in the
+  source folder may come from the Alpine Node container, so the tests keep their own copy in the
+  `chefbot-web-test-modules` volume. `podman volume rm chefbot-web-test-modules` starts it afresh.
+
 ## Style
 
 - File-scoped namespaces, nullable reference types on, `var` where the type is obvious.

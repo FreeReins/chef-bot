@@ -212,7 +212,7 @@
   .add-photo { display: inline-flex; align-items: center; gap: .35rem; margin-top: .6rem; cursor: pointer; color: var(--accent); }
   .add-photo input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   .add-photo:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: .25rem; }
-  .add-photo.busy { cursor: progress; opacity: .7; }
+  .add-photo.busy { cursor: progress; }
   .steps { margin: 0; padding-left: 1.4rem; }
   .steps li { padding: .3rem 0; }
   .notes { white-space: pre-line; margin: 0; }

@@ -2,7 +2,7 @@
    forms, lists). main.js imports it. Styles that only one component uses live in that component's <style>. */
 :root {
   --bg: #f6f7f4; --panel: #ffffff; --ink: #1d2420; --muted: #5d6963; --line: #dfe4de;
-  --accent: #2f6b4f; --accent-ink: #ffffff; --warn: #a85b00; --bad: #a3322b; --good: #2f6b4f; --chip: #edf1ec;
+  --accent: #2f6b4f; --accent-ink: #ffffff; --warn: #9c5400; --bad: #a3322b; --good: #2f6b4f; --chip: #edf1ec;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -53,7 +53,9 @@ a.button.small { padding: .15rem .55rem; font-size: .85rem; }
 
 /* Layout */
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; padding: .8rem 1rem; margin: .5rem 0; }
-.card.done { opacity: .6; }
+/* A meal already cooked or skipped. Muted colours rather than opacity, so its text keeps enough contrast to read. */
+.card.done { background: var(--bg); }
+.card.done, .card.done :is(h3, a) { color: var(--muted); }
 .empty { text-align: center; padding: 2.5rem 1rem; }
 .row { display: flex; flex-wrap: wrap; gap: .5rem 1rem; justify-content: space-between; align-items: baseline; }
 .row > :first-child { min-width: 0; flex: 1 1 14rem; }
