@@ -46,6 +46,17 @@ const VIEWS = [
       .then(() => page.getByRole('heading', { name: /draft for/ }).waitFor()),
   },
   { name: 'shopping', path: '/shopping' },
+  {
+    name: 'shopping, asking before marking everything bought', path: '/shopping',
+    act: (page) => page.getByRole('button', { name: 'Mark all as bought' }).click()
+      .then(() => page.getByRole('dialog').waitFor()),
+  },
+  {
+    name: 'shopping with the items not on the list opened', path: '/shopping',
+    act: async (page) => {
+      for (const summary of await page.locator('summary').all()) await summary.click();
+    },
+  },
   { name: 'shopping, staged plan with hand-added items', path: '/shopping',
     answers: { ...staged, 'GET /api/shopping/items': data.manualItems() } },
   { name: 'shopping, with two weeks planned', path: '/shopping', answers: weeks(data.plan(), data.nextPlan()) },
@@ -53,6 +64,19 @@ const VIEWS = [
   { name: 'shopping without a plan, empty list', path: '/shopping', answers: { ...noPlan, 'GET /api/pantry': [] } },
   { name: 'pantry with a plan', path: '/pantry' },
   { name: 'pantry without a plan', path: '/pantry', answers: noPlan },
+  {
+    name: 'pantry, correcting an item', path: '/pantry',
+    act: (page) => page.getByRole('button', { name: 'Change the amount or date of eggs' }).click()
+      .then(() => page.getByRole('button', { name: 'Save' }).waitFor()),
+  },
+  {
+    name: 'pantry, an item removed with its undo note', path: '/pantry', answers: {
+      'DELETE /api/pantry/*': reply(204),
+      'POST /api/plans/*/refresh': data.plan(),
+    },
+    act: (page) => page.getByRole('button', { name: 'Remove eggs' }).click()
+      .then(() => page.getByRole('button', { name: 'Undo' }).waitFor()),
+  },
 
   // Recipes
   { name: 'recipes', path: '/recipes' },
@@ -91,6 +115,17 @@ const VIEWS = [
     name: 'people, after creating an invite link', path: '/people', answers: { 'POST /api/invites': data.issuedLink() },
     act: (page) => page.getByRole('button', { name: 'Create invite link' }).click()
       .then(() => page.getByRole('button', { name: 'Copy' }).waitFor()),
+  },
+  {
+    name: 'people, a password reset link shown under the person', path: '/people',
+    answers: { 'POST /api/users/*/password-reset': { ...data.issuedLink(), purpose: 'PasswordReset', token: 'new-reset-token' } },
+    act: (page) => page.getByRole('button', { name: 'Reset password' }).last().click()
+      .then(() => page.getByRole('button', { name: 'Copy' }).waitFor()),
+  },
+  {
+    name: 'people, asking before removing someone', path: '/people',
+    act: (page) => page.getByRole('button', { name: 'Remove @sam' }).click()
+      .then(() => page.getByRole('dialog').waitFor()),
   },
   { name: 'settings: login', path: '/settings/login' },
   { name: 'settings: https', path: '/settings/https' },

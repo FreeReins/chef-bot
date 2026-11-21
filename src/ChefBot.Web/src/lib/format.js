@@ -49,3 +49,22 @@ export function amount(quantity, unit) {
   const rounded = Math.round(quantity * 100) / 100;
   return unit ? `${rounded} ${unit}` : `${rounded}`;
 }
+
+/**
+ * A warning about a pantry item's date: { tone, text } such as { tone: 'warn', text: '3 days left' }, or null when it
+ * is fresh or has no date, since those need no attention.
+ */
+export function freshness(item) {
+  const days = item.daysLeft;
+  if (item.freshness === 'Expired') {
+    const ago = days == null ? null : -days;
+    return { tone: 'bad', text: ago == null || ago <= 0 ? 'Expired' : `Expired ${ago === 1 ? 'yesterday' : `${ago} days ago`}` };
+  }
+  if (item.freshness === 'ExpiringSoon') {
+    return { tone: 'warn', text: days == null ? 'Use soon' : days <= 0 ? 'Use today' : days === 1 ? 'Use by tomorrow' : `${days} days left` };
+  }
+  return null;
+}
+
+/** "3 items", "1 item". */
+export const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;

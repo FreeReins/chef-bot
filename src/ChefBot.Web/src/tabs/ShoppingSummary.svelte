@@ -2,7 +2,7 @@
      where items are ticked off, is on the Shopping tab. -->
 <script>
   import { app } from '../lib/app.svelte.js';
-  import { amount } from '../lib/format.js';
+  import { amount, plural } from '../lib/format.js';
 
   const lines = $derived(app.ingredients?.ingredients ?? []);
   const toBuy = $derived(lines.filter((line) => line.status === 'ToBuy'));
@@ -16,7 +16,6 @@
   });
   const storeCount = $derived(groups.filter((group) => group.store !== 'Anywhere').length);
 
-  const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
   const headline = $derived([
     toBuy.length ? `${plural(toBuy.length, 'item')} to buy${storeCount > 1 ? ` at ${storeCount} stores` : ''}` : 'Nothing to buy',
     fromPantry ? `${fromPantry} from your pantry` : null,

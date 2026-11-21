@@ -38,7 +38,7 @@ export const app = $state({
   recipesChanged: 0,   // goes up each time the library may have changed, so the open page of recipes reloads
   recipeName: null,    // the name of the recipe open on its own page, once loaded, for the browser tab's title
   swap: null,          // { mealId, options } while a meal's alternatives are open
-  toasts: [],          // { id, text, kind: 'note' | 'error' } shown in the corner by Toasts.svelte
+  toasts: [],          // { id, text, kind: 'note' | 'error', action?: { label, run } } shown in the corner by Toasts.svelte
   confirmation: null,  // { title, message, confirmLabel, danger } while ConfirmDialog.svelte is asking
 });
 
@@ -66,12 +66,13 @@ let nextToastId = 0;
 
 /**
  * Shows a short message in the corner of the window and returns its id. A note goes away by itself after long
- * enough to read it; an error stays until it is closed or the next action starts.
+ * enough to read it; an error stays until it is closed or the next action starts. `action` ({ label, run }) adds a
+ * button to the message, such as Undo; a note with one stays a little longer, so there is time to press it.
  */
-export function toast(text, kind = 'note') {
+export function toast(text, kind = 'note', action = null) {
   const id = nextToastId++;
-  app.toasts.push({ id, text, kind });
-  if (kind !== 'error') setTimeout(() => dismissToast(id), Math.max(5000, text.length * 60));
+  app.toasts.push({ id, text, kind, action });
+  if (kind !== 'error') setTimeout(() => dismissToast(id), Math.max(action ? 8000 : 5000, text.length * 60));
   return id;
 }
 
@@ -254,6 +255,25 @@ export async function refreshAfterPantryChange() {
   }
 }
 
+/** Takes an item out of the pantry, with an Undo that puts it back as it was. */
+export const removePantryItem = (item) => run(async () => {
+  await api('DELETE', `/api/pantry/${item.id}`);
+  await refreshAfterPantryChange();
+  toast(`${item.name} was taken out of the pantry.`, 'note', {
+    label: 'Undo',
+    run: () => run(async () => {
+      await api('POST', '/api/pantry', { name: item.name, quantity: item.quantity, unit: item.unit || null, expiresOn: item.expiresOn });
+      await refreshAfterPantryChange();
+    }),
+  });
+});
+
+/** Corrects how much of a pantry item is left, or when it expires: { quantity?, expiresOn? }. */
+export const updatePantryItem = (id, changes) => run(async () => {
+  await api('PATCH', `/api/pantry/${id}`, changes);
+  await refreshAfterPantryChange();
+});
+
 /** Loads the pantry on its own. With a plan, the pantry comes with the plan's ingredients view instead. */
 export const loadPantry = async () => { app.pantry = await api('GET', '/api/pantry'); };
 
@@ -270,9 +290,16 @@ export function addToShoppingList(item) {
   }).then(() => added);
 }
 
-/** Takes a hand-added item off the list without buying it. */
+/** Takes a hand-added item off the list without buying it, with an Undo that puts it back. */
 export const removeManualItem = (id) => run(async () => {
+  const item = app.manualItems.find((other) => other.id === id);
   app.manualItems = await api('DELETE', `/api/shopping/items/${id}`);
+  if (item) {
+    toast(`${item.name} was taken off the list.`, 'note', {
+      label: 'Undo',
+      run: () => addToShoppingList({ name: item.name, quantity: item.quantity, unit: item.unit || null }),
+    });
+  }
 });
 
 /**
@@ -285,10 +312,20 @@ export const buyManual = (path) => run(async () => {
 });
 
 /**
- * Marks everything on the shopping list as bought. With a confirmed plan one request covers the plan's items and the
- * hand-added ones; otherwise only the hand-added items can be bought.
+ * Marks everything on the shopping list as bought, once the person confirms: `count` is how many items that is. With a
+ * confirmed plan one request covers the plan's items and the hand-added ones; otherwise only the hand-added items
+ * can be bought.
  */
-export const buyEverything = () => run(async () => {
+export async function buyEverything(count) {
+  if (!(await ask({
+    title: `Mark ${count === 1 ? 'this item' : `all ${count} items`} as bought?`,
+    message: 'They come off the shopping list and go into your pantry.',
+    confirmLabel: 'Mark as bought',
+  }))) return;
+  await buyAll();
+}
+
+const buyAll = () => run(async () => {
   if (isConfirmed()) {
     await applyPlan(await api('POST', `/api/plans/${app.plan.id}/shopping/purchase-all`, {}));
     await loadManualItems();

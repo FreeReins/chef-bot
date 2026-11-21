@@ -221,5 +221,6 @@
   .rows .text { min-width: 0; flex: 1; }
   .thumb { flex: none; width: 3.5rem; height: 2.75rem; object-fit: cover; border-radius: .3rem; background: var(--chip); }
 
-  .pager { justify-content: space-between; align-items: center; margin-top: 1rem; }
+  .pager { justify-content: center; align-items: center; gap: 1rem; margin-top: 1rem; }
+  .pager > :first-child { flex: none; }
 </style>

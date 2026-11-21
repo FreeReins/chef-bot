@@ -1,5 +1,5 @@
 <!-- The messages in the bottom corner of the window: notes that go away by themselves, and errors that stay until
-     closed. App.svelte shows this once; anything can add a message with toast() from lib/app.svelte.js. -->
+     closed. A message can carry one button, such as Undo. App.svelte shows this once; anything can add a message with toast() from lib/app.svelte.js. -->
 <script>
   import { fly } from 'svelte/transition';
   import { flip } from 'svelte/animate';
@@ -11,6 +11,9 @@
   {#each app.toasts.filter((item) => item.kind === kind) as item (item.id)}
     <div class="toast {item.kind}" animate:flip={{ duration: 200 }} transition:fly={{ y: 16, duration: 200 }}>
       <p>{item.text}</p>
+      {#if item.action}
+        <button class="small" onclick={() => { dismissToast(item.id); item.action.run(); }}>{item.action.label}</button>
+      {/if}
       <button class="close" aria-label="Close this message" title="Close" onclick={() => dismissToast(item.id)}>
         <X size={16} />
       </button>
@@ -40,6 +43,7 @@
     font-size: .92rem; box-shadow: 0 4px 16px rgb(0 0 0 / .15); pointer-events: auto; }
   .toast.error { border-color: var(--bad); color: var(--bad); }
   .toast p { margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .toast button.small { flex: none; }
   .close { flex: none; display: inline-flex; padding: .15rem; border: 0; background: none; color: var(--muted); }
   .close:hover { color: var(--ink); }
 </style>
