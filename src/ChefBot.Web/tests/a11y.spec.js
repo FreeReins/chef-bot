@@ -225,7 +225,7 @@ test('setup wizard, every step', async ({ page, api }) => {
   await page.getByRole('button', { name: 'Edit Slow cooker week' }).click();
   await expectAccessible(page);
 
-  await page.getByRole('button', { name: 'Next: stores' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('heading', { name: /Where do you shop/ }).waitFor();
   await expectAccessible(page);
   const saved = api.requests.filter((request) => request === 'PUT /api/plan-styles');

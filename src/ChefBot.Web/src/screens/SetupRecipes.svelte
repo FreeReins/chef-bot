@@ -56,7 +56,7 @@
     </details>
   </div>
 
-  <SetupNav label={count ? 'Next: stores' : 'Skip for now'} primary={Boolean(count)}>
+  <SetupNav label={count ? 'Next' : 'Skip for now'} primary={Boolean(count)}>
     {#if count === 0}No recipes yet. You can add some later.
     {:else}{count} {count === 1 ? 'recipe' : 'recipes'} in your library{/if}
   </SetupNav>

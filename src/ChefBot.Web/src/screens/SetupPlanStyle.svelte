@@ -58,7 +58,7 @@
     <PlanStyleEditor bind:styles={app.styleDraft} />
   </details>
 
-  <SetupNav label={styles.length ? 'Next: stores' : 'Skip for now'} primary={styles.length > 0} onnext={next}>
+  <SetupNav label={styles.length ? 'Next' : 'Skip for now'} primary={styles.length > 0} onnext={next}>
     {#if chosen}Weeks are planned as {chosen.name} unless you choose another.
     {:else}No styles: weeks are planned as the Classic week.{/if}
   </SetupNav>
