@@ -8,7 +8,7 @@ using Wolverine.Http;
 
 namespace ChefBot.Api.Endpoints;
 
-/// <summary>The recipe library kept in ChefBot's own database, and importing into it from a file, samples or Mealie.</summary>
+/// <summary>The recipe library kept in ChefBot's own database, and importing into it from a file, a web page, samples or Mealie.</summary>
 public static class RecipeEndpoints
 {
     /// <summary>The largest archive <see cref="ImportArchive"/> takes. Mealie backups with photos run to tens of MB.</summary>
@@ -94,6 +94,17 @@ public static class RecipeEndpoints
         copy.Position = 0;
         return await recipes.ImportArchiveAsync(fileName ?? string.Empty, copy, cancellationToken);
     }
+
+    /// <summary>
+    /// Adds the recipe on a web page: <c>{"url": "https://example.com/recipes/soup"}</c>. The page is read with the
+    /// reader for its site, named in <c>readWith</c>, and its photos are downloaded in the background. Answers 409
+    /// when that page or a recipe with the same name is already in the library, and 502 when the page can't be
+    /// downloaded.
+    /// </summary>
+    [WolverinePost("/api/recipes/import/web")]
+    public static Task<WebImportResponse> ImportFromWeb(
+        WebRecipeRequest request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.ImportFromWebAsync(request, cancellationToken);
 
     /// <summary>Starts a Mealie import in the background. Poll the status endpoint for the outcome.</summary>
     [WolverinePost("/api/recipes/import/mealie")]

@@ -1,4 +1,5 @@
 using System.Globalization;
+using AngleSharp.Html.Parser;
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Engines.Contracts.Services;
 using ChefBot.Core.Managers.Contracts;
@@ -9,17 +10,51 @@ using ChefBot.Core.Utilities;
 namespace ChefBot.Core.Engines.Transformation;
 
 /// <summary>
-/// Turns outside data into ChefBot's own: recipe files, typed-in recipes and Mealie recipes into stored recipes,
+/// Turns outside data into ChefBot's own: recipe files, recipe web pages, typed-in recipes and Mealie recipes into stored recipes,
 /// ingredient names into pantry items and free-form meals. Reads and saves nothing.
 /// </summary>
 internal sealed class TransformationEngine(
     IngredientCatalog catalog,
     PlannerOptions options,
     RecipeClassifier classifier,
-    IEnumerable<IRecipeFileFormat> formats)
+    IEnumerable<IRecipeFileFormat> formats,
+    IEnumerable<IRecipePageReader> pageReaders)
 {
     /// <summary>Every kind of file that can be imported.</summary>
     public IReadOnlyList<IRecipeFileFormat> Formats { get; } = formats.ToList();
+
+    /// <summary>The ways of reading recipe web pages, site-specific ones first.</summary>
+    public IReadOnlyList<IRecipePageReader> PageReaders { get; } = pageReaders.ToList();
+
+    /// <summary>The reader for a recipe page: the first registered one that handles its address.</summary>
+    /// <exception cref="RuleViolationException">No reader handles it, which only happens if none reads any site.</exception>
+    public IRecipePageReader PageReader(Uri url) =>
+        PageReaders.FirstOrDefault(reader => reader.Handles(url))
+        ?? throw new RuleViolationException($"ChefBot can't read recipes from {url.Host}. Type the recipe in instead.");
+
+    /// <summary>
+    /// Reads the recipe on a downloaded page with the reader chosen for its address. The recipe's source is the
+    /// address that was given, without any <c>#fragment</c>, and its photo addresses are made absolute.
+    /// </summary>
+    /// <exception cref="RuleViolationException">The reader found no recipe on the page.</exception>
+    public RecipeText ReadPage(IRecipePageReader reader, Uri url, WebPage page)
+    {
+        var document = new HtmlParser().ParseDocument(page.Html);
+        var recipe = reader.Read(url, document)
+            ?? throw new RuleViolationException(
+                "ChefBot couldn't find a recipe on that page. Check the link goes to one recipe, not a list of them, or type the recipe in instead.");
+
+        var images = (recipe.ImageUrls ?? [])
+            .Select(image => Uri.TryCreate(page.Address, image, out var absolute) ? absolute : null)
+            .Where(image => image is not null && (image.Scheme == Uri.UriSchemeHttp || image.Scheme == Uri.UriSchemeHttps))
+            .Select(image => image!.AbsoluteUri)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        return recipe with { SourceUrl = SourceAddress(url), ImageUrls = images };
+    }
+
+    /// <summary>A page address as recipes keep it: absolute, without a <c>#fragment</c>.</summary>
+    public static string SourceAddress(Uri url) => url.GetLeftPart(UriPartial.Query);
 
     /// <summary>Reads an uploaded recipe file with the format its name ending belongs to.</summary>
     /// <exception cref="RuleViolationException">The file is of a kind ChefBot can't read, or its contents can't be read.</exception>

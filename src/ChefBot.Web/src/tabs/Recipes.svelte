@@ -1,6 +1,7 @@
 <script>
-  import { app, run, isAdmin, importFromMealie, loadRecipes } from '../lib/app.svelte.js';
+  import { app, run, toast, isAdmin, importFromMealie, loadRecipes } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
+  import { go } from '../lib/addresses.js';
   import Chip from '../components/Chip.svelte';
   import RecipeDetail from './RecipeDetail.svelte';
   import RecipeForm from './RecipeForm.svelte';
@@ -20,6 +21,22 @@
       saved = true;
     });
     return saved;
+  }
+
+  let link = $state('');
+  let reading = $state(false);
+
+  async function addFromLink(event) {
+    event.preventDefault();
+    reading = true;
+    await run(async () => {
+      const { recipe, readWith } = await api('POST', '/api/recipes/import/web', { url: link });
+      await loadRecipes();
+      link = '';
+      toast(`Added ${recipe.name} (read with: ${readWith}). Its photos will appear once they have downloaded.`);
+      await go(`/recipes/${recipe.id}`);
+    });
+    reading = false;
   }
 </script>
 
@@ -56,6 +73,16 @@
       {/each}
     </section>
     <section>
+      <h2>Add a recipe from a link</h2>
+      <form class="card link" onsubmit={addFromLink}>
+        <label for="recipe-link">Address of a recipe page</label>
+        <div class="link-row">
+          <input id="recipe-link" type="text" inputmode="url" autocomplete="url" required
+                 placeholder="https://example.com/recipes/soup" bind:value={link} disabled={reading}>
+          <button type="submit" disabled={reading}>{reading ? 'Reading…' : 'Add'}</button>
+        </div>
+        <p class="muted">Works with most recipe sites. ChefBot saves the recipe straight away; you can edit it after.</p>
+      </form>
       <h2>Add a recipe</h2>
       <RecipeForm button="Save recipe" save={add} />
       <h2>Import recipe files</h2>
@@ -65,5 +92,8 @@
 {/if}
 
 <style>
-  .import { display: grid; gap: .5rem; }
+  .import, .link { display: grid; gap: .5rem; }
+  .link p { margin: 0; }
+  .link-row { display: flex; gap: .5rem; }
+  .link-row input { flex: 1; min-width: 0; }
 </style>

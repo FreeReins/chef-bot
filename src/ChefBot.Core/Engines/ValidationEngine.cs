@@ -157,6 +157,41 @@ internal sealed class ValidationEngine(IPlanAccess plans, IRecipeAccess recipes,
         }
     }
 
+    /// <summary>
+    /// The address of a recipe page to import. An address typed without <c>https://</c>, such as
+    /// <c>example.com/soup</c>, gets it added.
+    /// </summary>
+    public static Uri RecipePageAddress(string? url)
+    {
+        var trimmed = url?.Trim() ?? string.Empty;
+        if (trimmed.Length > 0 && !trimmed.Contains("://", StringComparison.Ordinal))
+        {
+            trimmed = "https://" + trimmed;
+        }
+
+        return WebAddress.IsHttp(trimmed) && Uri.TryCreate(trimmed, UriKind.Absolute, out var address) && address.Host.Contains('.')
+            ? address
+            : throw new RuleViolationException("Enter the full address of a recipe page, such as https://example.com/recipes/soup.");
+    }
+
+    /// <summary>Refuses a page the library already has a recipe from, archived ones included, before it is downloaded.</summary>
+    public static void PageNotInLibrary(string sourceUrl, IEnumerable<Recipe> library)
+    {
+        if (library.FirstOrDefault(existing => SamePage(existing.SourceUrl, sourceUrl)) is { } same)
+        {
+            throw new ConflictException($"That page is already in your recipes{Archived(same)} as {same.Name}, so nothing was added.");
+        }
+    }
+
+    /// <summary>Refuses a recipe whose name the library already has, archived ones included, as file imports do.</summary>
+    public static void NameNotInLibrary(RecipeText recipe, IEnumerable<Recipe> library)
+    {
+        if (library.FirstOrDefault(existing => existing.Name.Equals(recipe.Name.Trim(), StringComparison.OrdinalIgnoreCase)) is { } same)
+        {
+            throw new ConflictException($"{same.Name} is already in your recipes{Archived(same)}, so nothing was added. Rename that one to import this.");
+        }
+    }
+
     /// <summary>Checks a photo's bytes and says what kind of image it is, judged from the bytes, not the file name.</summary>
     /// <returns>The image's media type, such as image/jpeg.</returns>
     public static string Image(byte[]? data)
@@ -385,4 +420,14 @@ internal sealed class ValidationEngine(IPlanAccess plans, IRecipeAccess recipes,
 
     /// <summary>A time of day in its saved form, HH:mm.</summary>
     public static string TimeOfDay(string? time) => DailyTime.Format(DailyTime.Parse(time));
+
+    private static string Archived(Recipe recipe) => recipe.IsArchived ? " (archived)" : string.Empty;
+
+    /// <summary>Whether two page addresses are the same page, ignoring case and a leading www. in the host, and a trailing slash.</summary>
+    private static bool SamePage(string? first, string? second) =>
+        Uri.TryCreate(first, UriKind.Absolute, out var a) && Uri.TryCreate(second, UriKind.Absolute, out var b)
+        && string.Equals(Normal(a), Normal(b), StringComparison.Ordinal);
+
+    private static string Normal(Uri url) =>
+        $"{(url.Host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? url.Host[4..] : url.Host).ToLowerInvariant()}{url.AbsolutePath.TrimEnd('/')}{url.Query}";
 }

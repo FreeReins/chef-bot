@@ -55,7 +55,8 @@ Managers/          one per area of use: orchestrate a use case, own the transact
    ▼          ▼
 Engines/  ─►  ResourceAccess/   engines do the work (verbs); accessors read and save
                  ▼
-            PostgreSQL (EF Core), Mealie, the webhook, the backup folder, config/sample-recipes.json, config/stores.json
+            PostgreSQL (EF Core), Mealie, the webhook, recipe pages and photos on the web, the backup folder,
+            config/sample-recipes.json, config/stores.json
 
 Utilities/   the ingredient catalog, text and units, clock, settings options, password hashing: any layer
 ```
@@ -70,8 +71,8 @@ managers' contracts are public; the engines' and accessors' are internal.
 | `Managers/Contracts/Messages/` | The managers' requests and responses (these are the HTTP JSON bodies), the commands and events sent through the message bus, and the enums they use | Plain records. Changing one changes the API |
 | `Managers/Contracts/` | `ChefBotException` and the exceptions built on it (`NotFoundException`, `RuleViolationException`, ...), which the API turns into problem responses; `ContractJsonContext` | |
 | `Managers/` | The manager classes and `Mapping.cs` (data contracts to messages) | Call engines and accessors, never another manager. Commit once through `IMessageAccess.CommitAsync`, which also sends what they published |
-| `Engines/` | `PlanningEngine`, `ShoppingEngine`, `SuggestionEngine`, `TransformationEngine` (recipe files, Mealie recipes, typed-in recipes and pantry items), `ValidationEngine`, `SecurityEngine`, `NotificationEngine`, the recipe file formats (`Transformation/`), and the calculations several of them use (`MealRequirements`, `PantrySnapshot`, `PantryFreshness`, `WeekScorer`). Those calculations are plain functions and value types, not engines, so using one doesn't make one engine call another | Never call a manager or another engine. Only `ValidationEngine` reads through accessors, for rules that depend on what is stored; the others take everything as arguments and can be tested without a database |
-| `Engines/Contracts/Services/` | `IRecipeFileFormat`, which each kind of recipe file implements | |
+| `Engines/` | `PlanningEngine`, `ShoppingEngine`, `SuggestionEngine`, `TransformationEngine` (recipe files, recipe web pages, Mealie recipes, typed-in recipes and pantry items), `ValidationEngine`, `SecurityEngine`, `NotificationEngine`, the recipe file formats and web page readers (`Transformation/`, site-specific readers in `Transformation/Sites/`), the `SchemaRecipe` and `Microdata` helpers they share, and the calculations several of them use (`MealRequirements`, `PantrySnapshot`, `PantryFreshness`, `WeekScorer`). Those calculations are plain functions and value types, not engines, so using one doesn't make one engine call another | Never call a manager or another engine. Only `ValidationEngine` reads through accessors, for rules that depend on what is stored; the others take everything as arguments and can be tested without a database |
+| `Engines/Contracts/Services/` | `IRecipeFileFormat`, which each kind of recipe file implements, and `IRecipePageReader`, which each way of reading recipe web pages implements | |
 | `Engines/Contracts/Messages/` | The records engines take and return: `PlanRequest`, `PlanDraft`, `ShoppingDraft`, `Suggestions`, `ImportChanges`, `RequiredIngredient`, ... | Plain records |
 | `ResourceAccess/Contracts/Services/` | The accessor interfaces: `IRecipeAccess`, `IPlanAccess`, ..., `IMessageAccess` (the Wolverine outbox that publishes messages and commits) | |
 | `ResourceAccess/Contracts/Messages/` | The plain data contracts the accessors take and return (`Recipe`, `MealPlan`, `PantryItem`, ...) | Plain data, no EF Core |
@@ -99,8 +100,32 @@ Rules of thumb:
 - Recipe file imports are pluggable. To read a new kind of file, implement `IRecipeFileFormat` (from
   `Engines/Contracts/Services/`) in `ChefBot.Core/Engines/Transformation/` and register it in `CoreRegistration.cs`; `TransformationEngine` picks
   it by file name ending and the web page's file picker lists it automatically.
+- Recipe web pages are pluggable the same way. `SchemaOrgPage` reads any site from its schema.org data; a site
+  that needs more gets its own `IRecipePageReader` (see [Adding a recipe site](#adding-a-recipe-site)). Pages
+  and photos are downloaded through `PublicWeb.Handler`, which refuses private network addresses, so a link
+  can't reach the database or the home network. Keep any new download of an address someone else chose on it.
 - Something new to store: add the entity in `ResourceAccess/Persistence/`, the data contract in
   `ResourceAccess/Contracts/Messages/`, map them in `EntityMapping.cs`, and add it to `BackupAccess` so backups include it.
+
+## Adding a recipe site
+
+`SchemaOrgPage` reads the JSON-LD or microdata most recipe sites include for search engines, so most sites need
+nothing. Add a reader when a site's data is missing or wrong: ingredients run together, the servings are
+missing, or the recipe is only in the HTML.
+
+1. Save the page in `tests/ChefBot.Core.Tests/Pages/<site>.html`, trimmed to the parts the reader looks at:
+   the JSON-LD script and the HTML around the recipe. Leave out the site's own text, photos and scripts.
+2. Write `src/ChefBot.Core/Engines/Transformation/Sites/<Site>Page.cs`, implementing `IRecipePageReader`:
+   - `Name` is shown after an import ("read with: ..."), so use the site's name.
+   - `Handles` matches the site's host, including subdomains such as `www.`.
+   - `PageToFetch` is optional: return the site's print or AMP version when it is easier to read.
+   - `Read` gets an AngleSharp `IDocument`. Start from `SchemaRecipe.FromPage(page)` and fix only what the
+     site gets wrong, with `recipe with { ... }` and `page.QuerySelectorAll(...)`. Pass text taken from the
+     HTML through `SchemaRecipe.PageText`. Return null when there is no recipe, so the person is told so.
+   - It is a reader, not an engine: take `SchemaRecipe` in the constructor and nothing else.
+3. Register it in `CoreRegistration.cs` before `SchemaOrgPage`.
+4. Add a test in `WebRecipeTests.cs` that reads the saved page and checks the fields the reader fixes.
+   `FakeSitePage` in the tests shows the shape.
 
 ## Tests
 

@@ -49,9 +49,12 @@ internal static class TestData
         SlowCookerWords = ["slow cooker"],
     });
 
-    // Registered in the same order as CoreRegistration: the specific Mealie backup before general JSON.
+    public static readonly SchemaRecipe Schema = new(Classifier);
+
+    // Registered in the same order as CoreRegistration: the specific Mealie backup before general JSON, and site
+    // readers before the one for any site.
     public static readonly TransformationEngine Transformation =
-        new(Catalog, Options, Classifier, [new MealieBackupFormat(Classifier), new JsonRecipeFormat(Classifier)]);
+        new(Catalog, Options, Classifier, [new MealieBackupFormat(Classifier), new JsonRecipeFormat(Schema)], [new SchemaOrgPage(Schema)]);
 
     public static readonly PlanningEngine Planning = new(Catalog, Options, new WeeklyScheduleOptions());
 

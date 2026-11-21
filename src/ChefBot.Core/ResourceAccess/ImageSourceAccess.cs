@@ -5,9 +5,10 @@ using ChefBot.Core.Utilities;
 namespace ChefBot.Core.ResourceAccess;
 
 /// <inheritdoc cref="IImageSourceAccess"/>
+/// <remarks>Its <see cref="HttpClient"/> uses <see cref="PublicWeb.Handler"/>, set up in <c>CoreRegistration</c>.</remarks>
 internal sealed class ImageSourceAccess(HttpClient http) : IImageSourceAccess
 {
-    public async Task<byte[]> DownloadAsync(string url, int maxBytes, CancellationToken cancellationToken)
+    public async Task<byte[]> DownloadAsync(string url, int maxBytes, bool allowPrivateAddresses, CancellationToken cancellationToken)
     {
         if (!WebAddress.IsHttp(url))
         {
@@ -16,7 +17,9 @@ internal sealed class ImageSourceAccess(HttpClient http) : IImageSourceAccess
 
         try
         {
-            using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Options.Set(PublicWeb.AllowPrivateAddresses, allowPrivateAddresses);
+            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 throw new RecipeSourceException($"The photo at {url} couldn't be downloaded: HTTP {(int)response.StatusCode}.");
@@ -32,6 +35,10 @@ internal sealed class ImageSourceAccess(HttpClient http) : IImageSourceAccess
             }
 
             return copy.ToArray();
+        }
+        catch (HttpRequestException exception) when (PublicWeb.Refusal(exception) is { } refusal)
+        {
+            throw refusal;
         }
         catch (HttpRequestException exception)
         {

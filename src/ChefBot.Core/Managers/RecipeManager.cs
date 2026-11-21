@@ -5,6 +5,7 @@ using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
+using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Managers;
 
@@ -14,6 +15,7 @@ internal sealed class RecipeManager(
     ISettingsAccess settings,
     IRecipeSourceAccess mealie,
     IImageSourceAccess images,
+    IWebPageAccess web,
     ISampleRecipeAccess samples,
     IMessageAccess messages,
     TransformationEngine transformation,
@@ -100,12 +102,15 @@ internal sealed class RecipeManager(
             return [];
         }
 
+        // Mealie is often on the home network, so its photos may come from a private address; no other photos may.
+        var mealie = (await settings.GetMealieAsync(cancellationToken)).Url;
         var problems = new List<string>();
         foreach (var image in TransformationEngine.PendingImages(recipe))
         {
             try
             {
-                var data = await images.DownloadAsync(image.SourceUrl!, ValidationEngine.MaxImageBytes, cancellationToken);
+                var fromMealie = WebAddress.SameServer(image.SourceUrl, mealie);
+                var data = await images.DownloadAsync(image.SourceUrl!, ValidationEngine.MaxImageBytes, fromMealie, cancellationToken);
                 image.ContentType = ValidationEngine.Image(data);
                 await recipes.SaveImageFileAsync(new RecipeImageFile(image.Id, image.ContentType, data), cancellationToken);
             }
@@ -151,6 +156,26 @@ internal sealed class RecipeManager(
 
         var (added, newPhotos) = await AddNewAsync(file.Recipes, photos, cancellationToken);
         return new FileImportResult(added, file.Recipes.Count - added, file.Skipped, photosAdded + newPhotos);
+    }
+
+    public async Task<WebImportResponse> ImportFromWebAsync(WebRecipeRequest request, CancellationToken cancellationToken)
+    {
+        var url = ValidationEngine.RecipePageAddress(request.Url);
+        var library = await recipes.ListAllAsync(cancellationToken);
+        ValidationEngine.PageNotInLibrary(TransformationEngine.SourceAddress(url), library);
+
+        var reader = transformation.PageReader(url);
+        var page = await web.FetchAsync(reader.PageToFetch(url), cancellationToken);
+        var text = transformation.ReadPage(reader, url, page);
+        ValidationEngine.Recipe(text);
+        ValidationEngine.NameNotInLibrary(text, library);
+
+        var recipe = new Recipe { Origin = RecipeOrigin.Local };
+        transformation.ApplyText(text, recipe, clock.GetUtcNow());
+        await recipes.SaveAsync(recipe, cancellationToken);
+        await RequestImagesAsync(recipe);
+        await messages.CommitAsync(cancellationToken);
+        return new WebImportResponse(recipe.ToResponse(), reader.Name);
     }
 
     public async Task<IReadOnlyList<SampleRecipeResponse>> GetSamplesAsync(CancellationToken cancellationToken)

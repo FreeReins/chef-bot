@@ -25,8 +25,8 @@ It is a self-hosted web app: one container for the app, one for PostgreSQL.
   a whole grain, a protein and a vegetable or fruit. Choosing one updates the plan, the leftover lunches
   and the shopping list together.
 - **Keeps its own recipes.** Recipes live in ChefBot's database: their ingredients, steps, prep and cook times,
-  description, tags, notes, source link and photos. Add them in the web page, or import them from
-  [Mealie](https://mealie.io). Mealie is optional and only ever read from. Imported photos are downloaded once,
+  description, tags, notes, source link and photos. Add them in the web page, paste a link to a recipe on a
+  website, or import them from [Mealie](https://mealie.io). Mealie is optional and only ever read from. Imported photos are downloaded once,
   in the background, so they still show when Mealie or the recipe's website is down.
 - **Has accounts.** A setup wizard creates the first (admin) account, who can invite the rest of the
   household with single-use links. Everyone shares the same recipes, plan and pantry.
@@ -292,6 +292,7 @@ try each call. Both need you to be signed in.
 | `POST /api/recipes/import/file` | Import a recipe file: `{"fileName": "recipes.json", "content": "..."}`. Names already in the library are skipped |
 | `POST /api/recipes/import/archive?fileName=backup.zip` | Import a Mealie backup .zip, sent as the raw body (`Content-Type: application/zip`, up to 200 MB), with its photos. Names already in the library are skipped, but one with no photos gets the backup's. The answer adds `photosAdded` |
 | `GET /api/recipes/import/formats` | The kinds of recipe file that can be imported, with their file name endings |
+| `POST /api/recipes/import/web` | Add the recipe on a web page: `{"url": "https://example.com/recipes/soup"}`. Answers `{"recipe": {...}, "readWith": "Any site (schema.org)"}` naming the reader used. Photos download in the background. 409 when that page or name is already in the library, 502 when the page can't be downloaded |
 | `POST /api/recipes/import/mealie` | Start a background import. Poll `GET /api/recipes/import/status` |
 | `GET /api/session` | Whether setup is needed and who is signed in |
 | `POST /api/setup/account`, `POST /api/account/sign-in`, `POST /api/account/sign-out` | First account, signing in and out |
@@ -504,6 +505,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions.
   call ChefBot's API on its own.
 - **The database schema is created on first start** and is not upgraded automatically yet
   (see [Upgrading](#upgrading) and CONTRIBUTING.md).
+- **Recipe links need a site that describes its recipes.** Most recipe sites include schema.org data for search
+  engines, and that is what ChefBot reads. Sites without it, behind a sign-in, or that turn away programs get a
+  message saying so; type those recipes in, or add a reader for the site (CONTRIBUTING.md). ChefBot only
+  downloads pages and photos from the public internet, never from addresses on your own network, except photos
+  from the Mealie server you set up.
 - **Seasons are guesses** from the catalog, and stores only know what you tell them. Neither is live store data.
 
 ## License

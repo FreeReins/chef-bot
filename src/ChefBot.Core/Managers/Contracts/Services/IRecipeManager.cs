@@ -51,6 +51,15 @@ public interface IRecipeManager
     /// <exception cref="RuleViolationException">The file isn't an archive ChefBot can read.</exception>
     Task<FileImportResult> ImportArchiveAsync(string fileName, Stream archive, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Adds the recipe on a web page, read with the reader for its site (<see cref="WebImportResponse.ReadWith"/>
+    /// names it), and queues its photos for download. Only public internet addresses are downloaded.
+    /// </summary>
+    /// <exception cref="RuleViolationException">The address isn't a web address, or the page has no recipe ChefBot can read.</exception>
+    /// <exception cref="ConflictException">That page, or a recipe with the same name, is already in the library.</exception>
+    /// <exception cref="RecipeSourceException">The page couldn't be downloaded.</exception>
+    Task<WebImportResponse> ImportFromWebAsync(WebRecipeRequest request, CancellationToken cancellationToken);
+
     /// <summary>The setup wizard's sample recipes, marked when already in the library.</summary>
     Task<IReadOnlyList<SampleRecipeResponse>> GetSamplesAsync(CancellationToken cancellationToken);
 

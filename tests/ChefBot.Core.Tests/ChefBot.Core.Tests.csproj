@@ -12,4 +12,8 @@
     <!-- The shipped data files, so tests can check they agree with each other. -->
     <Content Include="../../config/*.json" Link="config/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Saved recipe pages, trimmed to what the readers look at. -->
+    <Content Include="Pages/*.html" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

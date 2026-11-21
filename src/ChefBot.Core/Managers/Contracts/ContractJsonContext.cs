@@ -50,6 +50,8 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(AddRecipeImageRequest))]
 [JsonSerializable(typeof(RecipeImageContent))]
 [JsonSerializable(typeof(FetchRecipeImages))]
+[JsonSerializable(typeof(WebRecipeRequest))]
+[JsonSerializable(typeof(WebImportResponse))]
 // Accounts
 [JsonSerializable(typeof(NewAccount))]
 [JsonSerializable(typeof(SignInRequest))]

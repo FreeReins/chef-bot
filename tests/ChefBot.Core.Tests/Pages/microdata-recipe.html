@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- A made-up recipe page that marks its recipe up with microdata instead of JSON-LD, trimmed to what matters. -->
+<html lang="en">
+<head><title>Lentil Soup | A Made-Up Blog</title></head>
+<body>
+  <div itemscope itemtype="https://schema.org/WebPage">
+    <article itemscope itemtype="https://schema.org/Recipe">
+      <h1 itemprop="name">Lentil   Soup</h1>
+      <img itemprop="image" src="/photos/lentil-soup.jpg" alt="">
+      <p itemprop="description">A warming soup &amp; a pantry staple.</p>
+      <span itemprop="author" itemscope itemtype="https://schema.org/Person"><span itemprop="name">Sam Cook</span></span>
+      <meta itemprop="prepTime" content="PT10M">
+      <meta itemprop="cookTime" content="PT40M">
+      <span itemprop="recipeYield">6 servings</span>
+      <span itemprop="recipeCategory">Soup</span>
+      <ul>
+        <li itemprop="recipeIngredient">1 cup red lentils</li>
+        <li itemprop="recipeIngredient">
+          2 carrots, diced
+        </li>
+        <li itemprop="recipeIngredient">4 cups stock</li>
+      </ul>
+      <ol>
+        <li itemprop="recipeInstructions">Soften the carrots.</li>
+        <li itemprop="recipeInstructions">Add the lentils and stock and simmer for 30 minutes.</li>
+      </ol>
+      <div itemprop="review" itemscope itemtype="https://schema.org/Review">
+        <span itemprop="name">Not an ingredient</span>
+      </div>
+    </article>
+  </div>
+</body>
+</html>

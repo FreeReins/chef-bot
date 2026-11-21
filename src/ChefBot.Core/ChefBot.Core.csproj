@@ -5,6 +5,8 @@
   -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- Reads recipe web pages: their JSON-LD, microdata, and the HTML that site readers pick apart. -->
+    <PackageReference Include="AngleSharp" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="WolverineFx.EntityFrameworkCore" />
     <PackageReference Include="WolverineFx.Postgresql" />

@@ -30,6 +30,12 @@ public static class CoreRegistration
     /// <summary>The schema that holds the message bus's own tables, next to ChefBot's.</summary>
     public const string MessagingSchema = "wolverine";
 
+    /// <summary>
+    /// How ChefBot introduces itself to recipe sites. Some sites turn away requests that don't look like a browser,
+    /// so it starts the way browsers do and then says what it is.
+    /// </summary>
+    private const string WebPageUserAgent = "Mozilla/5.0 (compatible; ChefBot/1.0; self-hosted recipe import)";
+
     /// <summary>How long startup waits for PostgreSQL to accept connections before giving up.</summary>
     private static readonly TimeSpan DatabaseStartupWait = TimeSpan.FromSeconds(60);
 
@@ -49,7 +55,7 @@ public static class CoreRegistration
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<PlanWriteLock>();
 
-        // Resource access: PostgreSQL, Mealie, the webhook, recipe photos on the web, the backup folder, and the sample recipe and known store files.
+        // Resource access: PostgreSQL, Mealie, the webhook, recipe pages and photos on the web, the backup folder, and the sample recipe and known store files.
         services.AddDbContext<ChefBotDbContext>(options => options.UseNpgsql(ConnectionString(configuration)));
         services.AddScoped<IRecipeAccess, RecipeAccess>();
         services.AddScoped<IPlanAccess, PlanAccess>();
@@ -64,7 +70,15 @@ public static class CoreRegistration
         // Mealie's address and token are saved settings, passed in with each import.
         services.AddHttpClient<IRecipeSourceAccess, RecipeSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<INotificationAccess, NotificationAccess>(client => client.Timeout = TimeSpan.FromSeconds(10));
-        services.AddHttpClient<IImageSourceAccess, ImageSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(20));
+        // Photos and recipe pages come from addresses people or web pages choose, so they only reach the public internet.
+        services.AddHttpClient<IImageSourceAccess, ImageSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(20))
+            .ConfigurePrimaryHttpMessageHandler(PublicWeb.Handler);
+        services.AddHttpClient<IWebPageAccess, WebPageAccess>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(15);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(WebPageUserAgent);
+            })
+            .ConfigurePrimaryHttpMessageHandler(PublicWeb.Handler);
 
         // Engines. They hold no state; ValidationEngine reads through the accessors, so it lives per request.
         services.AddSingleton<RecipeClassifier>();
@@ -72,6 +86,10 @@ public static class CoreRegistration
         // Add a line here for each new kind of file; put specific formats before general ones like JsonRecipeFormat.
         services.AddSingleton<IRecipeFileFormat, MealieBackupFormat>();
         services.AddSingleton<IRecipeFileFormat, JsonRecipeFormat>();
+        // Recipe page readers, chosen by the first that handles the page's address. Add a line here for each site
+        // reader in Engines/Transformation/Sites/, before SchemaOrgPage, which reads any site.
+        services.AddSingleton<SchemaRecipe>();
+        services.AddSingleton<IRecipePageReader, SchemaOrgPage>();
         services.AddSingleton<TransformationEngine>();
         services.AddSingleton<PlanningEngine>();
         services.AddSingleton<ShoppingEngine>();
