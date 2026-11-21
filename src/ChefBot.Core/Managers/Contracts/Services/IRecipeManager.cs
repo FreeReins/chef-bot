@@ -40,6 +40,17 @@ public interface IRecipeManager
     /// <summary>Adds the recipes in an uploaded file. Importing the same file again adds nothing new.</summary>
     Task<FileImportResult> ImportFileAsync(ImportFileRequest request, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Adds the recipes in an uploaded archive, such as a Mealie backup .zip, with their photos. A recipe already in
+    /// the library is left alone, except that one with no photos gets the archive's. Importing the same archive again
+    /// adds nothing new.
+    /// </summary>
+    /// <param name="fileName">The archive's name, which decides the format.</param>
+    /// <param name="archive">The archive's bytes. It must allow seeking.</param>
+    /// <param name="cancellationToken">Stops the import.</param>
+    /// <exception cref="RuleViolationException">The file isn't an archive ChefBot can read.</exception>
+    Task<FileImportResult> ImportArchiveAsync(string fileName, Stream archive, CancellationToken cancellationToken);
+
     /// <summary>The setup wizard's sample recipes, marked when already in the library.</summary>
     Task<IReadOnlyList<SampleRecipeResponse>> GetSamplesAsync(CancellationToken cancellationToken);
 

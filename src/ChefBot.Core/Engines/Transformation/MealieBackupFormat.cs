@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.IO.Compression;
+using System.Text;
 using System.Text.Json;
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Engines.Contracts.Services;
@@ -9,23 +11,64 @@ using static ChefBot.Core.Engines.Transformation.JsonValues;
 namespace ChefBot.Core.Engines.Transformation;
 
 /// <summary>
-/// The <c>database.json</c> inside a Mealie backup .zip: Mealie's tables, one array of rows each. Recipes are in
-/// <c>recipes</c>, their ingredient lines in <c>recipes_ingredients</c>, and their tags, categories and tools in
-/// link tables, which feed the course classifier and become the recipe's tags. Steps are in
-/// <c>recipe_instructions</c> and notes in <c>notes</c>. Photos are kept as files beside <c>database.json</c> in the
-/// .zip, not in it, so this format imports none.
+/// A Mealie backup: the .zip Mealie makes, or the <c>database.json</c> inside it. That file holds Mealie's tables, one
+/// array of rows each. Recipes are in <c>recipes</c>, their ingredient lines in <c>recipes_ingredients</c>, and their
+/// tags, categories and tools in link tables, which feed the course classifier and become the recipe's tags. Steps are
+/// in <c>recipe_instructions</c> and notes in <c>notes</c>. Photos are files beside it in the .zip, at
+/// <c>data/recipes/{recipe id}/images/original.webp</c>, so only the .zip brings them.
 /// </summary>
-internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeFileFormat
+internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeArchiveFormat
 {
-    public string Name => "Mealie backup (database.json from the backup .zip)";
+    /// <summary>The largest <c>database.json</c> read from a .zip, so a crafted archive can't fill the memory.</summary>
+    private const int MaxDatabaseBytes = 256 * 1024 * 1024;
 
-    public IReadOnlyList<string> Extensions { get; } = [".json"];
+    public string Name => "Mealie backup (the .zip, or database.json from it)";
+
+    public IReadOnlyList<string> Extensions { get; } = [".json", ".zip"];
+
+    public string ArchiveExtension => ".zip";
 
     /// <summary>Recognised by its ingredient table, which only a Mealie database dump has.</summary>
     public bool CanRead(string text) => text.Contains("\"recipes_ingredients\"", StringComparison.Ordinal);
 
     /// <exception cref="RuleViolationException">The file isn't JSON or holds no recipes.</exception>
-    public RecipeFile Read(string text)
+    public RecipeFile Read(string text) => Read(text, new Dictionary<Guid, byte[]>());
+
+    /// <exception cref="RuleViolationException">The .zip has no database.json, or it can't be read.</exception>
+    public RecipeFile ReadArchive(Stream archive)
+    {
+        ZipArchive zip;
+        try
+        {
+            zip = new ZipArchive(archive, ZipArchiveMode.Read, leaveOpen: true);
+        }
+        catch (InvalidDataException)
+        {
+            throw new RuleViolationException("That file isn't a .zip file. Make a new backup in Mealie and import the .zip it gives you.");
+        }
+
+        using (zip)
+        {
+            var database = zip.GetEntry("database.json")
+                ?? throw new RuleViolationException("That .zip has no database.json in it, so it isn't a Mealie backup. Make a new backup in Mealie and import the .zip it gives you.");
+            var json = Contents(database, MaxDatabaseBytes)
+                ?? throw new RuleViolationException("That Mealie backup is too large to import.");
+
+            var photos = new Dictionary<Guid, byte[]>();
+            foreach (var entry in zip.Entries)
+            {
+                if (PhotoOf(entry.FullName) is { } recipeId && !photos.ContainsKey(recipeId)
+                    && Contents(entry, ValidationEngine.MaxImageBytes) is { } data)
+                {
+                    photos[recipeId] = data;
+                }
+            }
+
+            return Read(Encoding.UTF8.GetString(json), photos);
+        }
+    }
+
+    private RecipeFile Read(string text, IReadOnlyDictionary<Guid, byte[]> photos)
     {
         using var document = Parse(text, "Mealie backup");
         var tables = document.RootElement;
@@ -48,6 +91,7 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeF
             .ToLookup(link => link.RecipeId, link => link.Label);
 
         var drafts = new List<RecipeText>();
+        var named = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
         foreach (var recipe in recipes)
         {
             var id = Id(recipe);
@@ -58,6 +102,11 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeF
                 .OfType<string>()
                 .ToList();
             if (string.IsNullOrEmpty(name) || lines.Count == 0) continue;
+
+            if (Guid.TryParse(id, out var guid) && photos.TryGetValue(guid, out var photo))
+            {
+                named.TryAdd(name, photo);
+            }
 
             var (course, isSlowCooker) = classifier.Classify(name, labels[id]);
             var servings = PositiveAmount(Property(recipe, "recipe_servings"))
@@ -85,7 +134,7 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeF
                 Tags: tags));
         }
 
-        return new RecipeFile(drafts, recipes.Count - drafts.Count);
+        return new RecipeFile(drafts, recipes.Count - drafts.Count, named);
     }
 
     /// <summary>
@@ -126,6 +175,41 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeF
             .Select(row => (RecipeId: Id(row, "recipe_id"), Label: names.GetValueOrDefault(Id(row, column))))
             .Where(link => link.Label is not null)
             .Select(link => (link.RecipeId, link.Label!));
+
+    /// <summary>
+    /// The recipe a .zip entry is the photo of, for <c>data/recipes/{id}/images/original.*</c>. The smaller
+    /// <c>min-</c> and <c>tiny-</c> copies beside it are left out. Ids are compared as GUIDs, with or without dashes.
+    /// </summary>
+    private static Guid? PhotoOf(string path)
+    {
+        var parts = path.Replace('\\', '/').Split('/');
+        return parts is ["data", "recipes", var id, "images", var file]
+            && Path.GetFileNameWithoutExtension(file).Equals("original", StringComparison.OrdinalIgnoreCase)
+            && Guid.TryParse(id, out var recipeId)
+                ? recipeId
+                : null;
+    }
+
+    /// <summary>
+    /// An entry's bytes, or null when it is larger than <paramref name="maxBytes"/>. The size is counted while reading,
+    /// not taken from the .zip's own record, which a crafted file could get wrong.
+    /// </summary>
+    private static byte[]? Contents(ZipArchiveEntry entry, int maxBytes)
+    {
+        if (entry.Length > maxBytes) return null;
+
+        using var stream = entry.Open();
+        using var copy = new MemoryStream();
+        var buffer = new byte[81920];
+        int read;
+        while ((read = stream.Read(buffer)) > 0)
+        {
+            if (copy.Length + read > maxBytes) return null;
+            copy.Write(buffer, 0, read);
+        }
+
+        return copy.ToArray();
+    }
 
     /// <summary>An id column as text, whether Mealie wrote it as a string or a number. Empty when missing.</summary>
     private static string Id(JsonElement row, string column = "id") => Property(row, column) switch

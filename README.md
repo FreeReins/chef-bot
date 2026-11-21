@@ -87,8 +87,8 @@ Open <http://localhost:8080>. The first visit starts the setup wizard:
 2. **Secure connection.** Shows the HTTPS address, lets you name the certificate for the address you use,
    download it, and choose to always use HTTPS.
 3. **Add your recipes.** Pick one or both:
-   - **Import my recipes** from a recipe file (JSON in ChefBot's own shape, the `database.json` from a Mealie
-     backup .zip, a Mealie recipe export or schema.org recipes from a website), as many files as you like, or connect Mealie once and import from it.
+   - **Import my recipes** from a recipe file (JSON in ChefBot's own shape, a Mealie backup .zip with its
+     photos or the `database.json` from one, a Mealie recipe export or schema.org recipes from a website), as many files as you like, or connect Mealie once and import from it.
    - **Start with sample recipes**: tick the ones you want from the 22 samples. You can come back to this
      list later from the Recipes tab.
 
@@ -290,6 +290,7 @@ try each call. Both need you to be signed in.
 | `POST /api/recipes/{id}/images` | Add a photo: `{"data": "<base64>"}`, a JPEG, PNG, WebP or GIF of up to 5 MB, at most 10 per recipe. Makes an imported recipe a local one |
 | `GET` `DELETE /api/recipes/{id}/images/{imageId}` | Get a photo as an image file, or remove it |
 | `POST /api/recipes/import/file` | Import a recipe file: `{"fileName": "recipes.json", "content": "..."}`. Names already in the library are skipped |
+| `POST /api/recipes/import/archive?fileName=backup.zip` | Import a Mealie backup .zip, sent as the raw body (`Content-Type: application/zip`, up to 200 MB), with its photos. Names already in the library are skipped, but one with no photos gets the backup's. The answer adds `photosAdded` |
 | `GET /api/recipes/import/formats` | The kinds of recipe file that can be imported, with their file name endings |
 | `POST /api/recipes/import/mealie` | Start a background import. Poll `GET /api/recipes/import/status` |
 | `GET /api/session` | Whether setup is needed and who is signed in |

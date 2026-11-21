@@ -77,8 +77,8 @@
       {/if}
     </p>
   </div>
-  <div class="actions">
-    {#if inApp}
+  {#if inApp}
+    <div class="actions plan-actions">
       {#if !app.plan}
         <button class="primary" onclick={() => stage({})}>Stage next week</button>
       {:else}
@@ -91,10 +91,12 @@
           <button class="primary" onclick={() => planAction('confirm')}>Confirm plan</button>
         {/if}
       {/if}
-      <span class="muted" style="align-self:center">{app.session.user.displayName}</span>
+    </div>
+    <div class="actions account">
+      <span class="muted name">{app.session.user.displayName}</span>
       <button onclick={signOut}>Sign out</button>
-    {/if}
-  </div>
+    </div>
+  {/if}
 </header>
 
 <Toasts />
@@ -103,7 +105,7 @@
 {#if inApp}
   <nav class="tabs" aria-label="Views">
     {#each tabs as tab (tab.key)}
-      <a href="/{tab.key}" aria-current={app.tab === tab.key ? 'page' : undefined}><tab.icon size={18} />{tab.label}</a>
+      <a href="/{tab.key}" aria-current={app.tab === tab.key ? 'page' : undefined}><tab.icon size={18} /><span class="tab-label">{tab.label}</span></a>
     {/each}
   </nav>
 {/if}
@@ -150,6 +152,8 @@
 
 <style>
   .top { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-start; }
+  .top > div:first-child { margin-right: auto; }
+  .name { align-self: center; }
   .tabs { display: flex; gap: .25rem; margin: 1.25rem 0 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
   .tabs a { display: inline-flex; align-items: center; gap: .45rem; border-bottom: 3px solid transparent; color: var(--muted);
     padding: .6rem .9rem; text-decoration: none; white-space: nowrap; }
@@ -167,4 +171,31 @@
   .footer-links a { display: inline-flex; padding: .3rem; border-radius: .4rem; color: var(--muted); }
   .footer-links a:hover { color: var(--ink); background: var(--chip); }
   .footer-links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Tablets and narrow windows: the tabs share the width evenly, label under icon, so the row never scrolls. */
+  @media (max-width: 56rem) {
+    .tabs { gap: 0; overflow: visible; }
+    .tabs a { flex: 1 1 0; flex-direction: column; justify-content: center; gap: .15rem; min-width: 0;
+      padding: .5rem .2rem; font-size: .8rem; }
+    .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  }
+
+  /* Phones: the title and Sign out share the top line with the plan buttons below them, the tabs become a bar
+     pinned to the bottom of the window, and the footer links sit at the end of the page instead. */
+  @media (max-width: 40rem) {
+    .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title account" "plan plan"; gap: .75rem; }
+    .top > div:first-child { grid-area: title; margin: 0; }
+    .account { grid-area: account; }
+    .account .name { display: none; }
+    .plan-actions { grid-area: plan; }
+    .plan-actions button { flex: 1 1 auto; }
+    .tabs { position: fixed; inset: auto 0 0 0; z-index: 10; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+      gap: 0; margin: 0; overflow: visible; background: var(--bg); border-bottom: 0; border-top: 1px solid var(--line);
+      padding-bottom: env(safe-area-inset-bottom); }
+    .tabs a { flex-direction: column; gap: .15rem; min-width: 0; padding: .45rem .1rem .4rem; font-size: .7rem;
+      border-bottom: 0; border-top: 3px solid transparent; }
+    .tabs a[aria-current="page"] { border-top-color: var(--accent); }
+    .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    .site-footer { position: static; margin-top: 1.5rem; padding-bottom: .45rem; background: none; }
+  }
 </style>

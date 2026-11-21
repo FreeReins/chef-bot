@@ -133,4 +133,6 @@
   .row-icon { display: inline-flex; padding: .2rem; line-height: 1; color: var(--muted); }
   .link-box { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
   .link-box input { flex: 1 1 16rem; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; }
+  /* At least 16px on phones, so iPhones don't zoom in on it. */
+  @media (max-width: 40rem) { .link-box input { font-size: 1rem; } }
 </style>

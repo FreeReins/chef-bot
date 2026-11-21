@@ -25,15 +25,35 @@ internal sealed class TransformationEngine(
     /// <exception cref="RuleViolationException">The file is of a kind ChefBot can't read, or its contents can't be read.</exception>
     public RecipeFile ReadFile(string fileName, string text)
     {
-        var extension = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
+        var extension = Extension(fileName);
+        if (Formats.OfType<IRecipeArchiveFormat>().Any(f => f.ArchiveExtension == extension))
+        {
+            throw new RuleViolationException(
+                $"A {extension} file has to be uploaded as it is, not as text. Import it from the Recipes tab.");
+        }
+
         var candidates = Formats.Where(f => f.Extensions.Contains(extension)).ToList();
         var format = candidates.FirstOrDefault(f => f.CanRead(text)) ?? candidates.LastOrDefault()
-            ?? throw new RuleViolationException(
-                $"ChefBot can't import {(extension.Length > 0 ? $"{extension} files" : "files without a type")} yet. " +
-                $"Choose one of these instead: {string.Join(", ", Formats.Select(f => $"{f.Name} ({string.Join(", ", f.Extensions)})"))}.");
+            ?? throw CannotImport(extension);
 
         return format.Read(text);
     }
+
+    /// <summary>Reads an uploaded archive, such as a Mealie backup .zip, with the format its name ending belongs to.</summary>
+    /// <param name="fileName">The archive's name, which decides the format.</param>
+    /// <param name="archive">The archive's bytes. It must allow seeking.</param>
+    /// <exception cref="RuleViolationException">No format reads archives with that ending, or its contents can't be read.</exception>
+    public RecipeFile ReadArchive(string fileName, Stream archive)
+    {
+        var extension = Extension(fileName);
+        var format = Formats.OfType<IRecipeArchiveFormat>().FirstOrDefault(f => f.ArchiveExtension == extension)
+            ?? throw CannotImport(extension);
+
+        return format.ReadArchive(archive);
+    }
+
+    /// <summary>Whether an imported photo may be added to a recipe already in the library: only when it has none.</summary>
+    public static bool NeedsPhoto(Recipe recipe) => recipe.Images.Count == 0;
 
     /// <summary>The recipes whose names aren't in the library yet, each name once.</summary>
     public IReadOnlyList<RecipeText> NotYetInLibrary(IEnumerable<RecipeText> recipes, IEnumerable<Recipe> library)
@@ -229,6 +249,12 @@ internal sealed class TransformationEngine(
         recipe.Images = [.. downloaded, .. uploaded];
         NumberImages(recipe);
     }
+
+    private static string Extension(string? fileName) => Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
+
+    private RuleViolationException CannotImport(string extension) => new(
+        $"ChefBot can't import {(extension.Length > 0 ? $"{extension} files" : "files without a type")} yet. " +
+        $"Choose one of these instead: {string.Join(", ", Formats.Select(f => $"{f.Name} ({string.Join(", ", f.Extensions)})"))}.");
 
     private static void NumberImages(Recipe recipe)
     {

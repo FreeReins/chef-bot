@@ -35,4 +35,6 @@
 
 <style>
   .store { font-size: .85rem; padding: .1rem .35rem; max-width: 11rem; }
+  /* At least 16px on phones, so iPhones don't zoom in on it. */
+  @media (max-width: 40rem) { .store { font-size: 1rem; padding: .3rem .4rem; } }
 </style>

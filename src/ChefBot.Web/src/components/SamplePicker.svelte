@@ -82,7 +82,7 @@
   /* Course tabs over a two-column list. */
   .picker-head { align-items: center; margin-bottom: .5rem; }
   .count { opacity: .75; font-size: .8em; }
-  .sample-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 1.25rem; }
+  .sample-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: 0 1.25rem; }
   .sample { display: flex; gap: .55rem; align-items: flex-start; padding: .4rem 0; border-top: 1px solid var(--line); color: var(--ink); font-size: .95rem; }
   .sample input { margin-top: .3rem; }
   .sample.added { opacity: .6; }

@@ -130,6 +130,29 @@ internal sealed class RecipeManager(
         return new FileImportResult(added, file.Recipes.Count - added, file.Skipped);
     }
 
+    public async Task<FileImportResult> ImportArchiveAsync(string fileName, Stream archive, CancellationToken cancellationToken)
+    {
+        var file = transformation.ReadArchive(fileName ?? string.Empty, archive);
+        var photos = file.Photos ?? new Dictionary<string, byte[]>();
+
+        // Recipes already in the library, such as ones imported before from database.json, get a photo only when
+        // they have none, so photos someone added or removed stay as they are.
+        var photosAdded = 0;
+        foreach (var recipe in await recipes.ListActiveAsync(cancellationToken))
+        {
+            if (TransformationEngine.NeedsPhoto(recipe) && photos.TryGetValue(recipe.Name, out var data)
+                && PhotoFile(recipe, data) is { } photo)
+            {
+                await recipes.SaveAsync(recipe, cancellationToken);
+                await recipes.SaveImageFileAsync(photo, cancellationToken);
+                photosAdded++;
+            }
+        }
+
+        var (added, newPhotos) = await AddNewAsync(file.Recipes, photos, cancellationToken);
+        return new FileImportResult(added, file.Recipes.Count - added, file.Skipped, photosAdded + newPhotos);
+    }
+
     public async Task<IReadOnlyList<SampleRecipeResponse>> GetSamplesAsync(CancellationToken cancellationToken)
     {
         var library = await recipes.ListActiveAsync(cancellationToken);
@@ -215,20 +238,57 @@ internal sealed class RecipeManager(
 
     /// <summary>Adds the recipes whose names aren't in the library yet.</summary>
     /// <returns>How many were added.</returns>
-    private async Task<int> AddNewAsync(IReadOnlyList<RecipeText> candidates, CancellationToken cancellationToken)
+    private async Task<int> AddNewAsync(IReadOnlyList<RecipeText> candidates, CancellationToken cancellationToken) =>
+        (await AddNewAsync(candidates, new Dictionary<string, byte[]>(), cancellationToken)).Added;
+
+    /// <summary>
+    /// Adds the recipes not in the library yet, with their photo from <paramref name="photos"/> (by recipe name) when
+    /// it is one ChefBot can show, and commits. Returns how many recipes and photos were added.
+    /// </summary>
+    private async Task<(int Added, int Photos)> AddNewAsync(
+        IReadOnlyList<RecipeText> candidates, IReadOnlyDictionary<string, byte[]> photos, CancellationToken cancellationToken)
     {
         var fresh = transformation.NotYetInLibrary(candidates, await recipes.ListAllAsync(cancellationToken));
+        var photosAdded = 0;
         foreach (var text in fresh)
         {
             ValidationEngine.Recipe(text);
             var recipe = new Recipe { Origin = RecipeOrigin.Local };
             transformation.ApplyText(text, recipe, clock.GetUtcNow());
+            var photo = photos.TryGetValue(recipe.Name, out var data) ? PhotoFile(recipe, data) : null;
             await recipes.SaveAsync(recipe, cancellationToken);
+            if (photo is not null)
+            {
+                await recipes.SaveImageFileAsync(photo, cancellationToken);
+                photosAdded++;
+            }
+
             await RequestImagesAsync(recipe);
         }
 
         await messages.CommitAsync(cancellationToken);
-        return fresh.Count;
+        return (fresh.Count, photosAdded);
+    }
+
+    /// <summary>
+    /// Puts an imported photo on the recipe, after its others, and returns its bytes to store once the recipe is
+    /// saved. Null, leaving the recipe alone, when the file isn't an image ChefBot can show or the recipe is full.
+    /// </summary>
+    private RecipeImageFile? PhotoFile(Recipe recipe, byte[] data)
+    {
+        string contentType;
+        try
+        {
+            ValidationEngine.RoomForImage(recipe);
+            contentType = ValidationEngine.Image(data);
+        }
+        catch (RuleViolationException)
+        {
+            return null;
+        }
+
+        var image = TransformationEngine.AddUploadedImage(recipe, contentType, clock.GetUtcNow());
+        return new RecipeImageFile(image.Id, contentType, data);
     }
 
     /// <summary>Asks for the recipe's photos to be downloaded once this change is saved, when it has any waiting.</summary>

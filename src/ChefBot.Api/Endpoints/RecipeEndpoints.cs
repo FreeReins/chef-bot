@@ -2,6 +2,7 @@ using ChefBot.Api.Messaging;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine.Http;
 
@@ -10,6 +11,9 @@ namespace ChefBot.Api.Endpoints;
 /// <summary>The recipe library kept in ChefBot's own database, and importing into it from a file, samples or Mealie.</summary>
 public static class RecipeEndpoints
 {
+    /// <summary>The largest archive <see cref="ImportArchive"/> takes. Mealie backups with photos run to tens of MB.</summary>
+    private const long MaxArchiveBytes = 200L * 1024 * 1024;
+
     [WolverineGet("/api/recipes")]
     public static Task<IReadOnlyList<RecipeResponse>> List([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.ListAsync(cancellationToken);
@@ -68,6 +72,28 @@ public static class RecipeEndpoints
     public static Task<FileImportResult> ImportFile(
         ImportFileRequest request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.ImportFileAsync(request, cancellationToken);
+
+    /// <summary>
+    /// Adds the recipes in an archive sent as the raw request body, with their photos: today a Mealie backup .zip
+    /// (<c>Content-Type: application/zip</c>). <paramref name="fileName"/> decides the format. Recipes whose name is
+    /// already in the library are left alone, except that one with no photos gets the archive's.
+    /// </summary>
+    [WolverinePost("/api/recipes/import/archive")]
+    public static async Task<FileImportResult> ImportArchive(
+        [FromQuery] string? fileName, HttpContext http, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken)
+    {
+        if (http.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
+        {
+            limit.MaxRequestBodySize = MaxArchiveBytes;
+        }
+
+        // A .zip is read by seeking to its end, which the request body can't do, so it is kept in a temporary file.
+        await using var copy = new FileStream(
+            Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
+        await http.Request.Body.CopyToAsync(copy, cancellationToken);
+        copy.Position = 0;
+        return await recipes.ImportArchiveAsync(fileName ?? string.Empty, copy, cancellationToken);
+    }
 
     /// <summary>Starts a Mealie import in the background. Poll the status endpoint for the outcome.</summary>
     [WolverinePost("/api/recipes/import/mealie")]

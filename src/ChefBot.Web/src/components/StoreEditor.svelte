@@ -203,7 +203,7 @@
   .month { display: flex; gap: .3rem; align-items: center; color: var(--ink); font-size: .9rem; }
   .picker-head { align-items: center; margin-bottom: .5rem; }
   .picker-head input { flex: 0 1 12rem; }
-  .known { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 1.25rem; }
+  .known { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: 0 1.25rem; }
   .known-store { display: flex; gap: .55rem; align-items: flex-start; justify-content: space-between; padding: .4rem 0;
     border-top: 1px solid var(--line); }
   .known-text { display: grid; min-width: 0; flex: 1; }

@@ -55,7 +55,7 @@
 </div>
 
 <style>
-  /* A sidebar of sections, one section shown at a time. On narrow screens the sidebar becomes a row. */
+  /* A sidebar of sections, one section shown at a time. On narrow screens the sidebar becomes wrapping chips. */
   .settings { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 1.75rem; align-items: start; margin-top: 1.25rem; }
   .side-nav { display: grid; gap: .15rem; position: sticky; top: 1rem; }
   .side-nav a { display: flex; align-items: center; gap: .5rem; border-left: 3px solid transparent; border-radius: 0 .4rem .4rem 0;
@@ -69,8 +69,8 @@
   .settings-body > h2:first-child { margin-top: 0; }
   @media (max-width: 40rem) {
     .settings { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
-    .side-nav { display: flex; overflow-x: auto; position: static; border-bottom: 1px solid var(--line); }
-    .side-nav a { border-left: 0; border-bottom: 3px solid transparent; border-radius: 0; white-space: nowrap; }
-    .side-nav a[aria-current="page"] { border-bottom-color: var(--accent); background: none; }
+    .side-nav { display: flex; flex-wrap: wrap; gap: .35rem; position: static; }
+    .side-nav a { border: 1px solid var(--line); border-radius: 999px; padding: .35rem .75rem; white-space: nowrap; }
+    .side-nav a[aria-current="page"] { border-color: var(--accent); background: var(--panel); }
   }
 </style>

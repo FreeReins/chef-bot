@@ -38,8 +38,9 @@
     importFiles([...event.dataTransfer.files]);
   }
 
-  function describe({ added, alreadyInLibrary, skipped }) {
+  function describe({ added, alreadyInLibrary, skipped, photosAdded }) {
     const parts = [`${added} added`];
+    if (photosAdded) parts.push(`${photosAdded} ${photosAdded === 1 ? 'photo' : 'photos'} added`);
     if (alreadyInLibrary) parts.push(`${alreadyInLibrary} already in your recipes`);
     if (skipped) parts.push(`${skipped} skipped (no name or ingredients)`);
     return parts.join(', ');

@@ -31,7 +31,9 @@
 </nav>
 
 <style>
-  .progress { margin-bottom: 1rem; }
+  /* Always as wide as `.gate.wide`, so the bar doesn't change size between steps; on the narrow steps it reaches
+     out past both sides of the column. */
+  .progress { --width: max(100%, min(52rem, 100vw - 2rem)); margin: 0 calc((100% - var(--width)) / 2) 1rem; }
   .steps { color: var(--muted); font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 .25rem; }
   ol { list-style: none; margin: .35rem 0 0; padding: 0; display: grid; gap: .4rem; }
   li { font-size: .8rem; color: var(--muted); }

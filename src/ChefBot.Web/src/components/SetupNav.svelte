@@ -24,4 +24,8 @@
     margin-top: 1rem; padding: .6rem 1rem; background: var(--panel); border: 1px solid var(--line);
     border-radius: .5rem; box-shadow: 0 2px 10px rgb(0 0 0 / .08); }
   .status { flex: 1; min-width: 0; }
+  /* Phones: the footer isn't pinned to the bottom there (App.svelte), so the bar sits right at the bottom. */
+  @media (max-width: 40rem) {
+    .setup-nav { bottom: calc(.5rem + env(safe-area-inset-bottom)); gap: .5rem; padding: .5rem .75rem; }
+  }
 </style>

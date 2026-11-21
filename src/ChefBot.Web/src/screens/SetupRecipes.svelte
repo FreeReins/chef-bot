@@ -86,7 +86,7 @@
   summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: .5rem; }
   .title { display: grid; flex: 1; min-width: 0; }
   .body { padding: .8rem 1rem 1rem; border-top: 1px solid var(--line); }
-  .two-up { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+  .two-up { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); }
   .source { display: grid; gap: .5rem; align-content: start; }
   @media (prefers-reduced-motion: reduce) { summary :global(.chevron) { transition: none; } }
 </style>

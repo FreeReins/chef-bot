@@ -27,4 +27,10 @@
   .slot { display: grid; grid-template-columns: 5.5rem 1fr auto; gap: .5rem; align-items: baseline; padding: .25rem 0; border-top: 1px solid var(--line); }
   .slot:first-of-type { border-top: 0; }
   .label { color: var(--muted); font-size: .85rem; }
+  /* Phones: the buttons go on their own line under the meal, so they don't squeeze its name. */
+  @media (max-width: 40rem) {
+    .slot { grid-template-columns: 4.5rem minmax(0, 1fr); }
+    .slot .row-actions { grid-column: 2; }
+    .slot .row-actions:empty { display: none; }
+  }
 </style>
