@@ -114,7 +114,8 @@ internal static class Mapping
             ingredients
                 .Select(ingredient => new RecipeIngredientResponse(
                     Written(ingredient), ingredient.Quantity, ingredient.Unit, ingredient.DisplayName, ingredient.Note))
-                .ToList());
+                .ToList(),
+            CookingSteps.Read(recipe.Instructions, ingredients.Select(ingredient => ingredient.DisplayName).ToList()));
     }
 
     public static RecipeSummaryResponse ToSummary(this Recipe recipe) => new(

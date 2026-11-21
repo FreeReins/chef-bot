@@ -19,6 +19,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Tags">Its tags.</param>
 /// <param name="Images">Its stored photos, the cover first. Photos still downloading aren't listed.</param>
 /// <param name="IngredientDetails">The same ingredients as <paramref name="Ingredients"/>, as ChefBot understood them for shopping.</param>
+/// <param name="StepDetails">The same steps as <paramref name="Instructions"/>, as ChefBot read them for cooking mode.</param>
 public sealed record RecipeResponse(
     Guid Id,
     string Name,
@@ -37,4 +38,5 @@ public sealed record RecipeResponse(
     string? Notes,
     IReadOnlyList<string> Tags,
     IReadOnlyList<RecipeImageResponse> Images,
-    IReadOnlyList<RecipeIngredientResponse> IngredientDetails);
+    IReadOnlyList<RecipeIngredientResponse> IngredientDetails,
+    IReadOnlyList<RecipeStepResponse> StepDetails);

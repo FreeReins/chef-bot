@@ -107,6 +107,37 @@ const VIEWS = [
   { name: 'a recipe without photos', path: `/recipes/${data.ids.stew}` },
   { name: 'editing a recipe', path: `/recipes/${data.ids.tacos}/edit` },
   { name: 'a recipe\'s photos', path: `/recipes/${data.ids.tacos}/photos` },
+  { name: 'cooking mode, gathering the ingredients', path: `/recipes/${data.ids.tacos}/cook` },
+  {
+    name: 'cooking mode, what to start before cooking', path: `/recipes/${data.ids.tacos}/cook`,
+    act: (page) => page.getByRole('button', { name: 'Next' }).click()
+      .then(() => page.getByRole('heading', { name: 'Before you start' }).waitFor()),
+  },
+  {
+    name: 'cooking mode, a step with a timer running and larger text', path: `/recipes/${data.ids.tacos}/cook`,
+    act: async (page) => {
+      await page.getByRole('combobox', { name: 'Go to' }).selectOption('Step 2');
+      await page.getByRole('button', { name: 'Start a timer for 8 to 10 minutes' }).click();
+      await page.getByRole('button', { name: 'Larger text' }).click();
+      await page.getByRole('region', { name: 'Timers' }).waitFor();
+    },
+  },
+  {
+    name: 'cooking mode, a timer that has ended', path: `/recipes/${data.ids.tacos}/cook`,
+    act: async (page) => {
+      await page.clock.install();
+      await page.getByRole('combobox', { name: 'Go to' }).selectOption('Step 2');
+      await page.getByRole('button', { name: 'Start a timer for 8 to 10 minutes' }).click();
+      await page.clock.fastForward('09:00');
+      await page.getByText("Time's up", { exact: true }).waitFor();
+    },
+  },
+  {
+    name: 'cooking mode, the last page', path: `/recipes/${data.ids.tacos}/cook`,
+    act: (page) => page.getByRole('combobox', { name: 'Go to' }).selectOption('Done')
+      .then(() => page.getByRole('heading', { name: 'That\'s every step' }).waitFor()),
+  },
+  { name: 'cooking mode, a recipe with no steps', path: `/recipes/${data.ids.stew}/cook` },
   { name: 'a recipe that is not in the library', path: '/recipes/00000000-0000-4000-8000-00000000ffff' },
   { name: 'sample recipes', path: '/recipes/samples' },
 

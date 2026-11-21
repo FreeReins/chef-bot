@@ -164,7 +164,7 @@ export const ingredients = () => {
 const recipe = (id, name, course, extra = {}) => ({
   id, name, course, isSlowCooker: false, servings: 4, ingredients: ['oats', 'milk'],
   description: null, instructions: [], prepMinutes: null, cookMinutes: null, totalMinutes: null, sourceUrl: null,
-  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], ...extra,
+  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], stepDetails: [], ...extra,
 });
 
 /** RecipeResponse[]: the first has everything filled in, for the recipe page. */
@@ -172,7 +172,11 @@ export const recipes = () => [
   recipe(ids.tacos, 'Slaw Fish Tacos', 'Main', {
     ingredients: ['600 g fish fillets', '1/2 head cabbage', '3 limes', '8 tortillas'],
     description: 'Crisp fish and a sharp lime slaw. The slaw keeps for lunch the next day.',
-    instructions: ['Shred the cabbage and dress it with lime and salt.', 'Season and pan-fry the fish.', 'Warm the tortillas and fill them.'],
+    instructions: [
+      'Preheat the oven to 200°C. Shred the cabbage and dress it with lime and salt.',
+      'Season the fish and roast it for 8 to 10 minutes.',
+      'Warm the tortillas and fill them.',
+    ],
     prepMinutes: 20, cookMinutes: 10, totalMinutes: 30, sourceUrl: 'https://example.com/slaw-fish-tacos',
     author: 'Jo Park', yieldText: '8 tacos', notes: 'Any firm white fish works.', tags: ['quick', 'fish'],
     images: [
@@ -180,6 +184,13 @@ export const recipes = () => [
       { id: '00000000-0000-4000-8000-000000000402', url: '/api/test-images/2.png' },
     ],
     ingredientDetails: [{ text: '600 g fish fillets', quantity: 600, unit: 'g', name: 'fish fillets', note: null }],
+    stepDetails: [
+      { text: 'Preheat the oven to 200°C. Shred the cabbage and dress it with lime and salt.', timers: [],
+        headStart: { kind: 'Preheat', text: 'Preheat the oven to 200°C' }, ingredients: [1, 2] },
+      { text: 'Season the fish and roast it for 8 to 10 minutes.', timers: [{ text: '8 to 10 minutes', seconds: 480 }],
+        headStart: null, ingredients: [0] },
+      { text: 'Warm the tortillas and fill them.', timers: [], headStart: null, ingredients: [3] },
+    ],
   }),
   recipe(ids.stew, 'Beef and Barley Stew', 'Main', { isSlowCooker: true, ingredients: ['beef chuck', 'barley', 'carrots'] }),
   recipe(ids.curry, 'Chickpea Curry', 'Main', { ingredients: ['chickpeas', 'spinach', 'coconut milk'] }),

@@ -1,6 +1,6 @@
 <!-- One recipe on its own page, /recipes/{id}, so it can be bookmarked: its photos, ingredients and steps to read.
-     Editing it (/recipes/{id}/edit) and managing its photos (/recipes/{id}/photos) open in dialogs over the page;
-     archiving it is in the ⋯ menu. -->
+     Editing it (/recipes/{id}/edit) and managing its photos (/recipes/{id}/photos) open in dialogs over the page,
+     and cooking mode (/recipes/{id}/cook, RecipeCook.svelte) over the whole screen; archiving it is in the ⋯ menu. -->
 <script>
   import { tick } from 'svelte';
   import { app, run, loadRecipes, toast, ask } from '../lib/app.svelte.js';
@@ -9,6 +9,8 @@
   import Chip from '../components/Chip.svelte';
   import Modal from '../components/Modal.svelte';
   import RecipeForm from './RecipeForm.svelte';
+  import RecipeCook from './RecipeCook.svelte';
+  import CookingPot from '@lucide/svelte/icons/cooking-pot';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import ImagePlus from '@lucide/svelte/icons/image-plus';
@@ -193,6 +195,7 @@
     <header class="title-row">
       <h2>{recipe.name}</h2>
       <div class="row-actions">
+        <a class="button primary with-icon" href="{base}/cook"><CookingPot size={16} />Start cooking</a>
         <a class="button with-icon" href="{base}/edit"><Pencil size={16} />Edit</a>
         <a class="button with-icon" href="{base}/photos"><Images size={16} />Photos ({images.length})</a>
         <div class="menu" bind:this={menu}>
@@ -261,7 +264,9 @@
     {/if}
   </article>
 
-  {#if app.recipeDialog === 'edit'}
+  {#if app.recipeDialog === 'cook'}
+    <RecipeCook {recipe} onclose={close} />
+  {:else if app.recipeDialog === 'edit'}
     <Modal wide title="Edit {recipe.name}" onclose={close}>
       <RecipeForm {recipe} button="Save changes" {save} cancel={close} plain />
     </Modal>
