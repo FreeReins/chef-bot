@@ -2,7 +2,7 @@
      to buy comes first, split by store, and anything without a store is grouped by food group. It works without a
      plan: then only the hand-added items are listed. Pantry items running out of date are offered for the list, and
      what the plan needs but needn't be bought (in the pantry, bought already, staples) is folded away at the end.
-     The pantry itself is on the Pantry tab. -->
+     A staple that has run out can be added to the list from there. The pantry itself is on the Pantry tab. -->
 <script>
   import { untrack } from 'svelte';
   import { app, isConfirmed, run, loadPantry, addToShoppingList, buyEverything, toast } from '../lib/app.svelte.js';
@@ -40,10 +40,12 @@
     ].filter((section) => section.lines.length > 0);
   });
 
+  // Names already on the list, lower-cased, so nothing is offered for it twice.
+  const listed = $derived(new Set(toBuy.map((line) => line.name.toLowerCase())));
+
   // Pantry items that are out of date or soon will be, and aren't on the list already.
   const pantryItems = $derived(app.plan ? (app.ingredients?.pantry ?? []).map((line) => line.item) : app.pantry);
   const restock = $derived.by(() => {
-    const listed = new Set(toBuy.map((line) => line.name.toLowerCase()));
     const seen = new Set();
     return pantryItems
       .filter((item) => freshness(item))
@@ -54,7 +56,12 @@
     ? [
       { title: 'From your pantry', note: 'Already in the kitchen, so not on the list.', lines: byStatus('InPantry') },
       { title: 'Already bought', note: 'Ticked off this week.', lines: bought },
-      { title: 'Staples assumed on hand', note: 'Things like salt and oil that are taken as kept in.', lines: byStatus('Staple') },
+      {
+        title: 'Staples assumed on hand',
+        note: "Things like salt and oil that are taken as kept in. Add any you've run out of to the list.",
+        lines: byStatus('Staple').filter((line) => !listed.has(line.name.toLowerCase())),
+        addable: true,
+      },
     ].filter((group) => group.lines.length)
     : []);
 
@@ -73,7 +80,8 @@
     }
   }
 
-  async function addRestock(item) {
+  // Puts a pantry item running out, or a staple that has run out, on the list by name.
+  async function addByName(item) {
     if (await addToShoppingList({ name: item.name, unit: item.unit || null })) toast(`${item.name} was added to the list.`);
   }
 </script>
@@ -138,7 +146,7 @@
             <div>
               <strong>{item.name}</strong> <Chip tone={warning.tone}>{warning.text}</Chip>
             </div>
-            <button class="small" aria-label="Add to list: {item.name}" onclick={() => addRestock(item)}>Add to list</button>
+            <button class="small" aria-label="Add to list: {item.name}" onclick={() => addByName(item)}>Add to list</button>
           </li>
         {/each}
       </ul>
@@ -153,7 +161,17 @@
           <summary>{group.title} ({group.lines.length})</summary>
           <p class="muted">{group.note}</p>
           <ul class="plain">
-            {#each group.lines as line, index (index)}<IngredientLine {line} />{/each}
+            {#each group.lines as line, index (index)}
+              {#if group.addable}
+                <IngredientLine {line}>
+                  {#snippet actions()}
+                    <button class="small" aria-label="Add to list: {line.name}" onclick={() => addByName(line)}>Add to list</button>
+                  {/snippet}
+                </IngredientLine>
+              {:else}
+                <IngredientLine {line} />
+              {/if}
+            {/each}
           </ul>
         </details>
       {/each}

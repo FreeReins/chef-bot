@@ -1,12 +1,12 @@
 <!-- One line of the shopping list. A line still to buy has a box to tick it off: a plan's line once the plan is
-     confirmed, a line added by hand (it has a manualId) any time. Lines added by hand can also be removed. -->
+     confirmed, a line added by hand (it has a manualId) any time. Lines added by hand can also be removed. An `actions` snippet adds the caller's own buttons beside the line's. -->
 <script>
   import { app, isConfirmed, planAction, setShoppingStore, buyManual, removeManualItem, setManualStore } from '../lib/app.svelte.js';
   import { amount, shortDate } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
-  let { line } = $props();
+  let { line, actions } = $props();
 
   const manual = $derived(Boolean(line.manualId));
   const itemId = $derived(line.manualId ?? line.shoppingItemId);
@@ -46,6 +46,7 @@
       <button class="icon remove" aria-label="Remove {line.name} from the list" title="Remove from the list"
               onclick={() => removeManualItem(line.manualId)}><Trash2 size={16} /></button>
     {/if}
+    {@render actions?.()}
   </div>
 </li>
 
