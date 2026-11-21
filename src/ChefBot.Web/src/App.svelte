@@ -28,6 +28,7 @@
   import Users from '@lucide/svelte/icons/users';
   import SettingsIcon from '@lucide/svelte/icons/settings';
   import CodeXml from '@lucide/svelte/icons/code-xml';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
   const TABS = [
     { key: 'meals', label: 'Meals', icon: Utensils },
@@ -113,7 +114,7 @@
 
 <main id="view">
   {#if app.screen === 'loading'}
-    <p class="muted">Loading…</p>
+    <p class="loading muted" role="status" aria-label="Loading"><LoaderCircle size={28} /></p>
   {:else if !inApp}
     <Gate />
   {:else if Other}
@@ -172,6 +173,10 @@
   .footer-links a { display: inline-flex; padding: .3rem; border-radius: .4rem; color: var(--muted); }
   .footer-links a:hover { color: var(--ink); background: var(--chip); }
   .footer-links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .loading { display: flex; justify-content: center; padding: 2rem 0; }
+  .loading :global(svg) { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .loading :global(svg) { animation: none; } }
 
   /* Tablets and narrow windows: the tabs share the width evenly, label under icon, so the row never scrolls. */
   @media (max-width: 56rem) {

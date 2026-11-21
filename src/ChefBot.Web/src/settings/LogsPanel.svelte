@@ -4,6 +4,7 @@
   import { run } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import Chip from '../components/Chip.svelte';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
   const REFRESH_MS = 5000;
   const PAGE = 100;
@@ -79,7 +80,7 @@
 
 <div class="card">
   {#if !loaded}
-    <p class="muted">Loading the log…</p>
+    <p class="loading muted" role="status" aria-label="Loading the log"><LoaderCircle size={24} /></p>
   {:else if entries.length === 0}
     <p class="muted">No log entries yet. Entries since ChefBot last started show here.</p>
   {:else if shown.length === 0}
@@ -133,4 +134,8 @@
   .link:hover { text-decoration: underline; }
   .pager { border-top: 1px solid var(--line); padding-top: .5rem; margin-top: .25rem; align-items: center; }
   details summary { cursor: pointer; font-size: .85rem; color: var(--muted); margin-top: .2rem; }
+  .loading { display: flex; justify-content: center; padding: 1.5rem 0; }
+  .loading :global(svg) { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .loading :global(svg) { animation: none; } }
 </style>
