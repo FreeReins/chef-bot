@@ -188,6 +188,15 @@ internal static partial class EntityMapping
         ExpiresAt = entity.ExpiresAt,
     };
 
+    public static ApiToken ToContract(this ApiTokenEntity entity) => new()
+    {
+        Id = entity.Id,
+        UserId = entity.UserId,
+        Name = entity.Name,
+        TokenHash = entity.TokenHash,
+        CreatedAt = entity.CreatedAt,
+    };
+
     // ---------- contract to entity ----------
 
     public static RecipeEntity ToEntity(this Recipe recipe) => new()
@@ -360,6 +369,15 @@ internal static partial class EntityMapping
         CreatedByUserId = link.CreatedByUserId,
         CreatedAt = link.CreatedAt,
         ExpiresAt = link.ExpiresAt,
+    };
+
+    public static ApiTokenEntity ToEntity(this ApiToken token) => new()
+    {
+        Id = token.Id,
+        UserId = token.UserId,
+        Name = token.Name,
+        TokenHash = token.TokenHash,
+        CreatedAt = token.CreatedAt,
     };
 
     // ---------- saving ----------

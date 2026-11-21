@@ -13,6 +13,9 @@ public static class Sessions
     /// <summary>The authorization policy for endpoints only admins may use.</summary>
     public const string AdminPolicy = "Admin";
 
+    /// <summary>The authorization policy for the MCP endpoint, which assistants sign in to with an API token.</summary>
+    public const string McpPolicy = "Mcp";
+
     /// <summary>The role claim admins' sessions carry.</summary>
     public const string AdminRole = "admin";
 
@@ -25,7 +28,11 @@ public static class Sessions
         http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
     /// <summary>The signed-in identity for an account as it is now.</summary>
-    public static ClaimsPrincipal Principal(SessionInfo session)
+    public static ClaimsPrincipal Principal(SessionInfo session) =>
+        Principal(session, CookieAuthenticationDefaults.AuthenticationScheme);
+
+    /// <summary>The identity for an account as it is now, signed in with <paramref name="scheme"/>.</summary>
+    public static ClaimsPrincipal Principal(SessionInfo session, string scheme)
     {
         var claims = new List<Claim>
         {
@@ -39,7 +46,7 @@ public static class Sessions
             claims.Add(new Claim(ClaimTypes.Role, AdminRole));
         }
 
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, scheme));
     }
 
     /// <summary>The id of the signed-in account, or null when nobody is signed in.</summary>

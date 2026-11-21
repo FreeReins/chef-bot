@@ -8,11 +8,14 @@ namespace ChefBot.Core.Engines;
 
 /// <summary>
 /// The rules that keep accounts safe: counting wrong passwords and locking accounts, ending sessions when a
-/// password changes, and issuing and checking single-use links. Reads and saves nothing.
+/// password changes, issuing and checking single-use links, and issuing API tokens. Reads and saves nothing.
 /// </summary>
 internal sealed class SecurityEngine
 {
     public const string WrongDetails = "That username and password don't match an account.";
+
+    /// <summary>How every API token's secret starts, so one pasted in the wrong place is easy to recognise.</summary>
+    public const string ApiTokenPrefix = "chefbot_";
 
     public static readonly TimeSpan InviteLifetime = TimeSpan.FromDays(7);
 
@@ -65,6 +68,14 @@ internal sealed class SecurityEngine
             ExpiresAt = now + (purpose == LinkPurpose.Invite ? InviteLifetime : PasswordResetLifetime),
         };
         return new NewLink(link, token);
+    }
+
+    /// <summary>A new API token for an account. Its secret starts with <see cref="ApiTokenPrefix"/>.</summary>
+    public NewApiToken IssueApiToken(Guid userId, string name, DateTimeOffset now)
+    {
+        var secret = ApiTokenPrefix + Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        var token = new ApiToken { UserId = userId, Name = name, TokenHash = HashToken(secret), CreatedAt = now };
+        return new NewApiToken(token, secret);
     }
 
     public string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token.Trim())));

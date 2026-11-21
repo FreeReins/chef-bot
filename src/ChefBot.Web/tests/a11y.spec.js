@@ -235,6 +235,20 @@ const VIEWS = [
     answers: { 'GET /api/calendar/feed': data.calendarFeed() },
     act: (page) => page.getByRole('button', { name: 'Make a new address' }).click().then(() => page.getByRole('dialog').waitFor()),
   },
+  { name: 'settings: AI assistants with no tokens', path: '/settings/assistants' },
+  { name: 'settings: AI assistants with tokens', path: '/settings/assistants', answers: { 'GET /api/tokens': data.apiTokens() } },
+  {
+    name: 'settings: AI assistants with a new token shown', path: '/settings/assistants',
+    act: async (page) => {
+      await page.getByLabel(/Name for a new token/).fill('Kitchen tablet');
+      await page.getByRole('button', { name: 'Make a token' }).click();
+      await page.getByLabel('Token', { exact: true }).waitFor();
+    },
+  },
+  {
+    name: 'settings: asking before revoking a token', path: '/settings/assistants', answers: { 'GET /api/tokens': data.apiTokens() },
+    act: (page) => page.getByRole('button', { name: 'Revoke Claude Desktop' }).click().then(() => page.getByRole('dialog').waitFor()),
+  },
   {
     name: 'settings: adding a Todoist to-do app', path: '/settings/todo-apps',
     act: async (page) => {
@@ -252,6 +266,7 @@ const VIEWS = [
   { name: 'plan for a member', path: '/plan', answers: { 'GET /api/session': data.session(data.member()) } },
   { name: 'plan for a member, no recipes', path: '/plan', answers: { ...noPlan, ...library([]), 'GET /api/session': data.session(data.member()) } },
   { name: 'settings for a member', path: '/settings/https', answers: { 'GET /api/session': data.session(data.member()) } },
+  { name: 'AI assistants for a member', path: '/settings/assistants', answers: { 'GET /api/session': data.session(data.member()) } },
   { name: 'calendar for a member', path: '/settings/calendar',
     answers: { 'GET /api/session': data.session(data.member()), 'GET /api/calendar/feed': data.calendarFeed() } },
 

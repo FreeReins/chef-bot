@@ -329,3 +329,15 @@ export const calendarFeed = () => ({
   url: 'https://chefbot.local:8443/api/calendar/0f3a9c2e7b5d41e8a6c0f3a9c2e7b5d41e8a6c0f3a9c2e7b5d41e8a6c0f3a9c2e/meals.ics',
   createdAt: '2026-11-20T09:00:00Z',
 });
+
+/** The signed-in person's API tokens, newest first. */
+export const apiTokens = () => [
+  { id: 'a7f0c2d1-0000-4000-8000-000000000002', name: 'Claude Code on the laptop', createdAt: '2026-11-02T18:30:00Z' },
+  { id: 'a7f0c2d1-0000-4000-8000-000000000001', name: 'Claude Desktop', createdAt: '2026-10-14T09:00:00Z' },
+];
+
+/** A token just made, with its secret. */
+export const issuedApiToken = (name = 'Kitchen tablet') => ({
+  id: 'a7f0c2d1-0000-4000-8000-000000000003', name,
+  token: 'chefbot_9e359d02660d4d63bdc9fba67942c7e46a4231d31489474d517c20b37ac3631b', createdAt: '2026-11-08T12:00:00Z',
+});

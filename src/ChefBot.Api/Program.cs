@@ -1,4 +1,5 @@
 using ChefBot.Api;
+using ChefBot.Api.Mcp;
 using ChefBot.Core;
 using ChefBot.Core.Managers.Contracts;
 using JasperFx;
@@ -34,6 +35,15 @@ builder.Host.UseWolverine(wolverine =>
 builder.Services.UseChefBotGeneratedCode();
 builder.Services.AddWolverineHttp();
 
+// The MCP server at /mcp, for assistants signed in with an API token (Settings, AI assistants). Its tools call the
+// managers just as the endpoints do.
+builder.Services.AddMcpServer(mcp => mcp.ServerInfo = new() { Name = "ChefBot", Version = "1.0" })
+    .WithHttpTransport(mcp => mcp.Stateless = true)
+    .WithTools<RecipeTools>(McpJsonContext.ToolOptions)
+    .WithTools<PlanTools>(McpJsonContext.ToolOptions)
+    .WithTools<ShoppingTools>(McpJsonContext.ToolOptions)
+    .WithTools<PantryTools>(McpJsonContext.ToolOptions);
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -64,6 +74,7 @@ app.MapGet("/health", () => Results.Ok(new HealthResponse("ok"))).ExcludeFromDes
 
 // Every API endpoint needs a signed-in user unless it is marked [AllowAnonymous].
 app.MapWolverineEndpoints(endpoints => endpoints.RequireAuthorizeOnAll());
+app.MapMcp("/mcp").RequireAuthorization(Sessions.McpPolicy);
 
 // Addresses such as /recipes/{id} or /settings/backups belong to the web page, so bookmarks and reloads work: any
 // path that isn't a file gets index.html, which shows the matching view. Unknown /api paths still get a 404.

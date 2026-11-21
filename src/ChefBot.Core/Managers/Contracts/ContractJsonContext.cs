@@ -91,6 +91,9 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(IReadOnlyList<PendingLink>))]
 [JsonSerializable(typeof(LinkDetails))]
 [JsonSerializable(typeof(SecuritySettingsChanged))]
+[JsonSerializable(typeof(CreateApiTokenRequest))]
+[JsonSerializable(typeof(IssuedApiToken))]
+[JsonSerializable(typeof(IReadOnlyList<ApiTokenResponse>))]
 // Maintenance
 [JsonSerializable(typeof(NotificationSettingsRequest))]
 [JsonSerializable(typeof(NotificationSettingsResponse))]

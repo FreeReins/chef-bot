@@ -5,6 +5,7 @@ using ChefBot.Core;
 using ChefBot.Core.Managers.Contracts.Services;
 using JasperFx;
 using JasperFx.CodeGeneration;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -71,7 +72,7 @@ public static class ServiceRegistration
     }
 
     /// <summary>
-    /// Sign-in with a cookie. The API answers 401 or 403 instead of redirecting to a login page, a session ends as
+    /// Sign-in with a cookie, and with an API token for the MCP endpoint (<see cref="Sessions.McpPolicy"/>). The API answers 401 or 403 instead of redirecting to a login page, a session ends as
     /// soon as its account is removed or its password changes, and endpoints marked with the
     /// <see cref="Sessions.AdminPolicy"/> policy are for admins only.
     /// </summary>
@@ -80,9 +81,13 @@ public static class ServiceRegistration
         // Cookies are encrypted with keys kept on disk, so sessions survive a restart.
         services.AddDataProtection().SetApplicationName("ChefBot").PersistKeysToFileSystem(new DirectoryInfo(KeysFolder(configuration)));
 
-        services.AddAuthorizationBuilder().AddPolicy(Sessions.AdminPolicy, policy => policy.RequireRole(Sessions.AdminRole));
+        services.AddAuthorizationBuilder()
+            .AddPolicy(Sessions.AdminPolicy, policy => policy.RequireRole(Sessions.AdminRole))
+            .AddPolicy(Sessions.McpPolicy, policy => policy.AddAuthenticationSchemes(ApiTokenAuthentication.SchemeName).RequireAuthenticatedUser());
         services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, AdminOnlyHandler>();
-        services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
+        services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddScheme<AuthenticationSchemeOptions, ApiTokenAuthentication>(ApiTokenAuthentication.SchemeName, _ => { })
+            .AddCookie(options =>
         {
             options.Cookie.Name = "chefbot.session";
             options.Cookie.HttpOnly = true;

@@ -21,6 +21,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     public DbSet<AccessLinkEntity> AccessLinks => Set<AccessLinkEntity>();
 
+    public DbSet<ApiTokenEntity> ApiTokens => Set<ApiTokenEntity>();
+
     public DbSet<GroceryStoreEntity> GroceryStores => Set<GroceryStoreEntity>();
 
     public DbSet<PlanStyleEntity> PlanStyles => Set<PlanStyleEntity>();
@@ -90,6 +92,12 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         {
             link.ToTable("AccessLinks");
             link.HasIndex(l => l.TokenHash).IsUnique();
+        });
+        modelBuilder.Entity<ApiTokenEntity>(token =>
+        {
+            token.ToTable("ApiTokens");
+            token.HasIndex(t => t.TokenHash).IsUnique();
+            token.HasIndex(t => t.UserId);
         });
 
         modelBuilder.Entity<GroceryStoreEntity>().ToTable("GroceryStores");

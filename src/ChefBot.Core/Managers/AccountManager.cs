@@ -137,6 +137,11 @@ internal sealed class AccountManager(
         ValidationEngine.CanRemove(id, actingUserId);
         var user = await validation.UserAsync(id, cancellationToken);
         await RemoveLinksAsync(link => link.UserId == user.Id, cancellationToken);
+        foreach (var token in await accounts.ListApiTokensAsync(user.Id, cancellationToken))
+        {
+            await accounts.RemoveApiTokenAsync(token.Id, cancellationToken);
+        }
+
         await accounts.RemoveUserAsync(user.Id, cancellationToken);
         await messages.CommitAsync(cancellationToken);
     }
@@ -229,6 +234,41 @@ internal sealed class AccountManager(
         }
 
         return rules.ToResponse();
+    }
+
+    public async Task<IReadOnlyList<ApiTokenResponse>> ListApiTokensAsync(Guid userId, CancellationToken cancellationToken) =>
+        (await accounts.ListApiTokensAsync(userId, cancellationToken))
+            .OrderByDescending(token => token.CreatedAt)
+            .Select(token => new ApiTokenResponse(token.Id, token.Name, token.CreatedAt))
+            .ToList();
+
+    public async Task<IssuedApiToken> CreateApiTokenAsync(Guid userId, CreateApiTokenRequest request, CancellationToken cancellationToken)
+    {
+        var name = ValidationEngine.ApiTokenName(request.Name);
+        var user = await validation.UserAsync(userId, cancellationToken);
+        var issued = security.IssueApiToken(user.Id, name, clock.GetUtcNow());
+        await accounts.SaveApiTokenAsync(issued.Token, cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+        return new IssuedApiToken(issued.Token.Id, issued.Token.Name, issued.Secret, issued.Token.CreatedAt);
+    }
+
+    public async Task RevokeApiTokenAsync(Guid userId, Guid id, CancellationToken cancellationToken)
+    {
+        var token = (await accounts.ListApiTokensAsync(userId, cancellationToken)).FirstOrDefault(token => token.Id == id)
+            ?? throw new NotFoundException("That token no longer exists.");
+        await accounts.RemoveApiTokenAsync(token.Id, cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+    }
+
+    public async Task<SessionInfo?> FindApiTokenSessionAsync(string token, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return null;
+        }
+
+        var stored = await accounts.FindApiTokenByHashAsync(security.HashToken(token), cancellationToken);
+        return stored is null ? null : (await accounts.FindUserAsync(stored.UserId, cancellationToken))?.ToSession();
     }
 
     /// <summary>A new password reset link for an account. Any earlier reset link for it stops working.</summary>

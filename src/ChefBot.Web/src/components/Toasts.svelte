@@ -32,7 +32,6 @@
   /* Above the footer pinned to the bottom of the window (App.svelte). */
   .toasts { position: fixed; z-index: 20; right: 1rem; bottom: calc(3.5rem + env(safe-area-inset-bottom));
     display: grid; gap: .5rem; width: min(24rem, calc(100vw - 2rem)); pointer-events: none; }
-  .stack { display: grid; gap: .5rem; }
   .stack:empty { display: none; }
   /* Phones: full width, above the tab bar pinned to the bottom (App.svelte). */
   @media (max-width: 40rem) {

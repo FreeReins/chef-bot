@@ -128,6 +128,9 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
 
         // Children go with their parents: the database deletes them through its foreign keys.
         await db.AccessLinks.ExecuteDeleteAsync(cancellationToken);
+        // API tokens aren't backed up, so a token revoked since the backup can't come back: like everyone signing
+        // in again, assistants need new tokens after a restore.
+        await db.ApiTokens.ExecuteDeleteAsync(cancellationToken);
         await db.MealPlans.ExecuteDeleteAsync(cancellationToken);
         await db.Recipes.ExecuteDeleteAsync(cancellationToken);
         await db.PantryItems.ExecuteDeleteAsync(cancellationToken);

@@ -43,7 +43,7 @@ dotnet test --solution ChefBot.slnx               # the same tests through dotne
 | Project | Holds | May depend on |
 |---|---|---|
 | `ChefBot.Core` | Everything below the API, in layers (see below). Only `Managers/Contracts/` and `CoreRegistration` are public | ASP.NET Core, Npgsql EF Core, Wolverine's EF Core and PostgreSQL storage |
-| `ChefBot.Api` | The clients of the core: Wolverine HTTP endpoints (`Endpoints/`), message handlers and the timer that queues the scheduled jobs (`Messaging/`), sign-in, HTTPS (`Https/`, with its own request and response records, since HTTPS belongs to the host rather than the core), startup wiring; serves the web page | `ChefBot.Core`'s public contracts |
+| `ChefBot.Api` | The clients of the core: Wolverine HTTP endpoints (`Endpoints/`), message handlers and the timer that queues the scheduled jobs (`Messaging/`), the MCP server's tools (`Mcp/`, each calling one manager method like an endpoint), sign-in (cookies, and API tokens for `/mcp`), HTTPS (`Https/`, with its own request and response records, since HTTPS belongs to the host rather than the core), startup wiring; serves the web page | `ChefBot.Core`'s public contracts |
 | `ChefBot.Web` | The web page: Svelte 5 components built with Vite into `ChefBot.Api/wwwroot` | The HTTP API |
 
 `ChefBot.Core` is split by what changes for different reasons. Calls only go down; nothing calls sideways:
@@ -157,6 +157,8 @@ groundwork for Native AOT.
   `Managers/Contracts/Messages/`.
   The API uses it for request and response bodies, and the message bus uses it for the commands and events it stores.
 - `ApiJsonContext` (`ChefBot.Api/ApiJsonContext.cs`) covers the bodies defined in the API project.
+- `McpJsonContext` (`ChefBot.Api/Mcp/McpJsonContext.cs`) covers the MCP tools' own parameters; their results are
+  `ContractJsonContext` records.
 - Each accessor that reads a file or talks to another service has its own private context next to its JSON types:
   backups, the webhook, the sample recipes, the known stores and the ingredient catalog.
 

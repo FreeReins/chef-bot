@@ -104,4 +104,32 @@ internal sealed class AccountAccess(ChefBotDbContext db) : IAccountAccess
             db.AccessLinks.Remove(link);
         }
     }
+
+    public async Task<ApiToken?> FindApiTokenByHashAsync(string tokenHash, CancellationToken cancellationToken) =>
+        (db.ApiTokens.Local.FirstOrDefault(token => token.TokenHash == tokenHash)
+            ?? await db.ApiTokens.FirstOrDefaultAsync(token => token.TokenHash == tokenHash, cancellationToken))?.ToContract();
+
+    public async Task<List<ApiToken>> ListApiTokensAsync(Guid userId, CancellationToken cancellationToken) =>
+        (await db.ApiTokens.Where(token => token.UserId == userId).ToListAsync(cancellationToken)).Select(token => token.ToContract()).ToList();
+
+    public async Task SaveApiTokenAsync(ApiToken token, CancellationToken cancellationToken)
+    {
+        var fresh = token.ToEntity();
+        if (await db.ApiTokens.FindAsync([token.Id], cancellationToken) is { } tracked)
+        {
+            db.CopyInto(tracked, fresh);
+        }
+        else
+        {
+            db.ApiTokens.Add(fresh);
+        }
+    }
+
+    public async Task RemoveApiTokenAsync(Guid id, CancellationToken cancellationToken)
+    {
+        if (await db.ApiTokens.FindAsync([id], cancellationToken) is { } token)
+        {
+            db.ApiTokens.Remove(token);
+        }
+    }
 }

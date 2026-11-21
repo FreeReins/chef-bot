@@ -10,6 +10,7 @@
   import NotificationsPanel from '../settings/NotificationsPanel.svelte';
   import ToDoAppsPanel from '../settings/ToDoAppsPanel.svelte';
   import CalendarPanel from '../settings/CalendarPanel.svelte';
+  import AssistantsPanel from '../settings/AssistantsPanel.svelte';
   import BackupsPanel from '../settings/BackupsPanel.svelte';
   import LogsPanel from '../settings/LogsPanel.svelte';
   import AppearancePanel from '../settings/AppearancePanel.svelte';
@@ -21,6 +22,7 @@
   import Bell from '@lucide/svelte/icons/bell';
   import ListTodo from '@lucide/svelte/icons/list-todo';
   import CalendarDays from '@lucide/svelte/icons/calendar-days';
+  import Bot from '@lucide/svelte/icons/bot';
   import Archive from '@lucide/svelte/icons/archive';
   import ScrollText from '@lucide/svelte/icons/scroll-text';
 
@@ -32,6 +34,7 @@
     { key: 'styles', label: 'Plan styles', icon: ListChecks, visible: () => Boolean(app.styles), panel: PlanStylesPanel },
     { key: 'stores', label: 'Stores', icon: Store, visible: () => isAdmin() && app.stores, panel: StoresPanel },
     { key: 'calendar', label: 'Calendar', icon: CalendarDays, visible: () => true, panel: CalendarPanel },
+    { key: 'assistants', label: 'AI assistants', icon: Bot, visible: () => true, panel: AssistantsPanel },
     { key: 'todo-apps', label: 'To-do apps', icon: ListTodo, visible: () => isAdmin(), panel: ToDoAppsPanel },
     { key: 'notifications', label: 'Notifications', icon: Bell, visible: () => isAdmin() && app.notifications, panel: NotificationsPanel },
     { key: 'backups', label: 'Backups', icon: Archive, visible: () => isAdmin() && app.backups, panel: BackupsPanel },

@@ -2,7 +2,7 @@ using ChefBot.Core.Managers.Contracts.Messages;
 
 namespace ChefBot.Core.Managers.Contracts.Services;
 
-/// <summary>First-run setup, signing in, passwords, lockout, inviting or removing people, and the sign-in rules.</summary>
+/// <summary>First-run setup, signing in, passwords, lockout, inviting or removing people, the sign-in rules, and API tokens.</summary>
 public interface IAccountManager
 {
     /// <summary>Whether setup is needed and who is signed in.</summary>
@@ -68,4 +68,21 @@ public interface IAccountManager
     /// passwords aren't sent over plain HTTP by default. Rules an admin saved are left alone. Returns the rules now.
     /// </summary>
     Task<SecurityResponse> UseDefaultHttpsRuleAsync(bool servesHttps, CancellationToken cancellationToken);
+
+    /// <summary>The API tokens that sign in as an account, newest first. Their secrets can't be shown again.</summary>
+    Task<IReadOnlyList<ApiTokenResponse>> ListApiTokensAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Creates an API token that signs in as an account, for an assistant such as an MCP client. It keeps working
+    /// after a password change, until it is revoked or the account is removed. The secret is returned only here.
+    /// </summary>
+    /// <exception cref="RuleViolationException">The name is blank or too long.</exception>
+    Task<IssuedApiToken> CreateApiTokenAsync(Guid userId, CreateApiTokenRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Stops one of an account's API tokens from working.</summary>
+    /// <exception cref="NotFoundException">The account has no token with that id.</exception>
+    Task RevokeApiTokenAsync(Guid userId, Guid id, CancellationToken cancellationToken);
+
+    /// <summary>The account an API token signs in as, as it is now. Null when the token or its account no longer exists.</summary>
+    Task<SessionInfo?> FindApiTokenSessionAsync(string token, CancellationToken cancellationToken);
 }

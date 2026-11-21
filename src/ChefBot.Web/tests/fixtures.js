@@ -65,6 +65,8 @@ function defaults() {
     'GET /api/shopping/items': [],
     'GET /api/shopping/targets': [],
     'GET /api/calendar/feed': { url: null, createdAt: null },
+    'GET /api/tokens': [],
+    'POST /api/tokens': (request) => data.issuedApiToken(request.postDataJSON().name),
     'GET /api/stores': data.stores(),
     'PUT /api/stores': (request) => ({ ...data.stores(), stores: request.postDataJSON().stores }),
     'GET /api/system/https': data.https(),

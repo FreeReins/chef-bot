@@ -2,7 +2,7 @@ using ChefBot.Core.ResourceAccess.Contracts.Messages;
 
 namespace ChefBot.Core.ResourceAccess.Contracts.Services;
 
-/// <summary>Stored accounts and their invite and password reset links.</summary>
+/// <summary>Stored accounts, their invite and password reset links, and their API tokens.</summary>
 internal interface IAccountAccess
 {
     Task<bool> AnyUsersAsync(CancellationToken cancellationToken);
@@ -44,4 +44,13 @@ internal interface IAccountAccess
     Task SaveLinkAsync(AccessLink link, CancellationToken cancellationToken);
 
     Task RemoveLinkAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<ApiToken?> FindApiTokenByHashAsync(string tokenHash, CancellationToken cancellationToken);
+
+    /// <summary>The tokens that sign in as one account.</summary>
+    Task<List<ApiToken>> ListApiTokensAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task SaveApiTokenAsync(ApiToken token, CancellationToken cancellationToken);
+
+    Task RemoveApiTokenAsync(Guid id, CancellationToken cancellationToken);
 }

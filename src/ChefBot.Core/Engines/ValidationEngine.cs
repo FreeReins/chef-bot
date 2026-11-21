@@ -17,6 +17,9 @@ internal sealed class ValidationEngine(
 {
     public const int MinimumPasswordLength = 8;
 
+    /// <summary>The longest name an API token can have.</summary>
+    public const int ApiTokenNameLength = 80;
+
     private const int MaxStores = 50;
 
     private const int MaxStoreName = 60;
@@ -320,6 +323,20 @@ internal sealed class ValidationEngine(
         (password ?? string.Empty).Length >= MinimumPasswordLength
             ? password!
             : throw new RuleViolationException($"A password needs at least {MinimumPasswordLength} characters.");
+
+    /// <summary>A trimmed API token name: not blank, and at most <see cref="ApiTokenNameLength"/> characters.</summary>
+    public static string ApiTokenName(string? name)
+    {
+        var trimmed = (name ?? string.Empty).Trim();
+        if (trimmed.Length == 0)
+        {
+            throw new RuleViolationException("Give the token a name, such as the assistant it is for.");
+        }
+
+        return trimmed.Length <= ApiTokenNameLength
+            ? trimmed
+            : throw new RuleViolationException($"A token's name can have at most {ApiTokenNameLength} characters.");
+    }
 
     public static void CanRemove(Guid id, Guid actingUserId)
     {

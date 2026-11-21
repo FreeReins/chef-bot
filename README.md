@@ -343,6 +343,7 @@ try each call. Both need you to be signed in.
 | `GET /api/links`, `POST /api/links/{id}/regenerate`, `DELETE /api/links/{id}` | List, replace or revoke unused links (admin) |
 | `POST /api/account/accept-invite`, `POST /api/account/reset-password` | Use an invite or reset link |
 | `POST /api/account/password` | Change your own password |
+| `GET` `POST /api/tokens`, `DELETE /api/tokens/{id}` | List, make (`{"name": "Claude Code"}`, answers with the `token` once) or revoke your own API tokens for AI assistants |
 | `GET /api/users`, `DELETE /api/users/{id}`, `POST /api/users/{id}/unlock` | See, remove and unlock accounts (admin) |
 | `GET` `PUT /api/system/security` | Lockout rules and "always use HTTPS" (admin) |
 | `GET /api/system/https`, `GET` `POST /api/system/https/certificate` | HTTPS status, download or recreate the certificate |
@@ -362,6 +363,8 @@ For scripts, sign in first and keep the cookie:
 curl -c cookies.txt -X POST localhost:8080/api/account/sign-in -H 'Content-Type: application/json' \
   -d '{"username": "jamie", "password": "..."}'
 ```
+
+API tokens only work on the MCP endpoint (see [AI assistants (MCP)](#ai-assistants-mcp)), not on `/api`.
 
 Errors come back as [problem details](https://www.rfc-editor.org/rfc/rfc9457) with a readable `detail`.
 
@@ -531,6 +534,26 @@ to its recipe, and remind you to start the slow cooker. The address carries a se
 [docs/calendar.md](docs/calendar.md) says what the calendar shows and which calendar apps can reach a ChefBot on a
 home network. It has step-by-step instructions for iPhone and Mac, Android (with ICSx⁵), Google Calendar, Outlook,
 Thunderbird and GNOME Calendar.
+
+### AI assistants (MCP)
+
+ChefBot is also an [MCP](https://modelcontextprotocol.io) server at `/mcp`, so assistants such as Claude can work
+with your kitchen: search and import recipes, read the week's plan, plan a week, swap, move or mark meals cooked,
+and look at or change the pantry and the shopping list. Admin settings (people, stores, plan styles, backups and
+so on) aren't offered.
+
+Under **Settings → AI assistants**, make a token for each assistant and copy it: it is shown only once. The
+assistant sends it as `Authorization: Bearer <token>`. For Claude Code:
+
+```sh
+claude mcp add --transport http chefbot https://your-host:8443/mcp --header "Authorization: Bearer chefbot_..."
+```
+
+Other clients that support Streamable HTTP with a custom header take the same address and header. A token acts as
+the person who made it, keeps working after a password change, and stops working when it is revoked or its account
+is removed. Tokens aren't kept in backups, so after a restore assistants need new ones. The assistant has to reach
+ChefBot at that address, so an assistant that runs in the cloud can't use a ChefBot that only your home network can
+reach. With ChefBot's own certificate, the machine running the assistant must trust it (see [HTTPS](#https)).
 
 ### Backups
 

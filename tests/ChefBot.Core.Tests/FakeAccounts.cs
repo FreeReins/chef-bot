@@ -9,6 +9,8 @@ internal sealed class FakeAccounts : IAccountAccess
 
     public List<AccessLink> Links { get; } = [];
 
+    public List<ApiToken> ApiTokens { get; } = [];
+
     public UserAccount User(string username) => Users.Single(u => u.Username == username);
 
     public Task<bool> AnyUsersAsync(CancellationToken cancellationToken) => Task.FromResult(Users.Count > 0);
@@ -86,6 +88,25 @@ internal sealed class FakeAccounts : IAccountAccess
     public Task RemoveLinkAsync(Guid id, CancellationToken cancellationToken)
     {
         Links.RemoveAll(l => l.Id == id);
+        return Task.CompletedTask;
+    }
+
+    public Task<ApiToken?> FindApiTokenByHashAsync(string tokenHash, CancellationToken cancellationToken) =>
+        Task.FromResult(ApiTokens.FirstOrDefault(t => t.TokenHash == tokenHash) is { } row ? Copies.Of(row) : null);
+
+    public Task<List<ApiToken>> ListApiTokensAsync(Guid userId, CancellationToken cancellationToken) =>
+        Task.FromResult(ApiTokens.Where(t => t.UserId == userId).Select(Copies.Of).ToList());
+
+    public Task SaveApiTokenAsync(ApiToken token, CancellationToken cancellationToken)
+    {
+        ApiTokens.RemoveAll(t => t.Id == token.Id);
+        ApiTokens.Add(Copies.Of(token));
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveApiTokenAsync(Guid id, CancellationToken cancellationToken)
+    {
+        ApiTokens.RemoveAll(t => t.Id == id);
         return Task.CompletedTask;
     }
 }
