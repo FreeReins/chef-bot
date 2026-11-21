@@ -196,4 +196,42 @@ public class ShoppingTests
         await Assert.That(pantry.Single(line => line.Item.Key == "cabbage").UsedFor.Select(meal => meal.Id)).IsEquivalentTo([dinners[1].Id]);
         await Assert.That(pantry.Single(line => line.Item.Key == "apple").UsedFor).IsEmpty();
     }
+
+    [Test]
+    public async Task Adds_up_amounts_written_in_different_units()
+    {
+        var dressing = TestData.NewRecipe("Dressing", RecipeCourse.Main, false, "2 tbsp tomato paste", "½ cup tomato paste");
+        var draft = TestData.Shopping.BuildList(PlanOf(dressing), PantrySnapshot.Empty, []);
+
+        var lines = draft.Items.Where(item => item.Key == "tomato paste").ToList();
+        await Assert.That(lines.Count).IsEqualTo(1);
+        await Assert.That(lines[0].Quantity).IsEqualTo(0.63m);
+        await Assert.That(lines[0].Unit).IsEqualTo("cup");
+    }
+
+    [Test]
+    public async Task Pantry_stock_in_another_unit_counts()
+    {
+        var stew = TestData.NewRecipe("Stew", RecipeCourse.Main, false, "½ lb stew meat", "1 lb cod");
+        var pantry = TestData.PantryOf(TestData.Stocked("stew meat", 8m, "oz"), TestData.Stocked("cod", 4m, "oz"));
+
+        var draft = TestData.Shopping.BuildList(PlanOf(stew), pantry, []);
+
+        await Assert.That(Find(draft, "stew meat") is null).IsTrue();
+        await Assert.That(Find(draft, "cod")?.Quantity).IsEqualTo(12m);
+        await Assert.That(Find(draft, "cod")?.Unit).IsEqualTo("oz");
+    }
+
+    [Test]
+    public async Task Cooking_takes_converted_amounts_from_the_pantry()
+    {
+        var rice = TestData.NewRecipe("Rice", RecipeCourse.Main, false, "1 cup brown rice");
+        var meal = TestData.Meal(rice, MealSlot.Dinner, TestData.Sunday, portions: 4);
+        var stock = TestData.Stocked("brown rice", 500m, "ml");
+
+        var finished = TestData.Shopping.DeductCooked([stock], meal);
+
+        await Assert.That(finished).IsEmpty();
+        await Assert.That(Math.Round(stock.Quantity!.Value)).IsEqualTo(263m);
+    }
 }

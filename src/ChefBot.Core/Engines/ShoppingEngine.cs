@@ -34,17 +34,26 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
         }
 
         var items = new List<ShoppingItem>();
-        foreach (var group in needed.GroupBy(requirement => (requirement.Ingredient.Key, requirement.Unit)))
+        foreach (var group in needed.GroupBy(requirement => (requirement.Ingredient.Key, Family: Units.Family(requirement.Unit))))
         {
             var ingredient = group.First().Ingredient;
-            var amounts = group.Where(requirement => requirement.Quantity is not null).Select(requirement => requirement.Quantity!.Value).ToList();
+            var unit = Units.Normalize(group.First().Unit);
+            var amounts = group
+                .Where(requirement => requirement.Quantity is not null)
+                .Select(requirement => Units.TryConvert(requirement.Quantity!.Value, requirement.Unit, unit, out var converted) ? converted : 0m)
+                .ToList();
             decimal? wanted = amounts.Count > 0 ? amounts.Sum() : null;
 
-            var (isCovered, toBuy) = SubtractPantry(pantry.WithKey(ingredient.Key), wanted, group.Key.Unit);
+            var (isCovered, toBuy) = SubtractPantry(pantry.WithKey(ingredient.Key), wanted, unit);
             if (isCovered)
             {
                 covered.Add(ingredient.DisplayName);
                 continue;
+            }
+
+            if (toBuy is decimal amount)
+            {
+                (toBuy, unit) = Units.Readable(amount, unit);
             }
 
             items.Add(new ShoppingItem
@@ -53,7 +62,7 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
                 CatalogName = ingredient.CatalogName,
                 DisplayName = ingredient.DisplayName,
                 Quantity = toBuy,
-                Unit = group.Key.Unit,
+                Unit = unit,
                 Store = StoreFor(ingredient, plan.WeekStart.Month, stores),
                 IsOptional = group.All(requirement => requirement.IsOptional),
             });
@@ -75,15 +84,23 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
     }
 
     /// <summary>
-    /// Puts something typed in on the hand-added list. When the same ingredient in the same unit is already there,
-    /// that line grows instead of a second one appearing. Returns the line to save.
+    /// Puts something typed in on the hand-added list. When the same ingredient is already there in a unit the amount
+    /// can be converted to (tbsp and cup, oz and lb), that line grows instead of a second one appearing. Returns the line to save.
     /// </summary>
     public static ManualShoppingItem AddToList(
         IReadOnlyList<ManualShoppingItem> list, IIngredientRef ingredient, decimal? quantity, string unit, DateOnly today)
     {
-        if (list.FirstOrDefault(item => item.Key == ingredient.Key && Units.Same(item.Unit, unit)) is { } existing)
+        if (list.FirstOrDefault(item => item.Key == ingredient.Key && Units.Comparable(item.Unit, unit)) is { } existing)
         {
-            existing.Quantity = existing.Quantity is decimal had && quantity is decimal more ? had + more : existing.Quantity ?? quantity;
+            if (existing.Quantity is decimal had && quantity is decimal more && Units.TryConvert(more, unit, existing.Unit, out var added))
+            {
+                (existing.Quantity, existing.Unit) = Units.Readable(had + added, existing.Unit);
+            }
+            else if (existing.Quantity is null)
+            {
+                (existing.Quantity, existing.Unit) = (quantity, unit);
+            }
+
             return existing;
         }
 
@@ -170,7 +187,7 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
 
     /// <summary>
     /// Takes what a cooked meal used out of the pantry, oldest first. Only items whose amount and unit can be
-    /// compared with the recipe are touched; anything else is left for a person to update. Changes the
+    /// compared with the recipe (the same unit, or one it converts to) are touched; anything else is left for a person to update. Changes the
     /// quantities of <paramref name="pantry"/> in place.
     /// </summary>
     /// <returns>The items that ran out and should be removed.</returns>
@@ -179,9 +196,10 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
         var finished = new List<PantryItem>();
         foreach (var use in MealRequirements.For([meal]))
         {
+            // What is still to take, in the recipe's unit.
             var remaining = use.Quantity ?? 0m;
             var matches = pantry
-                .Where(item => item.Quantity > 0m && item.Key == use.Ingredient.Key && Units.Same(item.Unit, use.Unit))
+                .Where(item => item.Quantity > 0m && item.Key == use.Ingredient.Key && Units.Comparable(item.Unit, use.Unit))
                 .OrderBy(item => item.ExpiresOn ?? DateOnly.MaxValue)
                 .ToList();
 
@@ -192,9 +210,10 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
                     break;
                 }
 
-                var taken = Math.Min(item.Quantity!.Value, remaining);
+                Units.TryConvert(remaining, use.Unit, item.Unit, out var wanted);
+                var taken = Math.Min(item.Quantity!.Value, wanted);
                 item.Quantity -= taken;
-                remaining -= taken;
+                remaining = Units.TryConvert(wanted - taken, item.Unit, use.Unit, out var left) ? left : 0m;
                 if (item.Quantity <= 0m)
                 {
                     finished.Add(item);
@@ -243,8 +262,8 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
     }
 
     /// <summary>
-    /// Compares what is wanted with what is on hand. When amounts can't be compared
-    /// (no amount, or different units) having some is taken to be enough.
+    /// Compares what is wanted with what is on hand, converting between units that measure the same thing. When
+    /// amounts can't be compared (no amount, or units such as cups and pounds) having some is taken to be enough.
     /// </summary>
     private static (bool IsCovered, decimal? ToBuy) SubtractPantry(IReadOnlyList<PantryItem> onHand, decimal? wanted, string unit)
     {
@@ -253,13 +272,14 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
             return (false, wanted);
         }
 
-        var comparable = onHand.Where(item => item.Quantity is not null && Units.Same(item.Unit, unit)).ToList();
+        var comparable = onHand.Where(item => item.Quantity is not null && Units.Comparable(item.Unit, unit)).ToList();
         if (wanted is null || comparable.Count != onHand.Count)
         {
             return (true, null);
         }
 
-        var remaining = wanted.Value - comparable.Sum(item => item.Quantity!.Value);
+        var have = comparable.Sum(item => Units.TryConvert(item.Quantity!.Value, item.Unit, unit, out var converted) ? converted : 0m);
+        var remaining = wanted.Value - have;
         return remaining <= 0m ? (true, null) : (false, remaining);
     }
 }

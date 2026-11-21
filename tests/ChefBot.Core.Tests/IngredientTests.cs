@@ -24,13 +24,35 @@ public class IngredientTests
     }
 
     [Test]
-    public async Task Proteins_keep_their_exact_name_but_match_the_catalog()
+    public async Task Proteins_keep_their_exact_cut_but_match_the_catalog()
     {
         var thigh = TestData.Catalog.Identify("chicken thigh");
 
         await Assert.That(thigh.Key).IsEqualTo("chicken thigh");
         await Assert.That(thigh.CatalogName).IsEqualTo("chicken");
         await Assert.That(thigh.MatchName()).IsEqualTo("chicken");
+    }
+
+    [Test]
+    public async Task Different_wordings_of_one_cut_share_a_key()
+    {
+        var keys = new[] { "chicken breasts", "boneless skinless chicken breasts", "large chicken breast" }
+            .Select(text => TestData.Catalog.Identify(text))
+            .ToList();
+
+        await Assert.That(keys.Select(identity => identity.Key).Distinct()).IsEquivalentTo(["chicken breast"]);
+        await Assert.That(keys[1].DisplayName).IsEqualTo("chicken breast");
+        await Assert.That(TestData.Catalog.Identify("cod fillets").Key).IsEqualTo("cod");
+        await Assert.That(TestData.Catalog.Identify("chicken").Key).IsEqualTo("chicken");
+    }
+
+    [Test]
+    public async Task Specific_names_prefer_the_alias_over_the_general_name()
+    {
+        var squash = TestData.Catalog.Identify("1 butternut squash");
+
+        await Assert.That(squash.Key).IsEqualTo("butternut squash");
+        await Assert.That(squash.CatalogName).IsEqualTo("winter squash");
     }
 
     [Test]
@@ -68,6 +90,27 @@ public class IngredientTests
         await Assert.That(carrots.Quantity == 3m).IsTrue();
         await Assert.That(carrots.Unit).IsEqualTo(string.Empty);
         await Assert.That(carrots.Name).IsEqualTo("carrots");
+    }
+
+    [Test]
+    [Arguments("2 ½ cups half and half", 2.5, "cup", "half and half")]
+    [Arguments("1½ lb chicken breast", 1.5, "lb", "chicken breast")]
+    [Arguments("1⁄2 pound ground beef", 0.5, "lb", "ground beef")]
+    [Arguments("▢ 1/2 pound bacon", 0.5, "lb", "bacon")]
+    [Arguments("¾ tsp. salt", 0.75, "tsp", "salt")]
+    [Arguments("2-4 chicken breasts, shredded", 4, "", "chicken breasts")]
+    [Arguments("1 to 2 cups milk", 2, "cup", "milk")]
+    [Arguments("1 (14 oz) can diced tomatoes", 1, "can", "diced tomatoes")]
+    [Arguments("2 lbs chicken breasts , (boneless, skinless)", 2, "lb", "chicken breasts")]
+    [Arguments("1 fl oz vanilla", 1, "fl oz", "vanilla")]
+    [Arguments("2 T olive oil", 2, "tbsp", "olive oil")]
+    public async Task Reads_fractions_ranges_and_prep_notes(string line, double quantity, string unit, string name)
+    {
+        var parsed = IngredientLineParser.Parse(line);
+
+        await Assert.That(parsed.Quantity).IsEqualTo((decimal)quantity);
+        await Assert.That(parsed.Unit).IsEqualTo(unit);
+        await Assert.That(parsed.Name).IsEqualTo(name);
     }
 
     [Test]

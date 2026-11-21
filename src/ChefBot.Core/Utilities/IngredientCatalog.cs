@@ -78,7 +78,31 @@ internal sealed partial class IngredientCatalog
         catalogName is not null && _byName.TryGetValue(catalogName, out var entry) ? entry : null;
 
     /// <summary>The catalog entry mentioned in free text such as "2 scallions, thinly sliced", if any.</summary>
-    public CatalogEntry? Find(string? text)
+    public CatalogEntry? Find(string? text) => Match(text)?.Entry;
+
+    /// <summary>
+    /// Works out how an ingredient should be keyed, matched and displayed. Ordinary ingredients share their catalog
+    /// name. Proteins and flagged entries are keyed on the catalog term they matched, so "chicken breasts, diced" and
+    /// "boneless chicken breast" are both "chicken breast", while cod and tilapia stay apart.
+    /// </summary>
+    public IngredientIdentity Identify(string text)
+    {
+        var display = text.Trim();
+        if (Match(display) is not { } match)
+        {
+            return new IngredientIdentity(TextNormalizer.Normalize(display), null, display);
+        }
+
+        // Text that is just the term ("Cod") keeps the way it was typed.
+        var (entry, term) = match;
+        var shown = TextNormalizer.Normalize(display) == term ? display : term;
+        return entry.Group == IngredientGroup.Protein || entry.KeepSpecificName
+            ? new IngredientIdentity(term, entry.Name, shown)
+            : new IngredientIdentity(entry.Name, entry.Name, entry.Name);
+    }
+
+    /// <summary>The catalog entry mentioned in the text and the name or alias it was found by.</summary>
+    private (CatalogEntry Entry, string Term)? Match(string? text)
     {
         var normalized = TextNormalizer.Normalize(text);
         if (normalized.Length == 0)
@@ -104,26 +128,14 @@ internal sealed partial class IngredientCatalog
                 continue;
             }
 
-            return entry;
+            // An alias is more specific than the entry's own name: "cremini mushrooms" is cremini, not mushroom.
+            var alias = term == entry.Name
+                ? _matchers.FirstOrDefault(other => other.Entry == entry && other.Term != entry.Name && other.Pattern.IsMatch(normalized)).Term
+                : null;
+            return (entry, alias ?? term);
         }
 
         return null;
-    }
-
-    /// <summary>Works out how an ingredient should be keyed, matched and displayed.</summary>
-    public IngredientIdentity Identify(string text)
-    {
-        var display = text.Trim();
-        var entry = Find(display);
-        if (entry is null)
-        {
-            return new IngredientIdentity(TextNormalizer.Normalize(display), null, display);
-        }
-
-        // Proteins and flagged entries keep their exact wording: cod is not tilapia at the store.
-        return entry.Group == IngredientGroup.Protein || entry.KeepSpecificName
-            ? new IngredientIdentity(TextNormalizer.Normalize(display), entry.Name, display)
-            : new IngredientIdentity(entry.Name, entry.Name, entry.Name);
     }
 
     private static bool MentionsProcessing(HashSet<string> words, string term)
