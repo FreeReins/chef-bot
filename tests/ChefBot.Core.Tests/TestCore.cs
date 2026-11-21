@@ -1,12 +1,27 @@
 using ChefBot.Core.Engines;
 using ChefBot.Core.Managers;
+using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ChefBot.Core.Tests;
 
-/// <summary>Managers built on the fakes above, with the real engines.</summary>
+/// <summary>
+/// Managers built on the fakes above, with the real engines. They are made by dependency injection, so a manager
+/// that takes a new accessor or engine needs only that registered here, not a change to every call.
+/// </summary>
 internal sealed class TestCore
 {
+    private readonly Lazy<ServiceProvider> services;
+
+    public TestCore(WeeklyScheduleOptions? schedule = null, PlannerOptions? options = null)
+    {
+        Plans = new FakePlans(Recipes);
+        Options = options ?? TestData.Options;
+        Schedule = schedule ?? new WeeklyScheduleOptions();
+        services = new(Register);
+    }
+
     public FixedClock Clock { get; } = new();
 
     public FakeRecipes Recipes { get; } = new();
@@ -37,28 +52,66 @@ internal sealed class TestCore
 
     public FakeKnownPlanStyles KnownStyles { get; } = new();
 
-    public TestCore(WeeklyScheduleOptions? schedule = null, PlannerOptions? options = null)
-    {
-        Plans = new FakePlans(Recipes);
-        Options = options ?? TestData.Options;
-        Schedule = schedule ?? new WeeklyScheduleOptions();
-    }
-
     public PlannerOptions Options { get; }
 
     public WeeklyScheduleOptions Schedule { get; }
 
-    private ValidationEngine Validation => new(Plans, Recipes, Pantry, ShoppingList, Accounts, new NoBackups());
+    public PlanManager PlanManager() => Make<PlanManager>();
 
-    public PlanManager PlanManager() => new(
-        Plans, Recipes, Pantry, ShoppingList, Settings, KnownStores, KnownStyles, ToDoLists, History, Messages,
-        new PlanningEngine(TestData.Catalog, Options, Schedule), TestData.Shopping, TestData.Suggestions, new CalendarEngine(Calendar), TestData.Transformation,
-        Validation, TestData.Catalog, Options, new PlanWriteLock(), Clock);
+    public PantryManager PantryManager() => Make<PantryManager>();
 
-    public PantryManager PantryManager() => new(Pantry, Messages, TestData.Transformation, Validation, TestData.Catalog, Options, Clock);
+    public RecipeManager RecipeManager() => Make<RecipeManager>();
 
-    public RecipeManager RecipeManager() => new(
-        Recipes, Images, Web, new NoSamples(), History, Messages, TestData.Transformation, new HistoryEngine(), Validation, Clock);
+    public AccountManager AccountManager() => Make<AccountManager>();
 
-    public AccountManager AccountManager() => new(Accounts, Settings, History, Messages, Validation, new SecurityEngine(), new PlainHasher(), Clock);
+    /// <summary>A new manager each call, as each request gets in the app; the fakes and engines are shared.</summary>
+    private T Make<T>()
+        where T : notnull => services.Value.GetRequiredService<T>();
+
+    private ServiceProvider Register()
+    {
+        var services = new ServiceCollection();
+
+        // Fakes for every accessor.
+        services.AddSingleton<IRecipeAccess>(Recipes);
+        services.AddSingleton<IPlanAccess>(Plans);
+        services.AddSingleton<IPantryAccess>(Pantry);
+        services.AddSingleton<IShoppingListAccess>(ShoppingList);
+        services.AddSingleton<IAccountAccess>(Accounts);
+        services.AddSingleton<IHistoryAccess>(History);
+        services.AddSingleton<ISettingsAccess>(Settings);
+        services.AddSingleton<IImageSourceAccess>(Images);
+        services.AddSingleton<IWebPageAccess>(Web);
+        services.AddSingleton<IToDoListAccess>(ToDoLists);
+        services.AddSingleton<IMessageAccess>(Messages);
+        services.AddSingleton<IKnownStoreAccess>(KnownStores);
+        services.AddSingleton<IKnownPlanStyleAccess>(KnownStyles);
+        services.AddSingleton<ISampleRecipeAccess>(new NoSamples());
+        services.AddSingleton<IBackupAccess>(new NoBackups());
+
+        // Settings, utilities and the real engines.
+        services.AddSingleton<TimeProvider>(Clock);
+        services.AddSingleton(Options);
+        services.AddSingleton(Schedule);
+        services.AddSingleton(Calendar);
+        services.AddSingleton(TestData.Catalog);
+        services.AddSingleton<IPasswordHasher>(new PlainHasher());
+        services.AddTransient<PlanWriteLock>();
+        services.AddSingleton(TestData.Transformation);
+        services.AddSingleton(TestData.Shopping);
+        services.AddSingleton(TestData.Suggestions);
+        services.AddSingleton<PlanningEngine>();
+        services.AddSingleton<CalendarEngine>();
+        services.AddSingleton<HistoryEngine>();
+        services.AddSingleton<SecurityEngine>();
+        services.AddTransient<ValidationEngine>();
+
+        // The managers under test.
+        services.AddTransient<PlanManager>();
+        services.AddTransient<PantryManager>();
+        services.AddTransient<RecipeManager>();
+        services.AddTransient<AccountManager>();
+
+        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true });
+    }
 }

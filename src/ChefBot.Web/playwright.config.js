@@ -4,12 +4,17 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const port = 4173;
+/** Set by ./dev.sh web-shot: the address to screenshot. Then only tests/screenshot.spec.js runs. */
+const shooting = Boolean(process.env.SHOT_PATH);
 
 export default defineConfig({
   testDir: 'tests',
   forbidOnly: true,
   retries: 0,
-  reporter: 'list',
+  // A dot per test in the container (CI=1), so a full run prints a few lines; pass --reporter=list to see each test.
+  reporter: process.env.CI ? 'dot' : 'list',
+  testMatch: shooting ? 'screenshot.spec.js' : '*.spec.js',
+  testIgnore: shooting ? [] : ['screenshot.spec.js'],
   use: { baseURL: `http://localhost:${port}`, locale: 'en-US', timezoneId: 'UTC' },
   // Light and dark mode use different colours, so contrast is checked in both. Phones lay the page out differently
   // (the tabs move to a bar at the bottom of the window).

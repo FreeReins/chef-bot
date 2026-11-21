@@ -9,5 +9,11 @@ tokens:
     overrides:
       # AGENTS.md is loaded into every agent session, so every token in it is paid for on every task.
       "AGENTS.md": 1200
+      # Loaded only when working in the web page.
+      "src/ChefBot.Web/AGENTS.md": 400
       # Loaded only when the skill is used. Waza's default for SKILL.md is 500.
       ".claude/skills/tune-agents-md/SKILL.md": 1500
+      # Checklists loaded only for their task. Each replaces reading 5-10 files to rediscover where things go.
+      ".claude/skills/add-stored-entity/SKILL.md": 700
+      ".claude/skills/add-core-operation/SKILL.md": 700
+      ".claude/skills/add-web-screen/SKILL.md": 700

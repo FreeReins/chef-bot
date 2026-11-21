@@ -168,7 +168,7 @@
                 {/if}
                 <span class="text">
                   <strong>{recipe.name}</strong>
-                  <span class="ingredients">{recipe.ingredients.join(', ')}</span>
+                  {#if recipe.description?.trim()}<span class="blurb">{recipe.description}</span>{/if}
                 </span>
               </a>
               {#if recipe.isSlowCooker || recipe.tags.length}
@@ -192,7 +192,7 @@
               <div class="text">
                 <a href="/recipes/{recipe.id}"><strong>{recipe.name}</strong></a>
                 {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
-                <p class="muted">{recipe.ingredients.join(', ')}</p>
+                {#if recipe.description?.trim()}<p class="muted blurb">{recipe.description}</p>{/if}
               </div>
             </li>
           {/each}
@@ -241,8 +241,9 @@
   .placeholder { display: grid; place-items: center; color: var(--muted); }
   .recipe-card .text { display: grid; gap: .2rem; padding: .6rem .8rem 0; }
   .recipe-card strong { color: var(--accent); }
-  .ingredients { color: var(--muted); font-size: .85rem; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
-    -webkit-box-orient: vertical; overflow: hidden; }
+  /* A recipe's description, cut to two lines in both layouts. Recipes without one show only their name. */
+  .blurb { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .recipe-card .blurb { color: var(--muted); font-size: .85rem; }
   .cards .chips { padding: 0 .8rem; }
   .cards li::after { content: ""; padding-bottom: .7rem; }
 

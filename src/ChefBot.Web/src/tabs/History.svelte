@@ -47,7 +47,7 @@
         <section class="chapter" aria-labelledby="chapter-{chapter.month}">
           <header class="sign">
             <h3 id="chapter-{chapter.month}">{chapterTitle(chapter)}</h3>
-            <p>{monthName(chapter.month)}{#if chapter.dinners > 0} · {plural(chapter.dinners, 'dinner')}{/if}</p>
+            <p>{monthName(chapter.month)}{#if chapter.dinners > 0}{` · ${plural(chapter.dinners, 'dinner')}`}{/if}</p>
           </header>
           <ol class="moments">
             {#each chapter.moments as moment, index (`${moment.kind}-${moment.date}-${index}`)}

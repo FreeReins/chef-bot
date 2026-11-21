@@ -217,8 +217,12 @@ has none.
 
 `./dev.sh web-test` checks every screen of the page with [axe](https://github.com/dequelabs/axe-core) (WCAG 2.2
 A and AA, plus axe's best practices) in real Chromium, in light mode, dark mode and at phone width, and tests
-the keyboard behaviour axe can't see. It takes about half a minute and exits. Arguments go to `playwright test`:
-`./dev.sh web-test --project desktop-dark -g schedule`.
+the keyboard behaviour axe can't see. It takes about a minute and a half, prints a dot per test, and exits.
+Arguments go to `playwright test`: `./dev.sh web-test --project desktop-dark -g schedule`, or `--reporter=list` to
+see each test's name.
+
+`./dev.sh web-shot /history` screenshots one address of the page, answered from the same stubs, in each project
+into `src/ChefBot.Web/shots/` (`tests/screenshot.spec.js`, which normal runs skip).
 
 - The tests are in `src/ChefBot.Web/tests/`: `a11y.spec.js` has one row per screen or state in `VIEWS`, and
   `keyboard.spec.js` checks focus and keys. To cover a new screen, add a row to `VIEWS`.

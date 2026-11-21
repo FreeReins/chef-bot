@@ -16,6 +16,7 @@
   import Printer from '@lucide/svelte/icons/printer';
   import Download from '@lucide/svelte/icons/download';
   import ListTodo from '@lucide/svelte/icons/list-todo';
+  import CheckCheck from '@lucide/svelte/icons/check-check';
   import { api } from '../lib/api.js';
   import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
 
@@ -145,15 +146,15 @@
       <h2>To buy ({toBuy.length})</h2>
       {#if bought.length}<p class="muted">{plural(bought.length, 'item')} bought so far</p>{/if}
     </div>
-    {#if buyable}
-      <button class="small" onclick={() => buyEverything(buyable)}>
-        {isConfirmed() || planToBuy.length === 0 ? 'Mark all as bought' : 'Mark hand-added items as bought'}
-      </button>
-    {/if}
   </div>
 
   {#if toBuy.length}
     <div class="row-actions export">
+      {#if buyable}
+        <button class="small with-icon" onclick={() => buyEverything(buyable)}>
+          <CheckCheck size={14} />{isConfirmed() || planToBuy.length === 0 ? 'Mark all as bought' : 'Mark hand-added items as bought'}
+        </button>
+      {/if}
       {#if canShare()}
         <button class="small with-icon" onclick={shareList}><Share2 size={14} />Share list</button>
       {:else}

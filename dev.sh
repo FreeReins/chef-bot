@@ -7,6 +7,9 @@
 #   ./dev.sh web      build the web page once into src/ChefBot.Api/wwwroot, for a plain `dotnet run`
 #   ./dev.sh web-test run the web page's accessibility tests in a Playwright container, then exit; arguments go
 #                     to `playwright test`, for example ./dev.sh web-test --project desktop-dark
+#   ./dev.sh web-shot /history
+#                     screenshot an address of the web page, answered from the test stubs, in each test project
+#                     (light, dark, phone) into src/ChefBot.Web/shots/, then exit
 #   ./dev.sh test     run the tests again on every save
 #   ./dev.sh db       start the dev database only
 #   ./dev.sh psql     open a SQL prompt on the dev database
@@ -114,7 +117,7 @@ web_test() {
         echo "Pin @playwright/test to an exact version in $web/package.json, so the container image can match it." >&2
         exit 1
     fi
-    podman run --rm --init --ipc=host --env NPM_CONFIG_UPDATE_NOTIFIER=false --env CI=1 \
+    podman run --rm --init --ipc=host --env NPM_CONFIG_UPDATE_NOTIFIER=false --env CI=1 --env SHOT_PATH \
         --volume "$PWD/$web:/source/$web:z" --volume "$web_test_modules:/source/$web/node_modules" \
         --workdir "/source/$web" "mcr.microsoft.com/playwright:v$version-noble" \
         sh -c 'npm install --no-audit --no-fund --loglevel=error && exec npx playwright test "$@"' web-test "$@"
@@ -180,6 +183,14 @@ case "${1:-run}" in
     web-test)
         shift
         web_test "$@"
+        ;;
+    web-shot)
+        if [[ -z "${2:-}" ]]; then
+            echo "Say which address to screenshot, for example: ./dev.sh web-shot /history" >&2
+            exit 1
+        fi
+        SHOT_PATH="$2" web_test --reporter=line "${@:3}"
+        echo "Screenshots are in $web/shots/."
         ;;
     test)
         exec dotnet watch --project tests/ChefBot.Core.Tests run
