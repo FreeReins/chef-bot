@@ -89,6 +89,10 @@ internal sealed partial class SchemaRecipe(RecipeClassifier classifier)
         if (Text(Property(entry, "course")) is { } written && Enum.TryParse<RecipeCourse>(written.Trim(), ignoreCase: true, out var chosen))
         {
             course = chosen;
+
+            // A file that names its course, as ChefBot's own export does, also gives it as recipeCategory for other
+            // apps; that is the course again, not a tag.
+            labels.RemoveAll(label => label.Trim().Equals(chosen.ToString(), StringComparison.OrdinalIgnoreCase));
         }
 
         if (Property(entry, "isSlowCooker") is { ValueKind: JsonValueKind.True or JsonValueKind.False } flag)

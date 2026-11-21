@@ -114,6 +114,25 @@
   {/if}
 {/snippet}
 
+<!-- An item's name and amount, then how fresh it is and the meals that will use it. -->
+{#snippet summary(item, usedFor)}
+  {@const quantity = amount(item.quantity, item.unit)}
+  <div class="summary">
+    <div class="name-line">
+      <strong>{item.name}</strong>
+      {#if quantity}<span class="quantity">{quantity}</span>{/if}
+    </div>
+    <div class="detail">
+      {@render when(item)}
+      {#if usedFor.length}
+        <span class="uses"><span class="muted">For</span>
+          {#each usedFor as meal, i (i)}<Chip>{mealLabel(meal)}</Chip>{/each}
+        </span>
+      {/if}
+    </div>
+  </div>
+{/snippet}
+
 {#snippet items(lines)}
   <ul class="plain">
     {#each lines as { item, usedFor } (item.id)}
@@ -132,16 +151,8 @@
             </div>
           </form>
         {:else}
-          <div class="row">
-            <div>
-              <strong>{item.name}</strong> <span class="muted inline-text">{amount(item.quantity, item.unit)}</span>
-              <div class="detail">
-                {@render when(item)}
-                {#if usedFor.length}
-                  <span class="muted">For {usedFor.map(mealLabel).join(', ')}</span>
-                {/if}
-              </div>
-            </div>
+          <div class="row item">
+            {@render summary(item, usedFor)}
             <div class="row-actions">
               <button class="icon" id="edit-{item.id}" aria-label="Change the amount or date of {item.name}" title="Change the amount or date"
                       onclick={() => edit(item)}><Pencil size={16} /></button>
@@ -177,11 +188,8 @@
       <div class="card soon">
         <ul class="plain">
           {#each soon as { item, usedFor } (item.id)}
-            <li class="row">
-              <div>
-                <strong>{item.name}</strong> {@render when(item)}
-                {#if usedFor.length}<span class="muted" style="display:block">For {usedFor.map(mealLabel).join(', ')}</span>{/if}
-              </div>
+            <li class="row item">
+              {@render summary(item, usedFor)}
               {#if item.freshness === 'Expired'}
                 <button class="small" aria-label="Buy more {item.name}" onclick={() => restock(item)}>Buy more</button>
               {/if}
@@ -205,8 +213,10 @@
     {/if}
     <div class="card">
       {#each byGroup(shown) as section (section.group)}
-        <h3>{section.title}</h3>
-        {@render items(section.lines)}
+        <div class="group" style="--group: var(--group-{section.group.toLowerCase()})">
+          <h3><span class="swatch" aria-hidden="true"></span>{section.title} <span class="count">{section.lines.length}</span></h3>
+          {@render items(section.lines)}
+        </div>
       {:else}
         <p class="muted">Nothing in the pantry matches "{filter}".</p>
       {/each}
@@ -215,21 +225,38 @@
 </section>
 
 <style>
+  /* Each food group is a block in its own colour (--group-* in styles.css): a coloured heading over a rule, and a
+     bar down the side of its items, so the sections tell apart as you scroll. */
+  .group { margin-top: 1.4rem; }
+  .group:first-child { margin-top: .2rem; }
+
   h3 {
-    margin: 0.75rem 0 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0 0 .2rem;
+    padding-bottom: .35rem;
+    border-bottom: 2px solid color-mix(in srgb, var(--group) 35%, transparent);
     font-size: .85rem;
     text-transform: uppercase;
     letter-spacing: .04em;
-    color: var(--muted);
+    color: var(--group);
   }
 
-  h3:first-child {
-    margin-top: 0;
-  }
+  .swatch { flex: none; width: .65rem; height: .65rem; border-radius: 50%; background: var(--group); }
+  .group ul { padding-left: .75rem; border-left: 3px solid color-mix(in srgb, var(--group) 30%, transparent); }
 
-  .detail { display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .6rem; margin-top: .15rem; }
+  .count { font-weight: 400; letter-spacing: 0; color: var(--muted); }
+
+  /* Roomier rows than the shared lists, with the buttons centred on the item's two lines. */
+  .card li { padding: .65rem 0; }
+  .item { align-items: center; }
+  .summary { display: grid; gap: .3rem; }
+  .name-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .6rem; }
+  .quantity { color: var(--muted); font-size: .95rem; }
+  .detail { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .75rem; font-size: .9rem; }
   .detail:empty { display: none; }
-  .inline-text { font-size: .95rem; }
+  .uses { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
   .soon { border-left: 4px solid var(--warn); }
   .list-head { align-items: center; }
   .list-head h2 { flex: 1 1 auto; }

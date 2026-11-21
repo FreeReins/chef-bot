@@ -93,5 +93,5 @@ export function shoppingCsv(sections) {
       rows.push([line.name, line.quantity, line.unit, line.store, line.group, line.isOptional ? 'yes' : '', line.usedIn.join('; ')]);
     }
   }
-  return `﻿${rows.map((row) => row.map(field).join(',')).join('\r\n')}\r\n`;
+  return `\uFEFF${rows.map((row) => row.map(field).join(',')).join('\r\n')}\r\n`;
 }

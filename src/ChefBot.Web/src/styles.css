@@ -19,6 +19,12 @@
   --area-plan: light-dark(#2f6b4f, #7fc8a3); --area-shopping: light-dark(#2563a8, #8cb8ee);
   --area-pantry: light-dark(#a35f08, #e5a04c); --area-recipes: light-dark(#b4532a, #f0a27a);
   --area-people: light-dark(#7048b0, #b9a0ec); --area-settings: light-dark(#556675, #a3b2bf);
+  /* One colour per food group (FOOD_GROUPS in lib/format.js), so the pantry's sections tell apart at a glance. Used
+     for small heading text, so each keeps 4.5:1 on --panel. */
+  --group-vegetable: light-dark(#2f6b4f, #7fc8a3); --group-fruit: light-dark(#a3325e, #f08bb4);
+  --group-herb: light-dark(#536d17, #b6d36a); --group-protein: light-dark(#a3441b, #f0a27a);
+  --group-dairy: light-dark(#1f5a99, #8cb8ee); --group-wholegrain: light-dark(#835600, #e2b35a);
+  --group-other: light-dark(#556675, #a3b2bf); --group-staple: light-dark(#7048b0, #b9a0ec);
   --shadow: light-dark(rgb(29 36 32 / .1), rgb(0 0 0 / .4));
 }
 :root[data-theme="light"] { color-scheme: light; }

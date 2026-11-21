@@ -26,6 +26,16 @@ public static class RecipeEndpoints
         string? query, RecipeCourse? course, int? page, int? pageSize, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.SearchAsync(new RecipeSearchRequest(query, course, page ?? 1, pageSize ?? 0), cancellationToken);
 
+    /// <summary>Every recipe that can be planned, as one schema.org JSON-LD file to download.</summary>
+    [WolverineGet("/api/recipes/export")]
+    public static async Task<IResult> ExportAll([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        Download(await recipes.ExportAllAsync(cancellationToken));
+
+    /// <summary>One recipe as a schema.org JSON-LD file to download. An archived recipe is not found.</summary>
+    [WolverineGet("/api/recipes/{id}/export")]
+    public static async Task<IResult> Export(Guid id, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        Download(await recipes.ExportAsync(id, cancellationToken));
+
     /// <summary>One recipe in full. An archived recipe is not found.</summary>
     [WolverineGet("/api/recipes/{id}")]
     public static Task<RecipeResponse> Get(Guid id, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
@@ -131,4 +141,6 @@ public static class RecipeEndpoints
     public static Task<AddSamplesResponse> AddSamples(
         AddSamplesRequest request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.AddSamplesAsync(request, cancellationToken);
+
+    private static IResult Download(RecipeExportFile file) => Results.File(file.Data, file.ContentType, file.FileName);
 }

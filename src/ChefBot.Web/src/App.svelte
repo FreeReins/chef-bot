@@ -133,7 +133,8 @@
   .top > div:first-child { margin-right: auto; }
   /* The logo mark and the name share the first line; the week is under the name. */
   .brand { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: .6rem; align-items: center; }
-  .brand #week { grid-column: 2; }
+  /* The plan's status pill keeps clear of the dates beside it, and drops to its own line when space is short. */
+  .brand #week { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .65rem; }
   .mark { grid-row: 1 / span 2; display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: .7rem;
     color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 14%, var(--panel)); }
   .account { align-items: center; }

@@ -2,6 +2,7 @@ using AngleSharp.Html.Parser;
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Engines.Contracts.Services;
 using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
@@ -9,7 +10,8 @@ namespace ChefBot.Core.Engines.Transformation;
 
 /// <summary>
 /// Turns outside data into ChefBot's own: recipe files, recipe web pages, typed-in recipes into stored recipes,
-/// ingredient names into pantry items and free-form meals. Reads and saves nothing.
+/// ingredient names into pantry items and free-form meals. It also writes recipes back out as schema.org files.
+/// Reads and saves nothing.
 /// </summary>
 internal sealed class TransformationEngine(
     IngredientCatalog catalog,
@@ -81,6 +83,29 @@ internal sealed class TransformationEngine(
             ?? throw CannotImport(extension);
 
         return format.ReadArchive(archive);
+    }
+
+    /// <summary>The media type of the files <see cref="ExportFile(Recipe)"/> writes.</summary>
+    public const string JsonLdType = "application/ld+json";
+
+    /// <summary>One recipe as a schema.org JSON-LD file, named after it.</summary>
+    public static RecipeExportFile ExportFile(Recipe recipe) =>
+        new($"{FileSlug(recipe.Name)}.json", JsonLdType, SchemaRecipeWriter.Write(recipe));
+
+    /// <summary>Several recipes, in name order, as one schema.org JSON-LD file named after the day.</summary>
+    public static RecipeExportFile ExportFile(IEnumerable<Recipe> recipes, DateOnly today) => new(
+        $"chefbot-recipes-{today:yyyy-MM-dd}.json",
+        JsonLdType,
+        SchemaRecipeWriter.Write(recipes.OrderBy(recipe => recipe.Name, StringComparer.OrdinalIgnoreCase)));
+
+    /// <summary>A name as a file name: "Slaw Fish Tacos!" is "slaw-fish-tacos". Letters in any alphabet stay.</summary>
+    public static string FileSlug(string name)
+    {
+        var words = new string(name.Trim().ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) ? c : ' ').ToArray())
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var slug = string.Join('-', words);
+        slug = slug.Length > 60 ? slug[..60].TrimEnd('-') : slug;
+        return slug.Length > 0 ? slug : "recipe";
     }
 
     /// <summary>Whether an imported photo may be added to a recipe already in the library: only when it has none.</summary>

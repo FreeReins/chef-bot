@@ -73,8 +73,21 @@ test('the shopping list downloads as CSV', async ({ page }) => {
 
   expect(file.suggestedFilename()).toMatch(/^shopping-list-\d{4}-\d\d-\d\d\.csv$/);
   const csv = await readFile(await file.path(), 'utf8');
-  const rows = csv.replace(/^﻿/, '').split('\r\n');
+  const rows = csv.replace(/^\uFEFF/, '').split('\r\n');
   expect(rows[0]).toBe('Name,Quantity,Unit,Store,Food group,Optional,For');
   expect(rows).toContain('fish fillets,600,g,Corner Market,Protein,,Slaw Fish Tacos');
   expect(rows).toContain('coconut milk,1,can,,Other,yes,Chickpea Curry');
+});
+
+test('a recipe and the whole library download as schema.org files', async ({ page }) => {
+  await open(page, `/recipes/${data.ids.tacos}`);
+  await page.getByRole('button', { name: /^More actions/ }).click();
+  const one = page.getByRole('link', { name: 'Download recipe file' });
+  await expect(one).toHaveAttribute('href', `/api/recipes/${data.ids.tacos}/export`);
+  await expect(one).toHaveAttribute('download', '');
+
+  await open(page, '/recipes');
+  const all = page.getByRole('link', { name: 'Download all' });
+  await expect(all).toHaveAttribute('href', '/api/recipes/export');
+  await expect(all).toHaveAttribute('download', '');
 });

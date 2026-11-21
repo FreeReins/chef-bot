@@ -12,6 +12,7 @@
   import Plus from '@lucide/svelte/icons/plus';
   import LayoutGrid from '@lucide/svelte/icons/layout-grid';
   import List from '@lucide/svelte/icons/list';
+  import Download from '@lucide/svelte/icons/download';
 
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
   const PAGE_SIZE = 24;
@@ -98,6 +99,10 @@
       <h2>Recipes ({librarySize})</h2>
       <div class="row-actions">
         {#if isAdmin()}<a class="button" href="/recipes/samples">Browse sample recipes</a>{/if}
+        {#if librarySize > 0}
+          <a class="button add" href="/api/recipes/export" download title="Every recipe in one schema.org file, which other recipe apps import">
+            <Download size={18} />Download all</a>
+        {/if}
         <a class="button primary add" href="/recipes/new/link"><Plus size={18} />Add recipe</a>
       </div>
     </div>

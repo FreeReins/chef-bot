@@ -1,7 +1,7 @@
 <!-- One recipe on its own page, /recipes/{id}, so it can be bookmarked: its photos, ingredients and steps to read.
      Editing it (/recipes/{id}/edit) and managing its photos (/recipes/{id}/photos) open in dialogs over the page,
-     and cooking mode (/recipes/{id}/cook, RecipeCook.svelte) over the whole screen; sharing it as text, printing it and archiving it are
-     in the ⋯ menu. -->
+     and cooking mode (/recipes/{id}/cook, RecipeCook.svelte) over the whole screen; sharing it as text, printing it, downloading it as a
+     schema.org file and archiving it are in the ⋯ menu. -->
 <script>
   import { tick } from 'svelte';
   import { app, run, loadRecipes, toast, ask } from '../lib/app.svelte.js';
@@ -24,6 +24,7 @@
   import Share2 from '@lucide/svelte/icons/share-2';
   import Copy from '@lucide/svelte/icons/copy';
   import Printer from '@lucide/svelte/icons/printer';
+  import FileDown from '@lucide/svelte/icons/file-down';
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
@@ -232,6 +233,9 @@
               <button type="button" class="with-icon" onclick={shareRecipe}><Copy size={16} />Copy as text</button>
             {/if}
             <button type="button" class="with-icon" onclick={print}><Printer size={16} />Print recipe</button>
+            <!-- A schema.org file other recipe apps import, as ChefBot's own import does. -->
+            <a class="with-icon" href="/api/recipes/{recipe.id}/export" download onclick={() => (menuOpen = false)}>
+              <FileDown size={16} />Download recipe file</a>
             <button type="button" class="with-icon bad-text" onclick={archive}><Archive size={16} />Archive recipe</button>
           </div>
         </div>
@@ -346,7 +350,8 @@
   .menu-panel { position: absolute; right: 0; top: calc(100% + .3rem); z-index: 5; min-width: 12rem; padding: .3rem;
     background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; box-shadow: 0 6px 24px rgb(0 0 0 / .18); }
   .menu-panel button { width: 100%; border: 0; justify-content: flex-start; font-size: .95rem; }
-  .menu-panel button:hover { background: var(--chip); }
+  .menu-panel a { display: flex; padding: .4rem .8rem; border-radius: .4rem; color: var(--ink); text-decoration: none; font-size: .95rem; }
+  .menu-panel button:hover, .menu-panel a:hover { background: var(--chip); }
   .description { margin: .75rem 0 .25rem; }
 
   /* The jump links only help on narrow screens, where the parts stack; they stay at the top while scrolling. */

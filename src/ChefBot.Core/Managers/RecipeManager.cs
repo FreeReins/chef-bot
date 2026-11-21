@@ -40,13 +40,15 @@ internal sealed class RecipeManager(
             found.Recipes.Select(recipe => recipe.ToSummary()).ToList(), found.Total, page, pageSize, librarySize);
     }
 
-    public async Task<RecipeResponse> GetAsync(Guid id, CancellationToken cancellationToken)
-    {
-        var recipe = await validation.RecipeAsync(id, cancellationToken);
-        return recipe.IsArchived
-            ? throw new NotFoundException("That recipe has been archived, so it is no longer in the library.")
-            : recipe.ToResponse();
-    }
+    public async Task<RecipeResponse> GetAsync(Guid id, CancellationToken cancellationToken) =>
+        (await ActiveAsync(id, cancellationToken)).ToResponse();
+
+    public async Task<RecipeExportFile> ExportAsync(Guid id, CancellationToken cancellationToken) =>
+        TransformationEngine.ExportFile(await ActiveAsync(id, cancellationToken));
+
+    public async Task<RecipeExportFile> ExportAllAsync(CancellationToken cancellationToken) =>
+        TransformationEngine.ExportFile(
+            await recipes.ListActiveAsync(cancellationToken), DateOnly.FromDateTime(clock.GetLocalNow().DateTime));
 
     public async Task<RecipeResponse> CreateAsync(RecipeDraft draft, CancellationToken cancellationToken)
     {
@@ -271,5 +273,15 @@ internal sealed class RecipeManager(
         {
             await messages.PublishAsync(new FetchRecipeImages(recipe.Id));
         }
+    }
+
+    /// <summary>A recipe that can be planned.</summary>
+    /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
+    private async Task<Recipe> ActiveAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var recipe = await validation.RecipeAsync(id, cancellationToken);
+        return recipe.IsArchived
+            ? throw new NotFoundException("That recipe has been archived, so it is no longer in the library.")
+            : recipe;
     }
 }

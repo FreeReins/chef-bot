@@ -59,6 +59,7 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(AddSamplesResponse))]
 [JsonSerializable(typeof(AddRecipeImageRequest))]
 [JsonSerializable(typeof(RecipeImageContent))]
+[JsonSerializable(typeof(RecipeExportFile))]
 [JsonSerializable(typeof(FetchRecipeImages))]
 [JsonSerializable(typeof(WebRecipeRequest))]
 [JsonSerializable(typeof(WebImportResponse))]
