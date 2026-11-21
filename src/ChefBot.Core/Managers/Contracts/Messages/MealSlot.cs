@@ -11,4 +11,7 @@ public enum MealSlot
     Dinner,
     Snack,
     Sweet,
+
+    /// <summary>A drink made once for the week, like snacks and sweets.</summary>
+    Drink,
 }

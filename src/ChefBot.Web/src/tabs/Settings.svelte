@@ -7,12 +7,14 @@
   import HttpsPanel from '../settings/HttpsPanel.svelte';
   import MealiePanel from '../settings/MealiePanel.svelte';
   import StoresPanel from '../settings/StoresPanel.svelte';
+  import PlanStylesPanel from '../settings/PlanStylesPanel.svelte';
   import NotificationsPanel from '../settings/NotificationsPanel.svelte';
   import BackupsPanel from '../settings/BackupsPanel.svelte';
   import LogsPanel from '../settings/LogsPanel.svelte';
   import KeyRound from '@lucide/svelte/icons/key-round';
   import Lock from '@lucide/svelte/icons/lock';
   import Store from '@lucide/svelte/icons/store';
+  import ListChecks from '@lucide/svelte/icons/list-checks';
   import Plug from '@lucide/svelte/icons/plug';
   import Bell from '@lucide/svelte/icons/bell';
   import Archive from '@lucide/svelte/icons/archive';
@@ -22,6 +24,7 @@
   const SECTIONS = [
     { key: 'login', label: 'Login', icon: KeyRound, visible: () => true, panel: LoginPanel },
     { key: 'https', label: 'HTTPS', icon: Lock, visible: () => true, panel: HttpsPanel, heading: 'Secure connection (HTTPS)' },
+    { key: 'styles', label: 'Plan styles', icon: ListChecks, visible: () => Boolean(app.styles), panel: PlanStylesPanel },
     { key: 'stores', label: 'Stores', icon: Store, visible: () => isAdmin() && app.stores, panel: StoresPanel },
     { key: 'mealie', label: 'Mealie', icon: Plug, visible: () => isAdmin() && app.mealie, panel: MealiePanel },
     { key: 'notifications', label: 'Notifications', icon: Bell, visible: () => isAdmin() && app.notifications, panel: NotificationsPanel },

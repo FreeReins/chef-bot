@@ -6,6 +6,7 @@ const ids = {
   admin: '00000000-0000-4000-8000-000000000001',
   sam: '00000000-0000-4000-8000-000000000002',
   plan: '00000000-0000-4000-8000-0000000000a1',
+  nextPlan: '00000000-0000-4000-8000-0000000000a2',
   tacos: '00000000-0000-4000-8000-0000000000b1',
   stew: '00000000-0000-4000-8000-0000000000b2',
   oats: '00000000-0000-4000-8000-0000000000b3',
@@ -51,10 +52,66 @@ export const plan = (status = 'Confirmed') => ({
     meal('06', null, null, 'Snack', 'Maple Granola', ids.granola, { isOptional: true, ingredients: ['oats', 'maple syrup'] }),
     meal('07', null, null, 'Sweet', 'Pear and Ginger Crumble', ids.crumble, { ingredients: ['pears', 'ginger', 'butter'] }),
     meal('08', 'Thursday', '2026-11-26', 'Dinner', 'Grain bowl: farro, eggs and kale', null, { ingredients: ['farro', 'eggs', 'kale'] }),
+    meal('09', null, null, 'Drink', 'Mint Lemonade', null, { portions: 0, ingredients: ['lemons', 'mint'] }),
   ],
   shopping: [],
+  styleName: 'Classic week',
   notes: [],
 });
+
+/** PlanResponse: a draft for the week after plan(), with a dinner and a snack. */
+export const nextPlan = () => ({
+  id: ids.nextPlan, weekStart: '2026-11-29', weekEnd: '2026-12-05', status: 'Staged',
+  meals: [
+    meal('21', 'Sunday', '2026-11-29', 'Dinner', 'Chickpea Curry', ids.curry, { ingredients: ['chickpeas', 'spinach', 'coconut milk'] }),
+    meal('22', null, null, 'Snack', 'Maple Granola', ids.granola, { ingredients: ['oats', 'maple syrup'] }),
+  ],
+  shopping: [],
+  styleName: 'Slow cooker week',
+  notes: [],
+});
+
+/** PlanSummaryResponse for a plan. */
+export const summary = ({ id, weekStart, weekEnd, status, styleName }) => ({ id, weekStart, weekEnd, status, styleName });
+
+/** PlanRuleDetails */
+const rule = (limit, count, slot, match, extra = {}) => ({ limit, count, slot, match, values: [], minutes: null, day: null, ...extra });
+
+/** PlanStyleDetails */
+const style = (id, name, extra = {}) => ({
+  id, name, description: '', isDefault: false, cookingDays: ['Sunday', 'Tuesday', 'Thursday', 'Saturday'], leftoverLunches: true,
+  breakfasts: 2, snacks: 3, sweets: 1, drinks: 0, rules: [], ...extra,
+});
+
+/** PlanStylesResponse: two saved styles, the starter styles, and what rules can name. */
+export const planStyles = () => {
+  const classic = {
+    description: 'Four dinners with leftovers for weekday lunches, one slow cooker meal on Tuesday, breakfasts, snacks and a sweet.',
+    rules: [rule('AtLeast', 1, 'Dinner', 'SlowCooker', { day: 'Tuesday' })],
+  };
+  const slowCooker = {
+    description: 'Three set-and-forget slow cooker dinners with leftovers, plus snacks and drinks.',
+    cookingDays: ['Sunday', 'Tuesday', 'Thursday'], breakfasts: 0, sweets: 0, drinks: 2,
+    rules: [rule('AtLeast', 3, 'Dinner', 'SlowCooker')],
+  };
+  const meatFree = {
+    description: 'Four vegetarian dinners with leftovers: no meat or fish in any meal.',
+    rules: [rule('None', 0, null, 'Ingredient', { values: ['chicken', 'beef', 'pork'] })],
+  };
+  return {
+    styles: [
+      style('00000000-0000-4000-8000-000000000601', 'Classic week', { ...classic, isDefault: true }),
+      style('00000000-0000-4000-8000-000000000602', 'Slow cooker week', slowCooker),
+    ],
+    known: [
+      style(null, 'Classic week', { ...classic, isDefault: true }),
+      style(null, 'Slow cooker week', slowCooker),
+      style(null, 'Meat-free', meatFree),
+    ],
+    tags: ['fish', 'quick'],
+    ingredients: ['beef', 'cabbage', 'chicken', 'eggs', 'pork'],
+  };
+};
 
 /** IngredientLine */
 const line = (name, status, extra = {}) => ({
@@ -175,6 +232,7 @@ export const backups = () => ({
 /** BackupSummary */
 export const backupSummary = () => ({
   recipes: 6, recipePhotos: 2, mealPlans: 3, plannedMeals: 24, shoppingItems: 40, pantryItems: 4, manualShoppingItems: 2, users: 2, groceryStores: 2,
+  planStyles: 2,
 });
 
 /** LogsResponse (src/ChefBot.Api/Logging/): a long message, a warning and an error with details. */

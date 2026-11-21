@@ -20,7 +20,8 @@
 </div>
 
 <style>
-  .setup-nav { position: sticky; bottom: calc(3rem + env(safe-area-inset-bottom)); display: flex; gap: 1rem; align-items: center;
+  /* Above the step's content, which scrolls underneath it. */
+  .setup-nav { position: sticky; z-index: 5; bottom: calc(3rem + env(safe-area-inset-bottom)); display: flex; gap: 1rem; align-items: center;
     margin-top: 1rem; padding: .6rem 1rem; background: var(--panel); border: 1px solid var(--line);
     border-radius: .5rem; box-shadow: 0 2px 10px rgb(0 0 0 / .08); }
   .status { flex: 1; min-width: 0; }

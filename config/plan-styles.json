@@ -1,0 +1,83 @@
+{
+  "styles": [
+    {
+      "name": "Classic week",
+      "description": "Four dinners with leftovers for weekday lunches, one slow cooker meal on Tuesday, breakfasts, snacks and a sweet.",
+      "cookingDays": ["Sunday", "Tuesday", "Thursday", "Saturday"],
+      "leftoverLunches": true,
+      "breakfasts": 2,
+      "snacks": 3,
+      "sweets": 1,
+      "drinks": 0,
+      "rules": [
+        { "limit": "AtLeast", "count": 1, "slot": "Dinner", "match": "SlowCooker", "day": "Tuesday" }
+      ]
+    },
+    {
+      "name": "Slow cooker week",
+      "description": "Three set-and-forget slow cooker dinners with leftovers, plus snacks and drinks.",
+      "cookingDays": ["Sunday", "Tuesday", "Thursday"],
+      "leftoverLunches": true,
+      "breakfasts": 0,
+      "snacks": 3,
+      "sweets": 0,
+      "drinks": 2,
+      "rules": [
+        { "limit": "AtLeast", "count": 3, "slot": "Dinner", "match": "SlowCooker" }
+      ]
+    },
+    {
+      "name": "No slow cooker",
+      "description": "Four dinners with leftovers, none of them in the slow cooker.",
+      "cookingDays": ["Sunday", "Tuesday", "Thursday", "Saturday"],
+      "leftoverLunches": true,
+      "breakfasts": 2,
+      "snacks": 3,
+      "sweets": 1,
+      "drinks": 0,
+      "rules": [
+        { "limit": "None", "count": 0, "match": "SlowCooker" }
+      ]
+    },
+    {
+      "name": "Quick weeknights",
+      "description": "A fresh dinner every weeknight, most of them ready in half an hour.",
+      "cookingDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "leftoverLunches": false,
+      "breakfasts": 2,
+      "snacks": 2,
+      "sweets": 0,
+      "drinks": 0,
+      "rules": [
+        { "limit": "AtLeast", "count": 4, "slot": "Dinner", "match": "ReadyWithin", "minutes": 30 }
+      ]
+    },
+    {
+      "name": "Meat-free",
+      "description": "Four vegetarian dinners with leftovers: no meat or fish in any meal.",
+      "cookingDays": ["Sunday", "Tuesday", "Thursday", "Saturday"],
+      "leftoverLunches": true,
+      "breakfasts": 2,
+      "snacks": 3,
+      "sweets": 1,
+      "drinks": 0,
+      "rules": [
+        {
+          "limit": "None", "count": 0, "match": "Ingredient",
+          "values": ["chicken", "beef", "pork", "bacon", "sausage", "ham", "turkey", "lamb", "fish", "salmon", "shrimp", "tuna"]
+        }
+      ]
+    },
+    {
+      "name": "Dinners only",
+      "description": "Five dinners spaced for leftover lunches, and nothing else.",
+      "cookingDays": ["Sunday", "Monday", "Tuesday", "Thursday", "Saturday"],
+      "leftoverLunches": true,
+      "breakfasts": 0,
+      "snacks": 0,
+      "sweets": 0,
+      "drinks": 0,
+      "rules": []
+    }
+  ]
+}

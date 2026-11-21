@@ -20,5 +20,8 @@
   { "name": "Cheddar and Pear Plate", "course": "Snack", "servings": 4, "ingredients": ["2 pears", "4 oz cheddar"] },
   { "name": "Baked Cinnamon Apples", "course": "Sweet", "servings": 4, "ingredients": ["4 apples", "0.25 cup rolled oats", "1 tsp cinnamon"] },
   { "name": "Banana Oat Cookies", "course": "Sweet", "servings": 12, "ingredients": ["3 bananas", "2 cups rolled oats"] },
-  { "name": "Frozen Yogurt Berry Bark", "course": "Sweet", "servings": 8, "ingredients": ["2 cups yogurt", "1 cup strawberries", "1 tbsp honey"] }
+  { "name": "Frozen Yogurt Berry Bark", "course": "Sweet", "servings": 8, "ingredients": ["2 cups yogurt", "1 cup strawberries", "1 tbsp honey"] },
+  { "name": "Mint Lemonade", "course": "Drink", "servings": 6, "ingredients": ["4 lemons", "0.5 cup honey", "1 bunch mint", "6 cups water"] },
+  { "name": "Strawberry Banana Smoothie", "course": "Drink", "servings": 2, "ingredients": ["1 cup strawberries", "1 banana", "1 cup yogurt", "0.5 cup milk"] },
+  { "name": "Cucumber Ginger Cooler", "course": "Drink", "servings": 4, "ingredients": ["1 cucumber", "1 inch ginger", "1 lime", "4 cups sparkling water"] }
 ]

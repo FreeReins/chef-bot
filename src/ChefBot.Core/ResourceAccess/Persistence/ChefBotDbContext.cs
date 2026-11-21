@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace ChefBot.Core.ResourceAccess.Persistence;
 
-/// <summary>The PostgreSQL database: recipes, weekly plans, the pantry, the hand-added shopping list, accounts, stores and settings.</summary>
+/// <summary>The PostgreSQL database: recipes, weekly plans, the pantry, the hand-added shopping list, accounts, stores, plan styles and settings.</summary>
 internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> options) : DbContext(options)
 {
     public DbSet<RecipeEntity> Recipes => Set<RecipeEntity>();
@@ -22,6 +22,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
     public DbSet<AccessLinkEntity> AccessLinks => Set<AccessLinkEntity>();
 
     public DbSet<GroceryStoreEntity> GroceryStores => Set<GroceryStoreEntity>();
+
+    public DbSet<PlanStyleEntity> PlanStyles => Set<PlanStyleEntity>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -90,6 +92,11 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         });
 
         modelBuilder.Entity<GroceryStoreEntity>().ToTable("GroceryStores");
+        modelBuilder.Entity<PlanStyleEntity>(style =>
+        {
+            style.ToTable("PlanStyles");
+            style.Property(s => s.Rules).HasColumnType("jsonb");
+        });
 
         modelBuilder.Entity<SecuritySettingsEntity>().ToTable("SecuritySettings");
         modelBuilder.Entity<NotificationSettingsEntity>().ToTable("NotificationSettings");

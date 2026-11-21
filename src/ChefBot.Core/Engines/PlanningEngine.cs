@@ -7,8 +7,9 @@ using ChefBot.Core.Utilities;
 namespace ChefBot.Core.Engines;
 
 /// <summary>
-/// Plans weeks: proposes dinners, leftover lunches, optional breakfasts, snacks and sweets; keeps leftover lunches
-/// following the dinners; changes single meals; and decides when the weekly schedule is due. Reads and saves nothing.
+/// Plans weeks in a household's plan style: proposes dinners on its cooking days, leftover lunches, optional
+/// breakfasts, snacks, sweets and drinks, following the style's rules about recipes; keeps leftover lunches following
+/// the dinners; changes and moves single meals; and decides when the weekly schedule is due. Reads and saves nothing.
 /// </summary>
 internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions options, WeeklyScheduleOptions schedule)
 {
@@ -16,18 +17,28 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
 
     public PlanDraft Plan(PlanRequest request)
     {
+        var style = request.Style ?? PlanStyle.Classic();
         var run = new Run(
             request,
+            style,
             new WeekScorer(catalog, options, request.Pantry, request.WeekStart.Month, request.PantryBoost),
             new Random(request.Seed ?? request.WeekStart.DayNumber),
-            new MealPlan { WeekStart = request.WeekStart, CreatedAt = request.CreatedAt },
+            new MealPlan
+            {
+                WeekStart = request.WeekStart,
+                CreatedAt = request.CreatedAt,
+                StyleName = style.Name,
+                LeftoverLunches = style.LeftoverLunches,
+            },
             Chosen: [],
             Warnings: []);
 
+        KeepMeals(run);
         AddDinners(run);
         AddBreakfasts(run);
-        AddExtras(run, MealSlot.Snack, RecipeCourse.Snack, options.Snacks);
-        AddExtras(run, MealSlot.Sweet, RecipeCourse.Sweet, options.Sweets);
+        AddExtras(run, MealSlot.Snack, RecipeCourse.Snack, style.Snacks);
+        AddExtras(run, MealSlot.Sweet, RecipeCourse.Sweet, style.Sweets);
+        AddExtras(run, MealSlot.Drink, RecipeCourse.Drink, style.Drinks);
         AddLeftoverLunches(run);
 
         return new PlanDraft(run.Plan, run.Warnings.Distinct().ToList());
@@ -36,30 +47,33 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
     /// <summary>
     /// Rebuilds the weekday leftover lunches from the dinners as they stand, then sizes each
     /// dinner to cover the lunches that depend on it. Lunches that were set by hand, cooked
-    /// or skipped are left alone. Changes <paramref name="plan"/> in place.
+    /// or skipped are left alone. A plan made without leftover lunches gets none. Changes <paramref name="plan"/> in place.
     /// </summary>
     public void PlaceLeftovers(MealPlan plan)
     {
         plan.Meals.RemoveAll(meal => meal is { Slot: MealSlot.Lunch, IsLeftover: true, Status: MealStatus.Planned });
 
-        var dinners = plan.Meals
-            .Where(meal => meal is { Slot: MealSlot.Dinner, Date: not null } && meal.Status != MealStatus.Skipped)
-            .OrderByDescending(meal => meal.Date)
-            .ToList();
-
-        foreach (var day in WeekLayout.Weekdays)
+        if (plan.LeftoverLunches)
         {
-            var date = WeekLayout.DateFor(plan.WeekStart, day);
-            if (plan.Meals.Any(meal => meal.Slot == MealSlot.Lunch && meal.Date == date))
-            {
-                continue;
-            }
+            var dinners = plan.Meals
+                .Where(meal => meal is { Slot: MealSlot.Dinner, Date: not null } && meal.Status != MealStatus.Skipped)
+                .OrderByDescending(meal => meal.Date)
+                .ToList();
 
-            var earliest = date.AddDays(-options.MaxLeftoverDays);
-            var source = dinners.FirstOrDefault(dinner => dinner.Date < date && dinner.Date >= earliest);
-            if (source is not null)
+            foreach (var day in WeekLayout.Weekdays)
             {
-                plan.Meals.Add(LeftoverOf(source, date));
+                var date = WeekLayout.DateFor(plan.WeekStart, day);
+                if (plan.Meals.Any(meal => meal.Slot == MealSlot.Lunch && meal.Date == date))
+                {
+                    continue;
+                }
+
+                var earliest = date.AddDays(-options.MaxLeftoverDays);
+                var source = dinners.FirstOrDefault(dinner => dinner.Date < date && dinner.Date >= earliest);
+                if (source is not null)
+                {
+                    plan.Meals.Add(LeftoverOf(source, date));
+                }
             }
         }
 
@@ -89,6 +103,23 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         meal.CustomIngredients.Clear();
         meal.CustomIngredients.AddRange(ingredients);
         ResetAsFreshMeal(meal);
+    }
+
+    /// <summary>
+    /// Moves a meal to another day. A meal of the same kind already on that day takes the moved meal's old day, so
+    /// the two swap. Returns the meal that was swapped, if any. Leftover lunches follow once the plan is reconciled.
+    /// </summary>
+    public static PlannedMeal? Move(MealPlan plan, PlannedMeal meal, DateOnly date)
+    {
+        var other = plan.Meals.FirstOrDefault(other =>
+            other.Id != meal.Id && other.Slot == meal.Slot && other.Date == date && !other.IsLeftover);
+        if (other is not null)
+        {
+            other.Date = meal.Date;
+        }
+
+        meal.Date = date;
+        return other;
     }
 
     /// <summary>
@@ -141,34 +172,58 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         LeftoverOfMealId = dinner.Id,
     };
 
+    /// <summary>Copies the meals kept from an earlier plan of the week into the new one, as fresh planned meals.</summary>
+    private void KeepMeals(Run run)
+    {
+        foreach (var kept in run.Request.Kept ?? [])
+        {
+            if (kept.IsLeftover)
+            {
+                continue;
+            }
+
+            run.Plan.Meals.Add(new PlannedMeal
+            {
+                Slot = kept.Slot,
+                Date = kept.Date,
+                Recipe = kept.Recipe,
+                RecipeId = kept.RecipeId,
+                Title = kept.Title,
+                Portions = options.PortionsFor(kept.Slot),
+                IsOptional = kept.IsOptional,
+                CustomIngredients = kept.CustomIngredients
+                    .Select(ingredient => new PlannedMealIngredient
+                    {
+                        Key = ingredient.Key,
+                        CatalogName = ingredient.CatalogName,
+                        DisplayName = ingredient.DisplayName,
+                    })
+                    .ToList(),
+            });
+
+            if (kept.Recipe is not null && run.Chosen.All(recipe => recipe.Id != kept.Recipe.Id))
+            {
+                run.Chosen.Add(kept.Recipe);
+            }
+        }
+    }
+
     private void AddDinners(Run run)
     {
-        var mains = run.Pool(RecipeCourse.Main);
-        if (mains.Count == 0)
+        var kept = run.Plan.Meals.Where(meal => meal.Slot == MealSlot.Dinner).ToList();
+        var days = OpenCookingDays(run, kept);
+        if (days.Count == 0)
+        {
+            return;
+        }
+
+        if (run.Pool(RecipeCourse.Main).Count == 0)
         {
             throw new RuleViolationException("There are no main-course recipes to plan. Add some, or import them from Mealie.");
         }
 
-        var days = WeekLayout.DinnerDays(options.Dinners);
-        var anyMain = PreferFresh(run, mains, days.Count);
-        var pools = days.ToDictionary(day => day, _ => anyMain);
-
-        var slowCookers = mains.Where(recipe => recipe.IsSlowCooker).ToList();
-        if (options.SlowCookerMeals > 0 && slowCookers.Count == 0)
-        {
-            run.Warnings.Add("No slow cooker recipes were found, so this week has none. Mark some recipes as slow cooker.");
-        }
-        else
-        {
-            var freshSlowCookers = PreferFresh(run, slowCookers, options.SlowCookerMeals);
-            foreach (var day in SlowCookerDays(days))
-            {
-                pools[day] = freshSlowCookers;
-            }
-        }
-
-        var picks = WeekSelector.Choose(days, pools, run.Chosen, run.Scorer.Score, run.Random)
-            ?? throw new RuleViolationException($"There aren't enough recipes to plan {days.Count} different dinners.");
+        var picks = Fill(run, MealSlot.Dinner, RecipeCourse.Main, days, KeptRecipes(kept), day => day)
+            ?? throw new RuleViolationException($"There aren't enough recipes to plan {days.Count + kept.Count} different dinners.");
 
         foreach (var day in days)
         {
@@ -178,21 +233,41 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         }
     }
 
-    /// <summary>The preferred slow cooker day first, then other cooking days if more than one is wanted.</summary>
-    private IEnumerable<DayOfWeek> SlowCookerDays(IReadOnlyList<DayOfWeek> dinnerDays) =>
-        dinnerDays.OrderBy(day => day == options.SlowCookerDay ? 0 : 1).Take(options.SlowCookerMeals);
+    /// <summary>
+    /// The style's cooking days that still need a dinner. A dinner kept on another day stands in for the nearest
+    /// cooking day, so moving a dinner and shuffling doesn't add a dinner.
+    /// </summary>
+    private static List<DayOfWeek> OpenCookingDays(Run run, IReadOnlyList<PlannedMeal> kept)
+    {
+        var open = run.Style.CookingDays.Distinct().Order().ToList();
+        foreach (var day in kept.Where(meal => meal.Date is not null).Select(meal => meal.Date!.Value.DayOfWeek))
+        {
+            if (!open.Remove(day) && open.Count > 0)
+            {
+                open.Remove(open.MinBy(cookingDay => Math.Abs(cookingDay - day)));
+            }
+        }
+
+        return open;
+    }
 
     private void AddBreakfasts(Run run)
     {
-        var weekdays = WeekLayout.Weekdays;
-        var breakfasts = PickSet(run, RecipeCourse.Breakfast, Math.Min(options.BreakfastRecipes, weekdays.Count));
+        var kept = run.Plan.Meals.Where(meal => meal.Slot == MealSlot.Breakfast).ToList();
+        var keptRecipes = KeptRecipes(kept);
+        var weekdays = WeekLayout.Weekdays
+            .Where(day => kept.All(meal => meal.Date != WeekLayout.DateFor(run.Request.WeekStart, day)))
+            .ToList();
+        var wanted = Math.Min(run.Style.Breakfasts, WeekLayout.Weekdays.Count);
+        if (weekdays.Count == 0 || wanted == 0)
+        {
+            return;
+        }
+
+        var breakfasts = keptRecipes.Take(wanted).Concat(PickSet(run, MealSlot.Breakfast, RecipeCourse.Breakfast, wanted - keptRecipes.Count, keptRecipes)).ToList();
         if (breakfasts.Count == 0)
         {
-            if (options.BreakfastRecipes > 0)
-            {
-                run.Warnings.Add("No breakfast recipes were found, so breakfasts are blank.");
-            }
-
+            run.Warnings.Add("No breakfast recipes were found, so breakfasts are blank.");
             return;
         }
 
@@ -207,13 +282,20 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         }
     }
 
-    /// <summary>Snacks and sweets: made once each, on no particular day.</summary>
+    /// <summary>Snacks, sweets and drinks: made once each, on no particular day.</summary>
     private void AddExtras(Run run, MealSlot slot, RecipeCourse course, int count)
     {
-        var picks = PickSet(run, course, count);
-        if (picks.Count < count)
+        var kept = run.Plan.Meals.Where(meal => meal.Slot == slot).ToList();
+        var wanted = count - kept.Count;
+        if (wanted <= 0)
         {
-            run.Warnings.Add($"Only {picks.Count} of {count} {slot.ToString().ToLowerInvariant()} recipes could be planned.");
+            return;
+        }
+
+        var picks = PickSet(run, slot, course, wanted, KeptRecipes(kept));
+        if (picks.Count < wanted)
+        {
+            run.Warnings.Add($"Only {picks.Count + kept.Count} of {count} {RecipeMatcher.Plural(slot)} could be planned. Add more {slot.ToString().ToLowerInvariant()} recipes.");
         }
 
         foreach (var recipe in picks)
@@ -225,6 +307,10 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
     private void AddLeftoverLunches(Run run)
     {
         PlaceLeftovers(run.Plan);
+        if (!run.Style.LeftoverLunches || !run.Plan.Meals.Any(meal => meal.Slot == MealSlot.Dinner))
+        {
+            return;
+        }
 
         var open = WeekLayout.Weekdays
             .Where(day => !run.Plan.Meals.Any(meal => meal.Slot == MealSlot.Lunch && meal.Date == WeekLayout.DateFor(run.Request.WeekStart, day)))
@@ -237,28 +323,150 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
     }
 
     /// <summary>Chooses up to <paramref name="count"/> different recipes of a course that go well with the week so far.</summary>
-    private IReadOnlyList<Recipe> PickSet(Run run, RecipeCourse course, int count)
+    private List<Recipe> PickSet(Run run, MealSlot slot, RecipeCourse course, int count, IReadOnlyList<Recipe> kept)
     {
-        var pool = run.Pool(course);
-        count = Math.Min(count, pool.Count);
+        count = Math.Min(count, run.Pool(course).Count(recipe => run.Chosen.All(chosen => chosen.Id != recipe.Id)));
         if (count <= 0)
         {
             return [];
         }
 
-        var candidates = PreferFresh(run, pool, count);
         var slots = Enumerable.Range(0, count).ToList();
-        var pools = slots.ToDictionary(slot => slot, _ => candidates);
-        var picks = WeekSelector.Choose(slots, pools, run.Chosen, run.Scorer.Score, run.Random);
+        var picks = Fill(run, slot, course, slots, kept, _ => null);
         if (picks is null)
         {
             return [];
         }
 
-        var chosen = slots.Select(slot => picks[slot]).ToList();
+        var chosen = slots.Select(index => picks[index]).ToList();
         run.Chosen.AddRange(chosen);
         return chosen;
     }
+
+    /// <summary>
+    /// Picks a recipe for every open slot of one kind of meal, following the style's rules for that kind. Each rule
+    /// narrows some slots' choices: "at least 3 slow cooker dinners" lets 3 dinner days choose only slow cooker
+    /// recipes, preferring the rule's day; "exactly" also keeps such recipes off the other days; "at most" and "no"
+    /// keep them off enough days. Meals kept from an earlier plan count towards the rules. A rule that can't be met is
+    /// relaxed, last rule first, and the plan's notes say so. Null when the slots can't be filled with different
+    /// recipes even with every rule relaxed.
+    /// </summary>
+    private Dictionary<TSlot, Recipe>? Fill<TSlot>(
+        Run run, MealSlot slot, RecipeCourse course, IReadOnlyList<TSlot> open, IReadOnlyList<Recipe> kept, Func<TSlot, DayOfWeek?> dayOf)
+        where TSlot : notnull
+    {
+        var pool = run.Pool(course).Where(recipe => run.Chosen.All(chosen => chosen.Id != recipe.Id)).ToList();
+        var rules = run.Style.Rules.Where(rule => rule.Slot == slot || rule.Slot is null).ToList();
+        var filters = open.ToDictionary(key => key, _ => new List<Filter>());
+        var total = open.Count + kept.Count;
+
+        foreach (var rule in rules)
+        {
+            var keptMatching = kept.Count(recipe => RecipeMatcher.Matches(recipe, rule));
+            var count = Math.Clamp(rule.Count, 0, total);
+            var (wantMatching, wantOther) = rule.Limit switch
+            {
+                RuleLimit.AtLeast => (count - keptMatching, 0),
+                RuleLimit.Exactly => (count - keptMatching, total - count - (kept.Count - keptMatching)),
+                RuleLimit.AtMost => (0, total - count - (kept.Count - keptMatching)),
+                _ => (0, open.Count),
+            };
+            wantMatching = Math.Clamp(wantMatching, 0, open.Count);
+            wantOther = Math.Clamp(wantOther, 0, open.Count - wantMatching);
+
+            var matching = Reserve(open, filters, pool, rule, matches: true, wantMatching, dayOf);
+            if (matching.Count < wantMatching)
+            {
+                run.Warnings.Add(matching.Count + Math.Min(keptMatching, count) == 0
+                    ? $"No {RecipeMatcher.Plural(slot)} could be {RecipeMatcher.Describe(rule)}, as there are no such recipes yet. Add some, or change the plan style."
+                    : $"Only {matching.Count + keptMatching} of {count} {RecipeMatcher.Plural(slot)} could be {RecipeMatcher.Describe(rule)}, as there aren't enough such recipes. Add some, or change the plan style.");
+            }
+
+            var rest = open.Where(key => !matching.Contains(key)).ToList();
+            var other = Reserve(rest, filters, pool, rule, matches: false, rule.Limit == RuleLimit.Exactly ? rest.Count : wantOther, dayOf);
+            if (other.Count < Math.Min(wantOther, rest.Count))
+            {
+                run.Warnings.Add($"There weren't enough recipes that aren't {RecipeMatcher.Describe(rule)}, so some {RecipeMatcher.Plural(slot)} are. Add some, or change the plan style.");
+            }
+        }
+
+        while (true)
+        {
+            var picks = WeekSelector.Choose(open, Pools(run, open, filters, pool, rules), run.Chosen, run.Scorer.Score, run.Random);
+            if (picks is not null)
+            {
+                return picks;
+            }
+
+            // Relax the last rule still narrowing a slot, then try again.
+            var relaxed = rules.LastOrDefault(rule => filters.Values.Any(list => list.Any(filter => filter.Rule == rule)));
+            if (relaxed is null)
+            {
+                return null;
+            }
+
+            foreach (var list in filters.Values)
+            {
+                list.RemoveAll(filter => filter.Rule == relaxed);
+            }
+
+            run.Warnings.Add($"The rule for {RecipeMatcher.Plural(slot)} {RecipeMatcher.Describe(relaxed)} couldn't be met with the recipes there are, so it was relaxed this week.");
+        }
+    }
+
+    /// <summary>
+    /// Narrows up to <paramref name="count"/> slots to recipes that match the rule (or don't), choosing slots that can
+    /// still be filled: the rule's day first, then the least narrowed. Never more than there are such recipes.
+    /// </summary>
+    private static List<TSlot> Reserve<TSlot>(
+        IEnumerable<TSlot> candidates, Dictionary<TSlot, List<Filter>> filters, IReadOnlyList<Recipe> pool,
+        PlanRule rule, bool matches, int count, Func<TSlot, DayOfWeek?> dayOf)
+        where TSlot : notnull
+    {
+        count = Math.Min(count, pool.Count(recipe => RecipeMatcher.Matches(recipe, rule) == matches));
+        if (count <= 0)
+        {
+            return [];
+        }
+
+        var filter = new Filter(rule, matches);
+        var chosen = candidates
+            .Where(key => pool.Any(recipe => filter.Allows(recipe) && filters[key].All(other => other.Allows(recipe))))
+            .OrderBy(key => matches && rule.Day is not null && dayOf(key) == rule.Day ? 0 : 1)
+            .ThenBy(key => filters[key].Count)
+            .Take(count)
+            .ToList();
+
+        foreach (var key in chosen)
+        {
+            filters[key].Add(filter);
+        }
+
+        return chosen;
+    }
+
+    /// <summary>The recipes each slot may choose from: the pool narrowed by its rules, recent recipes left out where possible.</summary>
+    private static Dictionary<TSlot, IReadOnlyList<Recipe>> Pools<TSlot>(
+        Run run, IReadOnlyList<TSlot> open, Dictionary<TSlot, List<Filter>> filters, IReadOnlyList<Recipe> pool, List<PlanRule> rules)
+        where TSlot : notnull
+    {
+        // Slots narrowed by the same rules share one pool, so recent recipes are only left out when enough others remain for all of them.
+        var pools = new Dictionary<TSlot, IReadOnlyList<Recipe>>();
+        foreach (var group in open.GroupBy(key => string.Join(";", filters[key].Select(filter => $"{rules.IndexOf(filter.Rule)}{(filter.Matches ? '+' : '-')}").Order())))
+        {
+            var allowed = pool.Where(recipe => filters[group.First()].All(filter => filter.Allows(recipe))).ToList();
+            var fresh = PreferFresh(run, allowed, group.Count());
+            foreach (var key in group)
+            {
+                pools[key] = fresh;
+            }
+        }
+
+        return pools;
+    }
+
+    private static List<Recipe> KeptRecipes(IEnumerable<PlannedMeal> kept) =>
+        kept.Where(meal => meal.Recipe is not null).Select(meal => meal.Recipe!).DistinctBy(recipe => recipe.Id).ToList();
 
     /// <summary>Leaves out recently planned recipes when enough others remain.</summary>
     private static IReadOnlyList<Recipe> PreferFresh(Run run, IReadOnlyList<Recipe> pool, int needed)
@@ -277,9 +485,16 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         return pool;
     }
 
+    /// <summary>One rule narrowing a slot: to recipes that match it, or to recipes that don't.</summary>
+    private sealed record Filter(PlanRule Rule, bool Matches)
+    {
+        public bool Allows(Recipe recipe) => RecipeMatcher.Matches(recipe, Rule) == Matches;
+    }
+
     /// <summary>The state of one planning pass.</summary>
     private sealed record Run(
         PlanRequest Request,
+        PlanStyle Style,
         WeekScorer Scorer,
         Random Random,
         MealPlan Plan,

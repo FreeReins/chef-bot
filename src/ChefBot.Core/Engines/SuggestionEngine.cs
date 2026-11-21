@@ -96,6 +96,7 @@ internal sealed class SuggestionEngine(IngredientCatalog catalog, PlannerOptions
         MealSlot.Breakfast => RecipeCourse.Breakfast,
         MealSlot.Snack => RecipeCourse.Snack,
         MealSlot.Sweet => RecipeCourse.Sweet,
+        MealSlot.Drink => RecipeCourse.Drink,
         _ => RecipeCourse.Main,
     };
 

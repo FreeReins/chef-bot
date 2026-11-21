@@ -5,7 +5,13 @@ import { expectAccessible } from './axe.js';
 import * as data from './data.js';
 
 const signedOut = { 'GET /api/session': { setupRequired: false, user: null, mealieConfigured: false } };
-const noPlan = { 'GET /api/plans/current': reply(404, { detail: 'There is no plan yet.' }) };
+const noPlan = { 'GET /api/plans': [] };
+/** Answers for weeks with these plans: the list of weeks, and each plan by its id. */
+const weeks = (...plans) => ({
+  'GET /api/plans': plans.map(data.summary),
+  'GET /api/plans/*': (request) => plans.find((plan) => request.url().endsWith(plan.id)) ?? plans[0],
+});
+const staged = weeks(data.plan('Staged'));
 
 /** { name, path, answers?: routes for api.set(), act?: async (page, api) => {} run before checking } */
 const VIEWS = [
@@ -16,19 +22,33 @@ const VIEWS = [
   { name: 'setup: create the account', path: '/', answers: { 'GET /api/session': { setupRequired: true, user: null, mealieConfigured: false } } },
 
   // The plan
-  { name: 'meals, confirmed plan', path: '/meals' },
-  { name: 'meals, staged plan', path: '/meals', answers: { 'GET /api/plans/current': data.plan('Staged') } },
-  { name: 'meals, nothing staged', path: '/meals', answers: noPlan },
+  { name: 'plan, confirmed week', path: '/plan' },
   {
-    name: 'meals, swap open', path: '/meals', answers: { 'GET /api/plans/current': data.plan('Staged') },
-    act: (page) => page.getByRole('button', { name: 'Swap Beef and Barley Stew' }).click()
-      .then(() => page.getByText('Recipes that use what you have').waitFor()),
+    name: 'plan, draft to review with its shopping list open', path: '/plan', answers: staged,
+    act: (page) => page.getByText(/items? to buy/).click(),
   },
-  { name: 'schedule, confirmed plan', path: '/schedule' },
-  { name: 'schedule, staged plan', path: '/schedule', answers: { 'GET /api/plans/current': data.plan('Staged') } },
+  {
+    name: 'plan, draft with a meal kept and a swap open', path: '/plan', answers: staged,
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Keep Beef and Barley Stew' }).click();
+      await page.getByRole('button', { name: 'Swap Chickpea Curry' }).click();
+      await page.getByText('Recipes that use what you have').waitFor();
+    },
+  },
+  { name: 'plan, nothing planned', path: '/plan', answers: noPlan },
+  { name: 'plan, nothing planned and no recipes', path: '/plan', answers: { ...noPlan, 'GET /api/recipes': [] } },
+  { name: 'plan, nothing planned and no styles saved', path: '/plan',
+    answers: { ...noPlan, 'GET /api/plan-styles': { ...data.planStyles(), styles: [] } } },
+  { name: 'plan, this week confirmed and next week a draft', path: '/plan', answers: weeks(data.plan(), data.nextPlan()) },
+  {
+    name: 'plan, looking at next week\'s draft', path: '/plan', answers: weeks(data.plan(), data.nextPlan()),
+    act: (page) => page.getByRole('button', { name: /, draft$/ }).click()
+      .then(() => page.getByRole('heading', { name: /draft for/ }).waitFor()),
+  },
   { name: 'shopping', path: '/shopping' },
   { name: 'shopping, staged plan with hand-added items', path: '/shopping',
-    answers: { 'GET /api/plans/current': data.plan('Staged'), 'GET /api/shopping/items': data.manualItems() } },
+    answers: { ...staged, 'GET /api/shopping/items': data.manualItems() } },
+  { name: 'shopping, with two weeks planned', path: '/shopping', answers: weeks(data.plan(), data.nextPlan()) },
   { name: 'shopping without a plan', path: '/shopping', answers: { ...noPlan, 'GET /api/shopping/items': data.manualItems() } },
   { name: 'shopping without a plan, empty list', path: '/shopping', answers: { ...noPlan, 'GET /api/pantry': [] } },
   { name: 'pantry with a plan', path: '/pantry' },
@@ -52,6 +72,17 @@ const VIEWS = [
   },
   { name: 'settings: login', path: '/settings/login' },
   { name: 'settings: https', path: '/settings/https' },
+  { name: 'settings: plan styles', path: '/settings/styles' },
+  {
+    name: 'settings: a plan style open for editing, with every kind of rule', path: '/settings/styles',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Edit Classic week' }).click();
+      for (const match of ['Tag', 'Ingredient', 'ReadyWithin']) {
+        await page.getByRole('button', { name: 'Add a rule' }).click();
+        await page.getByRole('combobox', { name: 'what it looks for' }).last().selectOption(match);
+      }
+    },
+  },
   { name: 'settings: stores', path: '/settings/stores' },
   {
     name: 'settings: a store open for editing', path: '/settings/stores',
@@ -70,27 +101,28 @@ const VIEWS = [
   },
 
   // Someone who isn't an admin sees fewer tabs and sections.
-  { name: 'meals for a member', path: '/meals', answers: { 'GET /api/session': data.session(data.member()) } },
+  { name: 'plan for a member', path: '/plan', answers: { 'GET /api/session': data.session(data.member()) } },
+  { name: 'plan for a member, no recipes', path: '/plan', answers: { ...noPlan, 'GET /api/recipes': [], 'GET /api/session': data.session(data.member()) } },
   { name: 'settings for a member', path: '/settings/https', answers: { 'GET /api/session': data.session(data.member()) } },
 
   // Things laid over the page
   {
-    name: 'the confirm dialog', path: '/meals',
+    name: 'the confirm dialog', path: '/plan',
     act: (page) => page.getByRole('button', { name: 'Clear plan' }).click()
       .then(() => page.getByRole('dialog').waitFor()),
   },
   {
-    name: 'a note and an error message', path: '/meals',
+    name: 'a note and an error message', path: '/plan',
     answers: {
-      'GET /api/plans/current': data.plan('Staged'),
+      ...staged,
       'POST /api/plans/*/confirm': { ...data.plan(), notes: ['Coconut milk was left off the list: it is already in the pantry.'] },
       'POST /api/plans/stage': reply(500, { detail: 'Next week could not be staged. Try again in a minute.' }),
     },
     act: async (page) => {
-      // A note from confirming the plan, then an error from staging the next week.
+      // A note from confirming the plan, then an error from planning the week after.
       await page.getByRole('button', { name: 'Confirm plan' }).click();
       await page.getByText('Coconut milk was left off').waitFor();
-      await page.getByRole('button', { name: 'Stage next week' }).click();
+      await page.getByRole('button', { name: /^Plan Nov 29/ }).click();
       await page.getByText('Next week could not be staged').waitFor();
     },
   },
@@ -110,6 +142,7 @@ test('setup wizard, every step', async ({ page, api }) => {
     'GET /api/session': { setupRequired: true, user: null, mealieConfigured: false },
     'POST /api/setup/account': data.admin(),
     'GET /api/recipes': [],
+    'GET /api/plan-styles': { ...data.planStyles(), styles: [] },
   });
   await open(page, '/');
   await page.getByLabel('Your name').fill('Alex Rivera');
@@ -129,6 +162,16 @@ test('setup wizard, every step', async ({ page, api }) => {
   await expectAccessible(page);
 
   await page.getByRole('button', { name: 'Skip for now' }).click();
+  await page.getByRole('heading', { name: 'How do you like to plan a week?' }).waitFor();
+  await expectAccessible(page);
+  await page.getByRole('radio', { name: 'Slow cooker week' }).check();
+  await page.getByText('Change these styles, or make your own').click();
+  await page.getByRole('button', { name: 'Edit Slow cooker week' }).click();
+  await expectAccessible(page);
+
+  await page.getByRole('button', { name: 'Next: stores' }).click();
   await page.getByRole('heading', { name: /Where do you shop/ }).waitFor();
   await expectAccessible(page);
+  const saved = api.requests.filter((request) => request === 'PUT /api/plan-styles');
+  if (saved.length !== 1) throw new Error(`Expected the plan styles to be saved once, not ${saved.length} times.`);
 });

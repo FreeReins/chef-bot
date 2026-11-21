@@ -1,0 +1,79 @@
+<!-- Setup step: choose how weeks are planned. Every starter style is offered and kept, so another can be picked for
+     any week; the one chosen here is the default. They can be changed, removed or added to here or later under
+     Settings, Plan styles. -->
+<script>
+  import { app, run, saveStyles, moveSetup } from '../lib/app.svelte.js';
+  import { ruleText, styleSummary } from '../lib/styles.js';
+  import SetupNav from '../components/SetupNav.svelte';
+  import SetupProgress from '../components/SetupProgress.svelte';
+  import PlanStyleEditor from '../components/PlanStyleEditor.svelte';
+
+  // Kept in app state rather than here, so going back a step and returning keeps the choices made so far.
+  const styles = $derived(app.styleDraft ?? []);
+  const chosen = $derived(styles.find((style) => style.isDefault) ?? styles[0]);
+
+  function choose(style) {
+    for (const other of app.styleDraft) other.isDefault = other === style;
+  }
+
+  function next() {
+    run(async () => {
+      if (styles.length || app.styles?.styles.length) await saveStyles($state.snapshot(styles));
+      app.styleDraft = null;
+      await moveSetup(1);
+    });
+  }
+</script>
+
+<section class="gate wide">
+  <SetupProgress />
+  <h2>How do you like to plan a week?</h2>
+  <p class="muted">
+    A plan style sets the days you cook dinner, what else to plan, and rules for the recipes, such as a slow cooker
+    meal or no meat. Choose the one for most weeks. You can pick another for any week, and change them later under
+    Settings, Plan styles.
+  </p>
+
+  {#if styles.length}
+    <fieldset class="choices">
+      <legend class="sr-only">Your usual plan style</legend>
+      {#each styles as style, index (index)}
+        <label class="choice" class:chosen={style === chosen}>
+          <input type="radio" name="usual-style" checked={style === chosen} onchange={() => choose(style)}
+                 aria-labelledby="style-name-{index}" aria-describedby="style-about-{index}">
+          <span class="text">
+            <strong id="style-name-{index}">{style.name}</strong>
+            <span id="style-about-{index}">
+              {#if style.description}<span class="about">{style.description}</span>{/if}
+              <span class="muted">{[styleSummary(style), ...style.rules.map(ruleText)].join(' · ')}</span>
+            </span>
+          </span>
+        </label>
+      {/each}
+    </fieldset>
+  {/if}
+
+  <details class="customise card" open={styles.length === 0}>
+    <summary>Change these styles, or make your own</summary>
+    <PlanStyleEditor bind:styles={app.styleDraft} />
+  </details>
+
+  <SetupNav label={styles.length ? 'Next: stores' : 'Skip for now'} primary={styles.length > 0} onnext={next}>
+    {#if chosen}Weeks are planned as {chosen.name} unless you choose another.
+    {:else}No styles: weeks are planned as the Classic week.{/if}
+  </SetupNav>
+</section>
+
+<style>
+  .choices { border: 0; margin: 0 0 .75rem; padding: 0; display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(min(19rem, 100%), 1fr)); }
+  .choice { display: flex; gap: .65rem; align-items: flex-start; padding: .75rem .9rem; border: 1px solid var(--line); border-radius: .5rem;
+    background: var(--panel); color: var(--ink); font-size: .95rem; cursor: pointer; }
+  .choice:hover { border-color: var(--accent); }
+  .choice.chosen { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .choice input { margin-top: .3rem; }
+  .text { display: grid; gap: .15rem; }
+  .text .about, .text .muted { display: block; }
+  .text .muted { font-size: .8rem; margin-top: .15rem; }
+  .customise summary { cursor: pointer; font-weight: 600; }
+  .customise[open] summary { margin-bottom: .5rem; }
+</style>

@@ -1,4 +1,4 @@
-<!-- Setup step four, optional: choose the stores the shopping list is split between. Skipping it groups the
+<!-- The last setup step, optional: choose the stores the shopping list is split between. Skipping it groups the
      shopping list by food group; stores can be added later under Settings, Stores. -->
 <script>
   import { app, run, enterApp, saveStores, toast } from '../lib/app.svelte.js';
@@ -18,15 +18,15 @@
       const total = app.recipes.length;
       const stillImporting = app.mealieImport?.state === 'Running';
       await enterApp();
-      await go(total || stillImporting ? '/recipes' : '/meals');
+      await go(total && !stillImporting ? '/plan' : '/recipes');
       const shopping = chosen.length
         ? 'Shopping lists are split between your stores.'
         : 'Shopping lists are grouped by food group. Add stores under Settings, Stores at any time.';
       toast(stillImporting
         ? `Setup is done. Your Mealie recipes are still importing and will appear on the Recipes tab when it finishes. ${shopping}`
         : total
-          ? `Setup is done and you have ${total} recipes. ${shopping} Stage a week when you are ready.`
-          : `Setup is done. ${shopping} Add recipes on the Recipes tab, then stage a week.`);
+          ? `Setup is done and you have ${total} recipes. ${shopping} Plan your first week here when you are ready.`
+          : `Setup is done. ${shopping} Add recipes here, then plan a week on the Plan tab.`);
     });
   }
 </script>

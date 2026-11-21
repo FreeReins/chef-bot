@@ -196,7 +196,7 @@ public class ReminderAndBackupTests
         var folder = Directory.CreateTempSubdirectory("chefbot-backup-test").FullName;
         try
         {
-            // An older backup: it has no groceryStores list.
+            // An older backup: it has no groceryStores or planStyles list.
             const string name = "chefbot-backup-test.json.gz";
             const string json = """
                 {
@@ -216,7 +216,7 @@ public class ReminderAndBackupTests
 
             var counts = await new BackupAccess(null!, folder).CountAsync(name, CancellationToken.None);
 
-            await Assert.That(counts).IsEqualTo(new BackupCounts(2, 1, 1, 3, 2, 0, 0, 1, 0));
+            await Assert.That(counts).IsEqualTo(new BackupCounts(2, 1, 1, 3, 2, 0, 0, 1, 0, 0));
         }
         finally
         {

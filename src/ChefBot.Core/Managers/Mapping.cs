@@ -27,7 +27,7 @@ internal static class Mapping
                 item.Id, item.DisplayName, item.Quantity, item.Unit, item.Store, item.IsOptional, item.IsPurchased, item.PurchasedOn))
             .ToList();
 
-        return new PlanResponse(plan.Id, plan.WeekStart, WeekLayout.WeekEnd(plan.WeekStart), plan.Status, meals, shopping, notes.ToList());
+        return new PlanResponse(plan.Id, plan.WeekStart, WeekLayout.WeekEnd(plan.WeekStart), plan.Status, meals, shopping, plan.StyleName, notes.ToList());
     }
 
     public static MealResponse ToResponse(this PlannedMeal meal) => new(
@@ -184,11 +184,67 @@ internal static class Mapping
             };
         }).ToList();
 
+    public static PlanSummaryResponse ToSummary(this MealPlan plan) =>
+        new(plan.Id, plan.WeekStart, WeekLayout.WeekEnd(plan.WeekStart), plan.Status, plan.StyleName);
+
+    /// <param name="style">The style.</param>
+    /// <param name="saved">False for a starter style, which has no id until it is added.</param>
+    public static PlanStyleDetails ToResponse(this PlanStyle style, bool saved = true) => new(
+        saved ? style.Id : null,
+        style.Name,
+        style.Description,
+        style.IsDefault,
+        [.. style.CookingDays],
+        style.LeftoverLunches,
+        style.Breakfasts,
+        style.Snacks,
+        style.Sweets,
+        style.Drinks,
+        style.Rules.Select(rule => new PlanRuleDetails(rule.Limit, rule.Count, rule.Slot, rule.Match, [.. rule.Values], rule.Minutes, rule.Day)).ToList());
+
+    /// <summary>
+    /// The styles to save for a checked request, in its order. A style keeps its id when one with the same id, or else
+    /// the same name, is already saved. Rule values are tidied, and only the fields a rule's kind uses are kept.
+    /// </summary>
+    public static List<PlanStyle> ToStyles(this IReadOnlyList<PlanStyleDetails> details, IReadOnlyList<PlanStyle> current) =>
+        details.Select((style, index) =>
+        {
+            var name = style.Name.Trim();
+            var match = current.FirstOrDefault(saved => saved.Id == style.Id)
+                ?? current.FirstOrDefault(saved => string.Equals(saved.Name, name, StringComparison.OrdinalIgnoreCase));
+            return new PlanStyle
+            {
+                Id = match?.Id ?? Guid.CreateVersion7(),
+                Name = name,
+                Description = style.Description?.Trim() ?? string.Empty,
+                IsDefault = style.IsDefault,
+                Position = index,
+                CookingDays = (style.CookingDays ?? []).Distinct().Order().ToList(),
+                LeftoverLunches = style.LeftoverLunches,
+                Breakfasts = style.Breakfasts,
+                Snacks = style.Snacks,
+                Sweets = style.Sweets,
+                Drinks = style.Drinks,
+                Rules = (style.Rules ?? []).Select(rule => new PlanRule
+                {
+                    Limit = rule.Limit,
+                    Count = rule.Limit == RuleLimit.None ? 0 : rule.Count,
+                    Slot = rule.Slot,
+                    Match = rule.Match,
+                    Values = rule.Match is RecipeMatchKind.Tag or RecipeMatchKind.Ingredient
+                        ? (rule.Values ?? []).Select(value => value.Trim()).Where(value => value.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                        : [],
+                    Minutes = rule.Match == RecipeMatchKind.ReadyWithin ? rule.Minutes : null,
+                    Day = rule.Day,
+                }).ToList(),
+            };
+        }).ToList();
+
     public static BackupFile ToResponse(this StoredBackup file) => new(file.Name, file.CreatedAt, file.SizeBytes);
 
     public static BackupSummary ToResponse(this BackupCounts counts) => new(
         counts.Recipes, counts.RecipePhotos, counts.MealPlans, counts.PlannedMeals,
-        counts.ShoppingItems, counts.PantryItems, counts.ManualShoppingItems, counts.Users, counts.GroceryStores);
+        counts.ShoppingItems, counts.PantryItems, counts.ManualShoppingItems, counts.Users, counts.GroceryStores, counts.PlanStyles);
 
     public static DeliveryResult ToResponse(this Delivery delivery) => new(delivery.Delivered, delivery.Problem);
 

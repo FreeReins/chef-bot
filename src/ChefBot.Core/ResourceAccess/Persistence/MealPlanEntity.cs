@@ -12,6 +12,10 @@ internal sealed class MealPlanEntity
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    public string StyleName { get; set; } = string.Empty;
+
+    public bool LeftoverLunches { get; set; } = true;
+
     public List<PlannedMealEntity> Meals { get; set; } = [];
 
     public List<ShoppingItemEntity> ShoppingItems { get; set; } = [];

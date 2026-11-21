@@ -14,6 +14,12 @@ internal sealed class MealPlan
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>The plan style it was made with, as it was named then.</summary>
+    public string StyleName { get; set; } = string.Empty;
+
+    /// <summary>True when weekday lunches are planned from the leftovers of recent dinners. Copied from the style when the plan was made.</summary>
+    public bool LeftoverLunches { get; set; } = true;
+
     public List<PlannedMeal> Meals { get; set; } = [];
 
     public List<ShoppingItem> ShoppingItems { get; set; } = [];

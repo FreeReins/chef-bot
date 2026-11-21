@@ -18,7 +18,7 @@ internal sealed class FakePlans(FakeRecipes recipes) : IPlanAccess
             ?? Rows.Where(p => p.WeekStart > today).MinBy(p => p.WeekStart)));
 
     public Task<List<MealPlan>> ListOpenAsync(DateOnly today, CancellationToken cancellationToken) =>
-        Task.FromResult(Rows.Where(p => p.WeekStart >= today.AddDays(-6)).Select(p => Load(p)!).ToList());
+        Task.FromResult(Rows.Where(p => p.WeekStart >= today.AddDays(-6)).OrderBy(p => p.WeekStart).Select(p => Load(p)!).ToList());
 
     public Task<HashSet<Guid>> RecipeIdsPlannedAsync(DateOnly from, DateOnly before, CancellationToken cancellationToken) =>
         Task.FromResult(Rows.Where(p => p.WeekStart >= from && p.WeekStart < before)

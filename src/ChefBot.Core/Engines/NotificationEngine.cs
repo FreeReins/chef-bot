@@ -38,6 +38,8 @@ internal sealed class NotificationEngine
             ["dinners"] = dinners,
             ["snacks"] = Titles(plan, MealSlot.Snack),
             ["sweets"] = Titles(plan, MealSlot.Sweet),
+            ["drinks"] = Titles(plan, MealSlot.Drink),
+            ["style"] = plan.StyleName,
             ["toBuy"] = plan.ShoppingItems.Count(item => !item.IsPurchased),
         });
     }
@@ -107,6 +109,7 @@ internal sealed class NotificationEngine
         AppendList(text, "Breakfast", plan, MealSlot.Breakfast);
         AppendList(text, "Snacks", plan, MealSlot.Snack);
         AppendList(text, "Sweets", plan, MealSlot.Sweet);
+        AppendList(text, "Drinks", plan, MealSlot.Drink);
 
         var toBuy = plan.ShoppingItems.Count(item => !item.IsPurchased);
         text.Append($"To buy: {toBuy} items. Review, swap and confirm the plan in ChefBot.");

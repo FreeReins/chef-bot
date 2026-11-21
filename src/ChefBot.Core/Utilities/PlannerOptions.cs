@@ -3,23 +3,12 @@ using ChefBot.Core.Managers.Contracts.Messages;
 
 namespace ChefBot.Core.Utilities;
 
-/// <summary>How the week is laid out and how choices are scored. Bound from the "Planner" settings section.</summary>
+/// <summary>
+/// Portions, freshness and how choices are scored. Bound from the "Planner" settings section. What a week holds (its
+/// dinner days, breakfasts, snacks and rules) comes from the household's plan styles instead.
+/// </summary>
 internal sealed class PlannerOptions
 {
-    /// <summary>Dinners cooked per week: 3, 4 or 5. The days are chosen so weekday lunches can be leftovers.</summary>
-    public int Dinners { get; set; } = 4;
-
-    public int SlowCookerMeals { get; set; } = 1;
-
-    public DayOfWeek SlowCookerDay { get; set; } = DayOfWeek.Tuesday;
-
-    /// <summary>How many different breakfasts to spread across the weekdays.</summary>
-    public int BreakfastRecipes { get; set; } = 2;
-
-    public int Snacks { get; set; } = 3;
-
-    public int Sweets { get; set; } = 1;
-
     /// <summary>People eating dinner.</summary>
     public int DinnerPortions { get; set; } = 2;
 
@@ -56,25 +45,20 @@ internal sealed class PlannerOptions
         MealSlot.Breakfast => BreakfastPortions,
         MealSlot.Lunch => LunchPortions,
         MealSlot.Dinner => DinnerPortions,
-        _ => 0, // Snacks and sweets are made once, as the recipe is written.
+        _ => 0, // Snacks, sweets and drinks are made once, as the recipe is written.
     };
 
     /// <summary>Fails fast on settings the planner can't work with.</summary>
     public void Validate()
     {
-        if (Dinners is < 3 or > 5)
-        {
-            throw new RuleViolationException("Planner:Dinners must be 3, 4 or 5.");
-        }
-
         if (DinnerPortions < 1 || LunchPortions < 0 || BreakfastPortions < 1 || DefaultServings <= 0)
         {
             throw new RuleViolationException("Planner portions and DefaultServings must be positive.");
         }
 
-        if (new[] { SlowCookerMeals, BreakfastRecipes, Snacks, Sweets, MaxLeftoverDays, AvoidRepeatDays, ExpiringSoonDays }.Any(value => value < 0))
+        if (new[] { MaxLeftoverDays, AvoidRepeatDays, ExpiringSoonDays }.Any(value => value < 0))
         {
-            throw new RuleViolationException("Planner counts and day ranges can't be negative.");
+            throw new RuleViolationException("Planner day ranges can't be negative.");
         }
     }
 }

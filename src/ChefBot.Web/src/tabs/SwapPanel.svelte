@@ -1,4 +1,5 @@
-<!-- Alternatives for one meal: recipes ranked by how much of the pantry they use, then made-up plates. -->
+<!-- Alternatives for one meal: recipes ranked by how much of the pantry they use, then made-up plates. Shown in
+     SwapDialog.svelte. -->
 <script>
   import { replaceMeal } from '../lib/app.svelte.js';
   import { shortDate } from '../lib/format.js';
@@ -27,7 +28,7 @@
   {/each}
 
   {#if options.creative.length}
-    <h3 style="margin-top:.75rem">Creative ideas: grain, protein and produce</h3>
+    <h3 class="spaced">Creative ideas: grain, protein and produce</h3>
   {/if}
   {#each options.creative as idea, index (index)}
     <div class="option row">
@@ -51,6 +52,6 @@
 </div>
 
 <style>
-  .swap { margin-top: .75rem; padding-top: .75rem; border-top: 1px dashed var(--line); }
   .option { padding: .5rem 0; border-top: 1px solid var(--line); }
+  .spaced { margin-top: .75rem; }
 </style>

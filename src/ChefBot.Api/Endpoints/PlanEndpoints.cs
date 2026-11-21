@@ -31,6 +31,11 @@ public static class PlanEndpoints
     public static Task<PlanResponse> Current([FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
         plans.GetCurrentAsync(cancellationToken);
 
+    /// <summary>Every plan whose week hasn't ended, earliest first, without their meals: this week's and any staged for later.</summary>
+    [WolverineGet("/api/plans")]
+    public static Task<IReadOnlyList<PlanSummaryResponse>> List([FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.ListOpenAsync(cancellationToken);
+
     [WolverineGet("/api/plans/{planId}")]
     public static Task<PlanResponse> Get(Guid planId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
         plans.GetAsync(planId, cancellationToken);
@@ -70,6 +75,15 @@ public static class PlanEndpoints
     public static Task<PlanResponse> ReplaceMeal(
         ReplaceMealRequest request, Guid planId, Guid mealId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
         plans.ReplaceMealAsync(planId, mealId, request, cancellationToken);
+
+    /// <summary>
+    /// Moves a dinner or breakfast to another day of its week. A meal of the same kind already on that day swaps
+    /// places with it. Leftover lunches and the shopping list follow.
+    /// </summary>
+    [WolverinePost("/api/plans/{planId}/meals/{mealId}/move")]
+    public static Task<PlanResponse> MoveMeal(
+        MoveMealRequest request, Guid planId, Guid mealId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.MoveMealAsync(planId, mealId, request, cancellationToken);
 
     /// <summary>Marks a meal as Planned, Cooked or Skipped. Cooking uses up pantry stock.</summary>
     [WolverinePost("/api/plans/{planId}/meals/{mealId}/status")]

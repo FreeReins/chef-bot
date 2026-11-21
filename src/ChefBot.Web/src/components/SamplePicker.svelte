@@ -10,7 +10,7 @@
   /** onadded(count) runs after the chosen samples are saved and `app.recipes` has been reloaded. */
   let { onadded } = $props();
 
-  const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet'];
+  const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink'];
 
   const groups = $derived(COURSES
     .map((course) => ({ course, title: SLOT_TITLES[course] ?? 'Dinners', samples: app.samples.filter((sample) => sample.course === course) }))

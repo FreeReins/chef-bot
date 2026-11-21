@@ -43,6 +43,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
             Mealie = await db.Set<MealieSettingsEntity>().AsNoTracking().ToListAsync(cancellationToken),
             Schedule = await db.Set<ScheduleStateEntity>().AsNoTracking().ToListAsync(cancellationToken),
             GroceryStores = await db.GroceryStores.AsNoTracking().ToListAsync(cancellationToken),
+            PlanStyles = await db.PlanStyles.AsNoTracking().ToListAsync(cancellationToken),
         };
 
         // A planned meal points at its recipe by id; the recipe itself is written once, under Recipes.
@@ -90,7 +91,8 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
             outline.PantryItems.Count,
             outline.ManualShoppingItems.Count,
             outline.Users.Count,
-            outline.GroceryStores.Count);
+            outline.GroceryStores.Count,
+            outline.PlanStyles.Count);
     }
 
     public async Task RestoreAsync(string name, CancellationToken cancellationToken)
@@ -125,6 +127,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         await db.Set<MealieSettingsEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.Set<ScheduleStateEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.GroceryStores.ExecuteDeleteAsync(cancellationToken);
+        await db.PlanStyles.ExecuteDeleteAsync(cancellationToken);
 
         db.ChangeTracker.Clear();
         db.AddRange(contents.Recipes);
@@ -139,6 +142,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         db.AddRange(contents.Mealie);
         db.AddRange(contents.Schedule);
         db.AddRange(contents.GroceryStores);
+        db.AddRange(contents.PlanStyles);
 
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -181,6 +185,9 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
 
         /// <summary>Empty in backups made before stores could be chosen in the web page.</summary>
         public List<GroceryStoreEntity> GroceryStores { get; set; } = [];
+
+        /// <summary>Empty in backups made before households could keep their own plan styles.</summary>
+        public List<PlanStyleEntity> PlanStyles { get; set; } = [];
     }
 
     /// <summary>
@@ -202,6 +209,8 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         public List<Counted> Users { get; init => field = value ?? []; } = [];
 
         public List<Counted> GroceryStores { get; init => field = value ?? []; } = [];
+
+        public List<Counted> PlanStyles { get; init => field = value ?? []; } = [];
     }
 
     /// <summary>A meal plan in a backup, counted by its meals and shopping items.</summary>

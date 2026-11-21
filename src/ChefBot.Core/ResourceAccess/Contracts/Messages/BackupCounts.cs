@@ -10,4 +10,5 @@ internal sealed record BackupCounts(
     int PantryItems,
     int ManualShoppingItems,
     int Users,
-    int GroceryStores);
+    int GroceryStores,
+    int PlanStyles);

@@ -1,10 +1,12 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChefBot.Core.ResourceAccess.Persistence;
 
 /// <summary>Copies between the stored entities and the data contracts, in both directions.</summary>
-internal static class EntityMapping
+internal static partial class EntityMapping
 {
     // ---------- entity to contract ----------
 
@@ -65,6 +67,8 @@ internal static class EntityMapping
             WeekStart = entity.WeekStart,
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,
+            StyleName = entity.StyleName,
+            LeftoverLunches = entity.LeftoverLunches,
             Meals = entity.Meals.Select(meal => new PlannedMeal
             {
                 Id = meal.Id,
@@ -122,6 +126,22 @@ internal static class EntityMapping
         Quantity = entity.Quantity,
         Unit = entity.Unit,
         AddedOn = entity.AddedOn,
+    };
+
+    public static PlanStyle ToContract(this PlanStyleEntity entity) => new()
+    {
+        Id = entity.Id,
+        Name = entity.Name,
+        Description = entity.Description,
+        IsDefault = entity.IsDefault,
+        Position = entity.Position,
+        CookingDays = [.. entity.CookingDays],
+        LeftoverLunches = entity.LeftoverLunches,
+        Breakfasts = entity.Breakfasts,
+        Snacks = entity.Snacks,
+        Sweets = entity.Sweets,
+        Drinks = entity.Drinks,
+        Rules = JsonSerializer.Deserialize(entity.Rules, RuleJson.Default.ListPlanRule) ?? [],
     };
 
     public static GroceryStore ToContract(this GroceryStoreEntity entity) => new()
@@ -211,6 +231,8 @@ internal static class EntityMapping
         WeekStart = plan.WeekStart,
         Status = plan.Status,
         CreatedAt = plan.CreatedAt,
+        StyleName = plan.StyleName,
+        LeftoverLunches = plan.LeftoverLunches,
         Meals = plan.Meals.Select(meal => new PlannedMealEntity
         {
             Id = meal.Id,
@@ -282,6 +304,22 @@ internal static class EntityMapping
         Months = [.. store.Months],
     };
 
+    public static PlanStyleEntity ToEntity(this PlanStyle style) => new()
+    {
+        Id = style.Id,
+        Name = style.Name,
+        Description = style.Description,
+        IsDefault = style.IsDefault,
+        Position = style.Position,
+        CookingDays = [.. style.CookingDays],
+        LeftoverLunches = style.LeftoverLunches,
+        Breakfasts = style.Breakfasts,
+        Snacks = style.Snacks,
+        Sweets = style.Sweets,
+        Drinks = style.Drinks,
+        Rules = JsonSerializer.Serialize(style.Rules, RuleJson.Default.ListPlanRule),
+    };
+
     public static UserEntity ToEntity(this UserAccount user) => new()
     {
         Id = user.Id,
@@ -346,4 +384,9 @@ internal static class EntityMapping
             }
         }
     }
+
+    /// <summary>The JSON shape of a plan style's rules, as stored in its row, made at build time.</summary>
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+    [JsonSerializable(typeof(List<PlanRule>))]
+    private sealed partial class RuleJson : JsonSerializerContext;
 }

@@ -17,6 +17,7 @@
     ['recipes', 'Recipes'], ['recipePhotos', 'Recipe photos'], ['mealPlans', 'Meal plans'],
     ['plannedMeals', 'Planned meals'], ['shoppingItems', 'Shopping list items'], ['pantryItems', 'Pantry items'],
     ['manualShoppingItems', 'Shopping items added by hand'], ['users', 'Accounts'], ['groceryStores', 'Grocery stores'],
+    ['planStyles', 'Plan styles'],
   ];
 
   function toggle(file) {

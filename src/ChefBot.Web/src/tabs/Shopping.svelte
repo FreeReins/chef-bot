@@ -5,7 +5,7 @@
 <script>
   import { untrack } from 'svelte';
   import { app, isConfirmed, run, loadPantry, addToShoppingList, buyEverything } from '../lib/app.svelte.js';
-  import { FOOD_GROUPS, amount, shortDate } from '../lib/format.js';
+  import { FOOD_GROUPS, amount, shortDate, weekName } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
   import IngredientLine from './IngredientLine.svelte';
 
@@ -84,6 +84,18 @@
     <button type="submit">Add</button>
   </form>
 
+  {#if app.plan && !isConfirmed()}
+    <p class="card notice">
+      This is a preview of the list for the draft plan for {shortDate(app.plan.weekStart)} to {shortDate(app.plan.weekEnd)}.
+      <a href="/plan">Confirm the plan</a> to start ticking its items off. Items you added yourself can be ticked off now.
+    </p>
+  {:else if app.plan && app.plans.length > 1}
+    <p class="muted">
+      The list for {weekName(app.plan.weekStart, app.plan.weekEnd)}: {shortDate(app.plan.weekStart)} to {shortDate(app.plan.weekEnd)}.
+      Choose another week on the <a href="/plan">Plan tab</a>.
+    </p>
+  {/if}
+
   <div class="row">
     <h2>To buy ({toBuy.length})</h2>
     {#if canBuyAll}
@@ -98,8 +110,6 @@
         ? 'Nothing left to buy for this plan. Add anything else you need above.'
         : 'Your shopping list is empty. Add an item above, or add pantry items that are running out.'}
     </p>
-  {:else if planToBuy.length && !isConfirmed()}
-    <p class="muted">Confirm the plan to start ticking off its items. Items you added yourself can be ticked off now.</p>
   {/if}
   {#each sections as section (section.key)}
     <div class="card">
@@ -140,3 +150,7 @@
     {@render group('Staples assumed on hand', byStatus('Staple'))}
   {/if}
 </section>
+
+<style>
+  .notice { border-left: 4px solid var(--warn); font-size: .95rem; }
+</style>

@@ -8,12 +8,24 @@ const REPLY = Symbol('reply');
 /** An answer other than 200 with JSON, for example `reply(500, { detail: 'The server is down.' })`. */
 export const reply = (status, body = null, contentType = 'application/json') => ({ [REPLY]: true, status, body, contentType });
 
-/** What every test starts with: an admin signed in, a confirmed plan, and everything the Settings tab loads. */
+/** What every test starts with: an admin signed in, a confirmed plan for one week, and everything the Settings tab loads. */
 function defaults() {
   return {
     'GET /api/session': data.session(),
     'GET /api/recipes': data.recipes(),
-    'GET /api/plans/current': data.plan(),
+    'GET /api/plans': [data.summary(data.plan())],
+    'GET /api/plans/*': data.plan(),
+    'GET /api/plan-styles': data.planStyles(),
+    'PUT /api/plan-styles': data.planStyles(),
+    'POST /api/plans/*/meals/*/move': (request) => {
+      const mealId = new URL(request.url()).pathname.split('/')[5];
+      const plan = data.plan('Staged');
+      const { date } = request.postDataJSON();
+      Object.assign(plan.meals.find((meal) => meal.id === mealId), {
+        date, day: new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }),
+      });
+      return plan;
+    },
     'GET /api/plans/*/ingredients': data.ingredients(),
     'GET /api/plans/*/meals/*/alternatives': (request) => {
       const mealId = new URL(request.url()).pathname.split('/')[5];
@@ -100,5 +112,5 @@ export { expect };
 /** Opens an address and waits until the page has left its loading screen. */
 export async function open(page, path) {
   await page.goto(path);
-  await expect(page.locator('#view')).not.toHaveText('Loading…');
+  await expect(page.getByRole('status', { name: 'Loading' })).toHaveCount(0);
 }

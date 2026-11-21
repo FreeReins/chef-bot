@@ -68,7 +68,7 @@ Do not run `./dev.sh`, `./dev.sh test` or `./dev-fresh.sh`: they watch for chang
 - In Core, start from the manager interface in `src/ChefBot.Core/Managers/Contracts/Services/`: it lists every
   operation of its area. Open the manager, then only the engines and accessors it uses.
 - The web page is one component per screen: `src/ChefBot.Web/src/tabs/<Tab>.svelte` (Recipes.svelte,
-  Meals.svelte, ...), `screens/` for setup and sign-in, `settings/<Section>Panel.svelte`. Open only the one
+  Plan.svelte, ...), `screens/` for setup and sign-in, `settings/<Section>Panel.svelte`. Open only the one
   you need.
 - `node_modules/` is installed packages.
 - `config/ingredients.json` is a large catalog. Search it; don't read it whole.

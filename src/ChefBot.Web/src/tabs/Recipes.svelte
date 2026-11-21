@@ -7,7 +7,7 @@
   import RecipeForm from './RecipeForm.svelte';
   import FileImport from '../components/FileImport.svelte';
 
-  const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Other'];
+  const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
 
   const groups = $derived(COURSES
     .map((course) => ({ course, recipes: app.recipes.filter((recipe) => recipe.course === course) }))

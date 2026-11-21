@@ -115,6 +115,32 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
         }
     }
 
+    public async Task<List<PlanStyle>> ListPlanStylesAsync(CancellationToken cancellationToken) =>
+        (await db.PlanStyles.ToListAsync(cancellationToken))
+            .OrderBy(style => style.Position)
+            .Select(style => style.ToContract())
+            .ToList();
+
+    public async Task SavePlanStylesAsync(IReadOnlyList<PlanStyle> styles, CancellationToken cancellationToken)
+    {
+        var tracked = await db.PlanStyles.ToDictionaryAsync(style => style.Id, cancellationToken);
+        var wanted = styles.Select(style => style.ToEntity()).ToList();
+        var wantedIds = wanted.Select(style => style.Id).ToHashSet();
+
+        db.PlanStyles.RemoveRange(tracked.Values.Where(style => !wantedIds.Contains(style.Id)));
+        foreach (var fresh in wanted)
+        {
+            if (tracked.TryGetValue(fresh.Id, out var row))
+            {
+                db.CopyInto(row, fresh);
+            }
+            else
+            {
+                db.PlanStyles.Add(fresh);
+            }
+        }
+    }
+
     /// <summary>The single row of a settings table, if one has been saved (or added earlier in this request).</summary>
     /// <remarks>Every settings row has Id 1; looking it up by key also finds a row added but not yet saved.</remarks>
     private async Task<TRow?> RowAsync<TRow>(CancellationToken cancellationToken)

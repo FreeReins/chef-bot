@@ -1,6 +1,6 @@
 # ChefBot
 
-ChefBot plans a week of meals, snacks and sweets around three things: ingredients the meals can share,
+ChefBot plans a week of meals, snacks, sweets and drinks around three things: ingredients the meals can share,
 what is in season, and what is already in your kitchen and about to expire. It then builds the shopping
 list, tracks what you bought with expiration dates, and helps you change the plan mid-week to use food up.
 
@@ -8,12 +8,16 @@ It is a self-hosted web app: one container for the app, one for PostgreSQL.
 
 ## What it does
 
-- **Stages a plan.** Three to five dinners (at least one slow cooker meal), weekday lunches from leftovers,
-  optional weekday breakfasts, plus snacks and sweets. A staged plan is a proposal: shuffle it, swap meals,
-  then confirm it.
-- **Shows it three ways.** *Meals* lists what was chosen. *Schedule* lays it out day by day.
-  *Shopping* shows everything the plan needs, where each item comes from (to buy, pantry, staple)
-  and which meals use it.
+- **Plans a week in your style.** A plan style sets the days you cook dinner, whether weekday lunches are
+  leftovers, how many breakfasts, snacks, sweets and drinks to plan, and rules for the recipes: "at least 3
+  slow cooker dinners", "no meals made with beef or pork", "at least 2 dinners made with chicken", "at least 4
+  dinners ready within 30 minutes", "exactly 1 dinner tagged fish, on Friday". Starter styles cover a classic
+  week, a slow cooker week, no slow cooker, quick weeknights, meat-free and dinners only; keep the ones you
+  like, change them, or make your own, and pick a style each time you plan.
+- **Gives you a draft to review.** The *Plan* tab shows the week day by day. Drag a meal to another day (or
+  use its Move menu), swap one, mark the ones you like with *Keep* and shuffle the rest, and see what the
+  shopping list comes to, then confirm. *Shopping* shows everything the plan needs, where each item comes
+  from (to buy, pantry, staple) and which meals use it.
 - **Builds the shopping list.** Quantities are totalled and scaled to portions, staples are left off,
   pantry stock is subtracted, and the list is split between the stores you shop at, or grouped by food group
   if you haven't chosen any. Anything else can be added to the list by hand, with or without a plan, and
@@ -90,12 +94,15 @@ Open <http://localhost:8080>. The first visit starts the setup wizard:
 3. **Add your recipes.** Pick one or both:
    - **Import my recipes** from a recipe file (JSON in ChefBot's own shape, a Mealie backup .zip with its
      photos or the `database.json` from one, a Mealie recipe export or schema.org recipes from a website), as many files as you like, or connect Mealie once and import from it.
-   - **Start with sample recipes**: tick the ones you want from the 22 samples. You can come back to this
+   - **Start with sample recipes**: tick the ones you want from the 25 samples. You can come back to this
      list later from the Recipes tab.
 
    Or skip the step and add recipes later.
+4. **Choose a plan style.** Pick the starter style for most weeks; the others are kept so you can choose one
+   for any week. Change them, or make your own, here or later under **Settings → Plan styles**.
+5. **Stores (optional).** Choose where you shop, so the shopping list is split between them.
 
-Then press **Stage next week**.
+Then press **Plan** on the Plan tab.
 
 To use your own recipes, an admin enters Mealie's address and an API token under **Settings → Mealie**, then
 presses **Import from Mealie** on the Recipes tab. `Mealie__Url` and `Mealie__ApiToken` in `chefbot.env` can
@@ -252,20 +259,26 @@ grouped by food group. The `Stores` setting is no longer read.
 
 ## A week with ChefBot
 
-1. **Saturday morning** the schedule stages next week and posts a summary to your webhook.
-2. **Review** the Meals tab. Press *Shuffle* for a different week, or *Swap* on a single meal.
+1. **Saturday morning** the schedule plans next week in your default style as a draft, and posts a summary to
+   your webhook. Or press **Plan** on the Plan tab yourself, choosing a style.
+2. **Review** the draft on the Plan tab. Drag meals between days, *Swap* any you don't want, press *Keep* on
+   the ones you like and *Shuffle* the rest, or plan the week again in another style. Open the shopping
+   summary to see what you'd buy.
 3. **Confirm** the plan. The Shopping tab is now your shopping list.
 4. **Shop**, then press *Bought* per item or *Mark all as bought*. Purchases move to the pantry with
    expiration dates.
-5. **During the week**, mark meals *Cooked* on the Schedule tab; their ingredients come out of the pantry.
-   Plans changed? *Swap* a meal: suggestions that use up expiring food come first.
+5. **During the week**, mark meals *Cooked* on the Plan tab; their ingredients come out of the pantry.
+   Plans changed? Move or *Swap* a meal: suggestions that use up expiring food come first. When this week is
+   confirmed, the Plan tab offers to plan the week after, and a switch at the top moves between the two.
 
-Two buttons at the top change the whole plan:
+Two buttons on a confirmed week change the whole plan:
 
-- **Regenerate from pantry** replaces the plan with a new one built around what is in the pantry, which is
-  the one to use after shopping: recipes that use food you already bought are strongly preferred, and the new
-  shopping list only holds what is still missing. The whole week is replaced, including days already past.
-- **Clear plan** removes the plan and its shopping list. The pantry is kept.
+- **Replan from pantry** replaces the plan with a new one in the same style, built around what is in the
+  pantry, which is the one to use after shopping: recipes that use food you already bought are strongly
+  preferred, and the new shopping list only holds what is still missing. The whole week is replaced,
+  including days already past.
+- **Clear plan** removes the plan and its shopping list. The pantry is kept. A draft has **Discard draft**
+  instead.
 
 ## API
 
@@ -275,12 +288,14 @@ try each call. Both need you to be signed in.
 
 | Method and path | What it does |
 |---|---|
-| `POST /api/plans/stage` | Stage a week. Body `{}` for the upcoming week, or `{"weekStart": "2026-11-08", "replace": true}` |
-| `GET /api/plans/current` | The plan for this week, or the next upcoming one |
+| `POST /api/plans/stage` | Plan a week as a draft. Body `{}` for the upcoming week in the default style, or `{"weekStart": "2026-11-08", "styleId": "...", "keep": ["<mealId>"], "replace": true}`: `keep` carries meals over from the week's current plan, as Shuffle does |
+| `GET /api/plans` | The weeks with a plan that haven't ended, earliest first: `id`, `weekStart`, `weekEnd`, `status`, `styleName` |
+| `GET /api/plans/current`, `GET /api/plans/{planId}` | The plan for this week (or else the next upcoming one), or a plan by id |
 | `POST /api/plans/{planId}/confirm` | Make a staged plan the working plan |
 | `GET /api/plans/{planId}/ingredients` | Everything the plan needs, plus the pantry with the meals that use each item (`usedFor`) |
 | `GET /api/plans/{planId}/meals/{mealId}/alternatives` | Recipe and creative suggestions for one meal |
 | `PUT /api/plans/{planId}/meals/{mealId}` | Replace a meal: `{"recipeId": "..."}` or `{"custom": {"title": "...", "ingredients": ["..."]}}` |
+| `POST /api/plans/{planId}/meals/{mealId}/move` | Move a dinner or breakfast to another day of its week: `{"date": "2026-11-11"}`. A meal of the same kind already there swaps with it; leftover lunches and the shopping list follow |
 | `POST /api/plans/{planId}/meals/{mealId}/status` | `{"status": "Cooked"}`, `"Skipped"` or `"Planned"` |
 | `POST /api/plans/{planId}/shopping/{itemId}/purchase` | Mark bought. Body `{}` or `{"expiresOn": "2026-11-20", "quantity": 2}` |
 | `POST /api/plans/{planId}/shopping/purchase-all` | Mark everything bought, including the items added by hand. Body `{}` |
@@ -289,6 +304,7 @@ try each call. Both need you to be signed in.
 | `POST /api/shopping/items/{itemId}/purchase`, `POST /api/shopping/items/purchase-all`, `DELETE /api/shopping/items/{itemId}` | Mark a hand-added item (or all of them) bought, which puts it in the pantry, or take it off the list. Body `{}` or, for one item, `{"expiresOn": "2026-11-20", "quantity": 2}` |
 | `POST /api/shopping/items/{itemId}/store` | Buy a hand-added item's ingredient at another store from now on, as for a plan's item |
 | `GET /api/stores`, `PUT /api/stores` | The household's stores, the known stores and the ingredient names they can list. `PUT` replaces the stores (admin) |
+| `GET /api/plan-styles`, `PUT /api/plan-styles` | The household's plan styles, the starter styles, and the recipe tags and ingredient names rules can use. `PUT` replaces the styles: `{"styles": [{"name": "Crockpot week", "isDefault": true, "cookingDays": ["Sunday", "Wednesday"], "leftoverLunches": true, "breakfasts": 0, "snacks": 2, "sweets": 0, "drinks": 1, "rules": [{"limit": "AtLeast", "count": 2, "slot": "Dinner", "match": "SlowCooker"}]}]}`. A rule's `limit` is `AtLeast`, `AtMost`, `Exactly` or `None`; `match` is `SlowCooker`, `Tag` or `Ingredient` (with `values`) or `ReadyWithin` (with `minutes`); `day` puts matching dinners on a day first |
 | `GET` `POST /api/pantry`, `PATCH` `DELETE /api/pantry/{id}` | Read and correct the pantry |
 | `GET` `POST /api/recipes`, `PUT` `DELETE /api/recipes/{id}` | Manage local recipes. A recipe has `name`, `course`, `servings`, `isSlowCooker` and `ingredients` (lines such as `"2 cups kale"`), and optionally `description`, `instructions` (a list of steps), `prepMinutes`, `cookMinutes`, `totalMinutes`, `sourceUrl`, `author`, `yieldText`, `notes` and `tags`. Responses add `images` and `ingredientDetails` (each line's quantity, unit and food) |
 | `POST /api/recipes/{id}/images` | Add a photo: `{"data": "<base64>"}`, a JPEG, PNG, WebP or GIF of up to 5 MB, at most 10 per recipe. Makes an imported recipe a local one |
@@ -308,7 +324,7 @@ try each call. Both need you to be signed in.
 | `GET /api/users`, `DELETE /api/users/{id}`, `POST /api/users/{id}/unlock` | See, remove and unlock accounts (admin) |
 | `GET` `PUT /api/system/security` | Lockout rules and "always use HTTPS" (admin) |
 | `GET /api/system/https`, `GET` `POST /api/system/https/certificate` | HTTPS status, download or recreate the certificate |
-| `POST /api/plans/{planId}/regenerate`, `DELETE /api/plans/{planId}` | Rebuild a plan around the pantry, or clear it |
+| `POST /api/plans/{planId}/regenerate`, `DELETE /api/plans/{planId}` | Rebuild a plan around the pantry in the style it was made in, or clear it |
 | `GET` `PUT /api/system/mealie` | Mealie's address and API token. The token is never returned (admin) |
 | `GET` `PUT /api/system/notifications`, `POST .../test`, `POST .../send-today` | Reminder settings, and sending now (admin) |
 | `GET` `PUT` `POST /api/system/backups` | Backup settings and list, or back up now (admin) |
@@ -337,14 +353,11 @@ curl -b cookies.txt -X POST localhost:8080/api/plans/stage -H 'Content-Type: app
 ## Configuration
 
 Settings live in `src/ChefBot.Api/appsettings.json`. Override any of them with environment variables,
-using `__` between levels (for example `Planner__Dinners=5`). With the Podman setup, put them in
+using `__` between levels (for example `Planner__DinnerPortions=4`). With the Podman setup, put them in
 `~/.config/chefbot/chefbot.env` and run `systemctl --user restart chefbot`.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `Planner:Dinners` | `4` | Dinners per week: 3, 4 or 5 |
-| `Planner:SlowCookerMeals` / `SlowCookerDay` | `1` / `Tuesday` | Slow cooker dinners and the preferred day |
-| `Planner:BreakfastRecipes`, `Snacks`, `Sweets` | `2`, `3`, `1` | How many of each to plan |
 | `Planner:DinnerPortions`, `LunchPortions`, `BreakfastPortions` | `2` | People eating each meal |
 | `Planner:ExpiringSoonDays` | `3` | Pantry food expiring this soon is planned first |
 | `Planner:AvoidRepeatDays` | `28` | Don't repeat a recipe planned this recently |
@@ -354,7 +367,7 @@ using `__` between levels (for example `Planner__Dinners=5`). With the Podman se
 | `Classifier` | see file | Tag words that sort imported recipes into courses |
 | `Notifications:WebhookUrl` | empty | The starting webhook address, until one is saved on the Settings tab |
 | `Mealie:Url`, `Mealie:ApiToken` | empty | The starting Mealie connection, until one is saved on the Settings tab |
-| `Planner:Weights:RegeneratePantryBoost` | `4` | How much more pantry food counts in "Regenerate from pantry" |
+| `Planner:Weights:RegeneratePantryBoost` | `4` | How much more pantry food counts in "Replan from pantry" |
 | `Data:Backups` | `backups` | The folder backups are written to |
 | `Https:Mode` | `Off` (`SelfSigned` in the container image) | `Off`, `SelfSigned` or `Certificate` |
 | `Https:HttpPort`, `Https:Port`, `Https:PublicPort` | `8080`, `8443`, `8443` | Listening ports, and the HTTPS port people type |
@@ -394,6 +407,25 @@ To offer different stores, edit the file and mount your copy over the built-in o
 {"name": "Costco", "kind": "WarehouseClub", "description": "Bulk meat, eggs and dairy", "items": ["chicken", "egg"]}
 ```
 
+### Plan styles
+
+What a week holds (dinner days, leftover lunches, how many breakfasts, snacks, sweets and drinks, and rules for
+the recipes) is set by plan styles, chosen in setup and changed under **Settings → Plan styles** by anyone
+signed in. The `Planner:Dinners`, `SlowCookerMeals`, `SlowCookerDay`, `BreakfastRecipes`, `Snacks` and `Sweets`
+settings of earlier versions are no longer read. Until a household saves any styles, weeks are planned in the
+first starter style.
+
+A rule your recipes can't meet, say three slow cooker dinners with only one slow cooker recipe, is relaxed for
+that week and the plan's notes say so. Ingredient rules match whole words in ingredient names, so "chicken"
+also matches chicken thighs and chicken broth.
+
+`config/plan-styles.json` holds the starter styles; the first is the default for a new household. Adding one
+copies it, so you can change it afterwards. To offer different starters, edit the file and mount your copy
+over the built-in one (see the comments in [chefbot.container](deploy/podman/chefbot.container)).
+
+Drinks are a course like snacks and sweets: imported recipes labelled drink, beverage, cocktail, smoothie or
+lemonade are filed as drinks (`Classifier:DrinkWords`), and three drinks are among the sample recipes.
+
 ### Notifications and Home Assistant
 
 On the Settings tab an admin enters a webhook address, picks which reminders to send and when the daily ones
@@ -414,7 +446,7 @@ Every notification is a JSON POST:
 
 | `type` | Sent | `data` holds |
 |---|---|---|
-| `plan_ready` | When a week is staged or regenerated | `planId`, `weekStart`, `trigger`, `dinners` (day, title, slowCooker), `snacks`, `sweets`, `toBuy` |
+| `plan_ready` | When a week is staged or regenerated | `planId`, `weekStart`, `trigger`, `style`, `dinners` (day, title, slowCooker), `snacks`, `sweets`, `drinks`, `toBuy` |
 | `slow_cooker` | Daily time, on the day of a slow cooker dinner | `meals`, `ingredients` |
 | `expiring_food` | Daily time, when pantry food expires within `Planner:ExpiringSoonDays` | `items` (name, expiresOn, daysLeft, usedByPlan) |
 | `shopping` | Daily time, the day before a week starts and on its first day | `status`, `toBuy` |

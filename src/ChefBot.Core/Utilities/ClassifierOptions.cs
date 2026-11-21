@@ -12,10 +12,12 @@ internal sealed class ClassifierOptions
 
     public List<string> SweetWords { get; set; } = [];
 
+    public List<string> DrinkWords { get; set; } = [];
+
     /// <summary>Also matched against the recipe name.</summary>
     public List<string> SlowCookerWords { get; set; } = [];
 
-    /// <summary>Labels for things that are never a meal on their own, such as sides and drinks.</summary>
+    /// <summary>Labels for things that are never a meal on their own, such as sides and sauces.</summary>
     public List<string> NotAMealWords { get; set; } = [];
 
     /// <summary>When set, only recipes carrying one of these labels count as mains.</summary>

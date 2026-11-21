@@ -11,7 +11,8 @@ public enum RecipeCourse
     Breakfast,
     Snack,
     Sweet,
+    Drink,
 
-    /// <summary>Sides, drinks, sauces and anything else that is never planned on its own.</summary>
+    /// <summary>Sides, sauces and anything else that is never planned on its own.</summary>
     Other,
 }

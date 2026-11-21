@@ -1,18 +1,18 @@
-<!-- ChefBot's page: first-run setup, sign-in, then reviewing a staged plan, swapping meals, shopping,
-     the pantry and (for admins) inviting people. State and actions live in lib/app.svelte.js. -->
+<!-- ChefBot's page: first-run setup, sign-in, then planning and reviewing a week, shopping, the pantry and (for
+     admins) inviting people. State and actions live in lib/app.svelte.js. -->
 <script>
-  import { app, isAdmin, isConfirmed, run, start, stage, planAction, clearPlan, regenerate, signOut } from './lib/app.svelte.js';
+  import { app, isAdmin, run, start, signOut } from './lib/app.svelte.js';
   import { shortDate } from './lib/format.js';
   import SetupAccount from './screens/SetupAccount.svelte';
   import SetupHttps from './screens/SetupHttps.svelte';
   import SetupRecipes from './screens/SetupRecipes.svelte';
+  import SetupPlanStyle from './screens/SetupPlanStyle.svelte';
   import SetupStores from './screens/SetupStores.svelte';
   import SetupSamples from './screens/SetupSamples.svelte';
   import SignIn from './screens/SignIn.svelte';
   import Join from './screens/Join.svelte';
   import Reset from './screens/Reset.svelte';
-  import Meals from './tabs/Meals.svelte';
-  import Schedule from './tabs/Schedule.svelte';
+  import Plan from './tabs/Plan.svelte';
   import Shopping from './tabs/Shopping.svelte';
   import Pantry from './tabs/Pantry.svelte';
   import Recipes from './tabs/Recipes.svelte';
@@ -20,7 +20,6 @@
   import Settings from './tabs/Settings.svelte';
   import Toasts from './components/Toasts.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
-  import Utensils from '@lucide/svelte/icons/utensils';
   import CalendarDays from '@lucide/svelte/icons/calendar-days';
   import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
   import Refrigerator from '@lucide/svelte/icons/refrigerator';
@@ -31,8 +30,7 @@
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
   const TABS = [
-    { key: 'meals', label: 'Meals', icon: Utensils },
-    { key: 'schedule', label: 'Schedule', icon: CalendarDays },
+    { key: 'plan', label: 'Plan', icon: CalendarDays },
     { key: 'shopping', label: 'Shopping', icon: ShoppingCart },
     { key: 'pantry', label: 'Pantry', icon: Refrigerator },
     { key: 'recipes', label: 'Recipes', icon: ChefHat },
@@ -40,17 +38,14 @@
     { key: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
   const GATES = { 'setup-account': SetupAccount, 'setup-https': SetupHttps, 'setup-recipes': SetupRecipes,
-    'setup-stores': SetupStores, 'setup-samples': SetupSamples,
+    'setup-styles': SetupPlanStyle, 'setup-stores': SetupStores, 'setup-samples': SetupSamples,
     'sign-in': SignIn, join: Join, reset: Reset };
-  const PLAN_TABS = { meals: Meals, schedule: Schedule };
-  // Shopping works without a plan too: things can be added to the list by hand.
-  const OTHER_TABS = { shopping: Shopping, pantry: Pantry, recipes: Recipes, people: People, settings: Settings };
+  const TAB_VIEWS = { plan: Plan, shopping: Shopping, pantry: Pantry, recipes: Recipes, people: People, settings: Settings };
 
   const inApp = $derived(app.screen === 'app');
   const tabs = $derived(TABS.filter((tab) => !tab.adminOnly || isAdmin()));
   const Gate = $derived(GATES[app.screen]);
-  const Other = $derived(OTHER_TABS[app.tab]);
-  const PlanTab = $derived(PLAN_TABS[app.tab]);
+  const View = $derived(TAB_VIEWS[app.tab]);
 
   // The browser tab's title names the view, so bookmarks and history read well.
   const title = $derived.by(() => {
@@ -75,25 +70,11 @@
         No plan yet
       {:else}
         Week of {shortDate(app.plan.weekStart)} to {shortDate(app.plan.weekEnd)}
-        <span class="pill {app.plan.status.toLowerCase()}">{app.plan.status}</span>
+        <span class="pill {app.plan.status.toLowerCase()}">{app.plan.status === 'Staged' ? 'Draft' : 'Confirmed'}</span>
       {/if}
     </p>
   </div>
   {#if inApp}
-    <div class="actions plan-actions">
-      {#if !app.plan}
-        <button class="primary" onclick={() => stage({})}>Stage next week</button>
-      {:else}
-        <button title="Remove this plan and keep the pantry" onclick={clearPlan}>Clear plan</button>
-        <button title="Build a new plan that uses what you have already bought" onclick={regenerate}>Regenerate from pantry</button>
-        {#if isConfirmed()}
-          <button onclick={() => stage({})}>Stage next week</button>
-        {:else}
-          <button onclick={() => stage({ weekStart: app.plan.weekStart })}>Shuffle</button>
-          <button class="primary" onclick={() => planAction('confirm')}>Confirm plan</button>
-        {/if}
-      {/if}
-    </div>
     <div class="actions account">
       <span class="muted name">{app.session.user.displayName}</span>
       <button onclick={signOut}>Sign out</button>
@@ -117,19 +98,8 @@
     <p class="loading muted" role="status" aria-label="Loading"><LoaderCircle size={28} /></p>
   {:else if !inApp}
     <Gate />
-  {:else if Other}
-    <Other />
-  {:else if !app.plan}
-    <div class="card empty">
-      <h2>Nothing is staged yet</h2>
-      <p class="muted">
-        {app.recipes.length === 0
-          ? 'Add some recipes on the Recipes tab first, then stage a week.'
-          : 'Stage a week to see proposed meals, a schedule and a shopping list.'}
-      </p>
-    </div>
   {:else}
-    <PlanTab />
+    <View />
   {/if}
 </main>
 
@@ -186,15 +156,13 @@
     .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   }
 
-  /* Phones: the title and Sign out share the top line with the plan buttons below them, the tabs become a bar
-     pinned to the bottom of the window, and the footer links sit at the end of the page instead. */
+  /* Phones: the title and Sign out share the top line, the tabs become a bar pinned to the bottom of the window,
+     and the footer links sit at the end of the page instead. */
   @media (max-width: 40rem) {
-    .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title account" "plan plan"; gap: .75rem; }
+    .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title account"; gap: .75rem; }
     .top > div:first-child { grid-area: title; margin: 0; }
     .account { grid-area: account; }
     .account .name { display: none; }
-    .plan-actions { grid-area: plan; }
-    .plan-actions button { flex: 1 1 auto; }
     .tabs { position: fixed; inset: auto 0 0 0; z-index: 10; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
       gap: 0; margin: 0; overflow: visible; background: var(--bg); border-bottom: 0; border-top: 1px solid var(--line);
       padding-bottom: env(safe-area-inset-bottom); }

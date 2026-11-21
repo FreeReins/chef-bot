@@ -43,6 +43,19 @@ public class JsonShapeTests
         await Assert.That(numeric).IsEmpty();
     }
 
+    [Test]
+    public async Task Days_of_the_week_are_written_by_name()
+    {
+        var rule = new Managers.Contracts.Messages.PlanRuleDetails(
+            Managers.Contracts.Messages.RuleLimit.AtLeast, 1, Managers.Contracts.Messages.MealSlot.Dinner,
+            Managers.Contracts.Messages.RecipeMatchKind.SlowCooker, Day: DayOfWeek.Tuesday);
+
+        var json = JsonSerializer.Serialize(rule, ContractJsonContext.Default.PlanRuleDetails);
+
+        await Assert.That(json).Contains("\"day\":\"Tuesday\"");
+        await Assert.That(JsonSerializer.Deserialize(json, ContractJsonContext.Default.PlanRuleDetails)).IsEqualTo(rule with { Values = null });
+    }
+
     /// <summary>
     /// Reads the smallest valid JSON for every type each build-time shape can reach, with that shape and with
     /// reflection, and compares the results. A field the JSON leaves out must keep its default the same way.

@@ -3,11 +3,13 @@
 import { api, upload } from './api.js';
 // addresses.js imports this module too. That is safe: neither uses the other's exports until a function runs.
 import { showAddress, listenForAddresses } from './addresses.js';
+import { addDays, upcomingSunday, shortDate } from './format.js';
+import { copyStyle, cleanStyles } from './styles.js';
 
 const query = new URLSearchParams(location.search);
 
 export const app = $state({
-  screen: 'loading',   // loading | setup-account | setup-https | setup-recipes | setup-stores | setup-samples | sign-in | join | reset | app
+  screen: 'loading',   // loading | setup-account | setup-https | setup-recipes | setup-styles | setup-stores | setup-samples | sign-in | join | reset | app
   session: null,       // SessionResponse: { setupRequired, user, mealieConfigured }
   linkToken: query.get('invite') ?? query.get('reset'),
   link: null,          // LinkDetails for linkToken: { purpose, username, expiresAt }
@@ -19,13 +21,17 @@ export const app = $state({
   samples: [],         // sample recipes offered by the setup wizard
   stores: null,        // GroceryStoresResponse: { stores, known, ingredients }
   storeDraft: null,    // the stores chosen in setup but not saved yet
+  styles: null,        // PlanStylesResponse: { styles, known, tags, ingredients }
+  styleDraft: null,    // the plan styles chosen in setup but not saved yet
   fileFormats: [],     // RecipeFileFormatResponse[]: the kinds of recipe file that can be imported
   mealieImport: null,  // the latest Mealie import this page started: { state, result?, message? }
   people: { users: [], links: [], newLink: null },
-  tab: 'meals',        // the open tab; the address bar says which (see addresses.js)
+  tab: 'plan',         // the open tab; the address bar says which (see addresses.js)
   recipeId: null,      // the recipe shown on its own page, from /recipes/{id}
   settingsSection: 'login', // which Settings sidebar item is open
-  plan: null,          // PlanResponse, or null when nothing is staged yet
+  plans: [],           // PlanSummaryResponse[]: the weeks with a plan that haven't ended, earliest first
+  plan: null,          // PlanResponse for the week being looked at (one of plans), or null when nothing is planned
+  keep: [],            // ids of the draft's meals marked Keep, which Shuffle leaves as they are
   ingredients: null,   // IngredientsResponse for the plan
   pantry: [],          // PantryItemResponse[], loaded by the Pantry tab when there is no plan to read it from
   manualItems: [],     // ManualShoppingItemResponse[]: what was put on the shopping list by hand, plan or not
@@ -104,48 +110,123 @@ export function answer(confirmed) {
 
 const ingredientsFor = (plan) => (plan ? api('GET', `/api/plans/${plan.id}/ingredients`) : null);
 
-export async function loadPlan() {
-  let plan = null;
-  try {
-    plan = await api('GET', '/api/plans/current');
-  } catch (error) {
-    if (error.status !== 404) throw error;
-  }
-  // Both at once, so the page never shows a new plan beside the old plan's ingredients.
+/**
+ * Loads the weeks that have a plan, then one of them with its meals and ingredients: the one asked for if it is
+ * still there, otherwise the earliest (this week's, or else the next one).
+ */
+export async function loadPlan(planId = app.plan?.id) {
+  const plans = await api('GET', '/api/plans');
+  const summary = plans.find((plan) => plan.id === planId) ?? plans[0] ?? null;
+  const plan = summary ? await api('GET', `/api/plans/${summary.id}`) : null;
+  // All at once, so the page never shows a new plan beside the old plan's ingredients.
   const ingredients = await ingredientsFor(plan);
+  app.plans = plans;
   app.plan = plan;
   app.ingredients = ingredients;
+  app.keep = app.keep.filter((id) => plan?.meals.some((meal) => meal.id === id));
 }
 
 /**
  * Applies a plan returned by a change, together with the ingredients view that matches it. Its notes (what was left
- * off the shopping list) are shown unless `quiet`, for refreshes the person didn't ask to change the plan with.
+ * off the shopping list, a meal that moved) are shown unless `quiet`, for refreshes the person didn't ask for.
  */
 export async function applyPlan(plan, { quiet = false } = {}) {
   const ingredients = await ingredientsFor(plan);
   app.plan = plan;
   app.ingredients = ingredients;
+  const summary = { id: plan.id, weekStart: plan.weekStart, weekEnd: plan.weekEnd, status: plan.status, styleName: plan.styleName };
+  app.plans = [...app.plans.filter((other) => other.id !== plan.id && other.weekStart !== plan.weekStart), summary]
+    .sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+  app.keep = app.keep.filter((id) => plan.meals.some((meal) => meal.id === id));
   if (!quiet) for (const note of plan.notes ?? []) toast(note);
   app.swap = null;
 }
 
-export const stage = (body) => run(async () => applyPlan(await api('POST', '/api/plans/stage', body)));
 export const planAction = (path, body) => run(async () => applyPlan(await api('POST', `/api/plans/${app.plan.id}/${path}`, body)));
 
+/** Shows another week's plan. */
+export const selectWeek = (planId) => run(async () => {
+  app.swap = null;
+  await loadPlan(planId);
+});
+
+/** The week to plan next: the one after the latest planned week, or the coming week when nothing is planned. */
+export function nextWeekStart() {
+  const last = app.plans.at(-1);
+  return last ? addDays(last.weekStart, 7) : upcomingSunday();
+}
+
+/** True when the week being looked at is confirmed and no later week has a plan, so the page offers to plan one. */
+export const canPlanAhead = () => isConfirmed() && app.plans.at(-1)?.id === app.plan?.id;
+
+/** The household's saved style with this name, used to plan a week again in the style it was made with. */
+export const styleNamed = (name) => (app.styles?.styles ?? []).find((style) => style.name === name) ?? null;
+
+/**
+ * The id to plan with. Until the household saves styles, the choices are the starter styles, which have no id: the
+ * chosen one is saved as the household's default first.
+ */
+async function styleIdFor(style) {
+  if (!style || style.id) return style?.id ?? null;
+  await saveStyles([{ ...copyStyle(style), isDefault: true }]);
+  return styleNamed(style.name)?.id ?? null;
+}
+
+/** Plans a week (the next one, unless another is given) in a style, as a draft to review. */
+export function planWeek(style, weekStart = nextWeekStart()) {
+  return run(async () => {
+    const styleId = await styleIdFor(style);
+    await applyPlan(await api('POST', '/api/plans/stage', { weekStart, styleId }));
+  });
+}
+
+/**
+ * Plans the draft's week again, keeping the meals marked Keep: in its own style for Shuffle, or in another. The kept
+ * meals come back as new meals, so they stay marked.
+ */
+export function replan(style = styleNamed(app.plan.styleName)) {
+  const plan = app.plan;
+  const kept = plan.meals.filter((meal) => app.keep.includes(meal.id));
+  return run(async () => {
+    const styleId = await styleIdFor(style);
+    const next = await api('POST', '/api/plans/stage', { weekStart: plan.weekStart, styleId, keep: kept.map((meal) => meal.id) });
+    await applyPlan(next);
+    app.keep = next.meals
+      .filter((meal) => kept.some((old) => old.slot === meal.slot && old.date === meal.date && old.title === meal.title))
+      .map((meal) => meal.id);
+  });
+}
+
+/** Marks a draft's meal to keep when shuffling, or stops keeping it. */
+export function toggleKeep(mealId) {
+  app.keep = app.keep.includes(mealId) ? app.keep.filter((id) => id !== mealId) : [...app.keep, mealId];
+}
+
+/** Makes the draft the working plan. */
+export const confirmPlan = () => run(async () => {
+  await applyPlan(await api('POST', `/api/plans/${app.plan.id}/confirm`));
+  toast(`The plan for ${shortDate(app.plan.weekStart)} to ${shortDate(app.plan.weekEnd)} is confirmed. Tick items off on the Shopping tab as you buy them, and mark meals as cooked here.`);
+});
+
+/** Moves a dinner or breakfast to another day of its week; a meal already there swaps with it. */
+export const moveMeal = (mealId, date) => run(async () => applyPlan(await api('POST', `/api/plans/${app.plan.id}/meals/${mealId}/move`, { date })));
+
 export async function clearPlan() {
-  if (!(await ask({ title: 'Clear this plan?', message: 'Meals and the shopping list are removed. Your pantry is kept.',
-    confirmLabel: 'Clear plan', danger: true }))) return;
+  const draft = app.plan.status === 'Staged';
+  if (!(await ask(draft
+    ? { title: 'Discard this draft?', message: 'The proposed meals and their shopping list are removed. Your pantry is kept.', confirmLabel: 'Discard draft', danger: true }
+    : { title: 'Clear this plan?', message: 'Meals and the shopping list are removed. Your pantry is kept.', confirmLabel: 'Clear plan', danger: true }))) return;
   run(async () => {
     await api('DELETE', `/api/plans/${app.plan.id}`);
-    await loadPlan();
-    toast('The plan was cleared. Your pantry is unchanged.');
+    await loadPlan(null);
+    toast(draft ? 'The draft was discarded. Your pantry is unchanged.' : 'The plan was cleared. Your pantry is unchanged.');
     app.swap = null;
   });
 }
 
 export async function regenerate() {
-  if (!(await ask({ title: 'Regenerate this plan?', message: 'It is replaced with a new plan built around what is in your pantry.',
-    confirmLabel: 'Regenerate' }))) return;
+  if (!(await ask({ title: 'Replan from your pantry?', message: 'This week is planned again around what is in your pantry, so you buy less. Meals already cooked are not kept.',
+    confirmLabel: 'Replan' }))) return;
   planAction('regenerate');
 }
 
@@ -292,6 +373,7 @@ const SETUP_STEPS = [
   { screen: 'setup-account', label: 'Your account' },
   { screen: 'setup-https', label: 'Secure connection' },
   { screen: 'setup-recipes', label: 'Recipes' },
+  { screen: 'setup-styles', label: 'Plan style' },
   { screen: 'setup-stores', label: 'Stores (optional)' },
 ];
 
@@ -309,6 +391,7 @@ export function openSetupStep(screen) {
   return run(async () => {
     if (screen !== 'setup-account' && !app.session?.user) return;
     if (screen === 'setup-recipes') await openSetupRecipes();
+    else if (screen === 'setup-styles') await openSetupStyles();
     else if (screen === 'setup-stores') await openSetupStores();
     else app.screen = screen;
   });
@@ -326,6 +409,18 @@ async function openSetupRecipes() {
   const [samples] = await Promise.all([api('GET', '/api/setup/samples'), loadFileFormats(), loadRecipes()]);
   app.samples = samples;
   app.screen = 'setup-recipes';
+}
+
+/**
+ * Setup: choose how weeks are planned. Until the household has styles, every starter style is offered, the first as
+ * the default; choices not saved yet are kept while moving between steps.
+ */
+async function openSetupStyles() {
+  await loadStyles();
+  app.styleDraft ??= app.styles.styles.length
+    ? $state.snapshot(app.styles.styles)
+    : app.styles.known.map((style, index) => ({ ...copyStyle(style), isDefault: index === 0 }));
+  app.screen = 'setup-styles';
 }
 
 /** Setup: choose the stores the shopping list is split between. Choices not saved yet are kept while moving between steps. */
@@ -354,6 +449,18 @@ export function setShoppingStore(itemId, store) {
     await applyPlan(await api('POST', `/api/plans/${app.plan.id}/shopping/${itemId}/store`, { store }));
     await Promise.all([loadStores(), loadManualItems()]);
   });
+}
+
+// ---------- plan styles ----------
+
+/** Loads the household's plan styles, the starter styles, and the tags and ingredients rules can name. */
+export async function loadStyles() {
+  app.styles = await api('GET', '/api/plan-styles');
+}
+
+/** Saves the household's plan styles. Plans already made keep the style they were made with. */
+export async function saveStyles(styles) {
+  app.styles = await api('PUT', '/api/plan-styles', { styles: cleanStyles(styles) });
 }
 
 // ---------- settings ----------
@@ -408,7 +515,7 @@ export async function enterApp() {
     history.replaceState(null, '', location.pathname);
     app.linkToken = null;
   }
-  await Promise.all([loadRecipes(), loadPlan(), loadManualItems(), loadSystem(), loadStores(), isAdmin() ? loadPeople() : null]);
+  await Promise.all([loadRecipes(), loadPlan(), loadManualItems(), loadSystem(), loadStores(), loadStyles(), isAdmin() ? loadPeople() : null]);
   await showAddress();
 }
 
@@ -417,6 +524,8 @@ export function signOut() {
     await api('POST', '/api/account/sign-out');
     app.session.user = null;
     app.plan = null;
+    app.plans = [];
+    app.keep = [];
     app.toasts = [];
     app.screen = 'sign-in';
   });

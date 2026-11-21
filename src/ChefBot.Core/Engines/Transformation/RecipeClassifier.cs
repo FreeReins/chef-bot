@@ -18,6 +18,7 @@ internal sealed class RecipeClassifier(ClassifierOptions options)
         if (ContainsAny(labels, options.BreakfastWords)) return RecipeCourse.Breakfast;
         if (ContainsAny(labels, options.SnackWords)) return RecipeCourse.Snack;
         if (ContainsAny(labels, options.SweetWords)) return RecipeCourse.Sweet;
+        if (ContainsAny(labels, options.DrinkWords)) return RecipeCourse.Drink;
         if (ContainsAny(labels, options.NotAMealWords)) return RecipeCourse.Other;
         if (options.MainWords.Count > 0 && !ContainsAny(labels, options.MainWords)) return RecipeCourse.Other;
         return RecipeCourse.Main;

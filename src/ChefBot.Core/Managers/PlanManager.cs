@@ -22,6 +22,7 @@ internal sealed class PlanManager(
     IShoppingListAccess shoppingList,
     ISettingsAccess settings,
     IKnownStoreAccess knownStores,
+    IKnownPlanStyleAccess knownStyles,
     IMessageAccess messages,
     PlanningEngine planning,
     ShoppingEngine shopping,
@@ -33,13 +34,18 @@ internal sealed class PlanManager(
     PlanWriteLock writeLock,
     TimeProvider clock) : IPlanManager
 {
-    public Task<PlanResponse> StageAsync(StagePlanRequest request, CancellationToken cancellationToken) =>
-        StageAsync(request.WeekStart ?? WeekLayout.UpcomingWeekStart(clock.Today()), request.Replace, favorPantry: false, "manual", cancellationToken);
+    public async Task<PlanResponse> StageAsync(StagePlanRequest request, CancellationToken cancellationToken)
+    {
+        var style = await StyleAsync(request.StyleId, cancellationToken);
+        var week = request.WeekStart ?? WeekLayout.UpcomingWeekStart(clock.Today());
+        return await StageAsync(week, request.Replace, favorPantry: false, "manual", style, request.Keep ?? [], cancellationToken);
+    }
 
     public async Task<PlanResponse> RegenerateFromPantryAsync(Guid planId, CancellationToken cancellationToken)
     {
         var plan = await validation.PlanAsync(planId, cancellationToken);
-        return await StageAsync(plan.WeekStart, replace: true, favorPantry: true, "regenerate", cancellationToken);
+        var style = await StyleNamedAsync(plan.StyleName, cancellationToken);
+        return await StageAsync(plan.WeekStart, replace: true, favorPantry: true, "regenerate", style, [], cancellationToken);
     }
 
     public async Task ClearAsync(Guid planId, CancellationToken cancellationToken)
@@ -59,6 +65,9 @@ internal sealed class PlanManager(
 
     public async Task<PlanResponse> GetAsync(Guid planId, CancellationToken cancellationToken) =>
         (await validation.PlanAsync(planId, cancellationToken)).ToResponse([]);
+
+    public async Task<IReadOnlyList<PlanSummaryResponse>> ListOpenAsync(CancellationToken cancellationToken) =>
+        (await plans.ListOpenAsync(clock.Today(), cancellationToken)).Select(plan => plan.ToSummary()).ToList();
 
     public async Task<PlanResponse> ConfirmAsync(Guid planId, CancellationToken cancellationToken)
     {
@@ -127,6 +136,28 @@ internal sealed class PlanManager(
         await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
+    }
+
+    public async Task<PlanResponse> MoveMealAsync(Guid planId, Guid mealId, MoveMealRequest request, CancellationToken cancellationToken)
+    {
+        using var _ = await writeLock.AcquireAsync(cancellationToken);
+        var plan = await validation.PlanAsync(planId, cancellationToken);
+        var meal = ValidationEngine.Meal(plan, mealId);
+        ValidationEngine.CanMove(plan, meal, request.Date);
+        if (meal.Date == request.Date)
+        {
+            return plan.ToResponse([]);
+        }
+
+        var from = meal.Date!.Value;
+        var swapped = PlanningEngine.Move(plan, meal, request.Date);
+        await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+
+        var note = swapped is null
+            ? $"Moved {meal.Title} to {request.Date.DayOfWeek}."
+            : $"Swapped {meal.Title} to {request.Date.DayOfWeek} and {swapped.Title} to {from.DayOfWeek}.";
+        return plan.ToResponse([note]);
     }
 
     public async Task<PlanResponse> SetMealStatusAsync(Guid planId, Guid mealId, MealStatusRequest request, CancellationToken cancellationToken)
@@ -293,6 +324,20 @@ internal sealed class PlanManager(
         return DescribeStores(stores);
     }
 
+    public async Task<PlanStylesResponse> GetStylesAsync(CancellationToken cancellationToken) =>
+        await DescribeStylesAsync(await settings.ListPlanStylesAsync(cancellationToken), cancellationToken);
+
+    public async Task<PlanStylesResponse> SaveStylesAsync(SavePlanStylesRequest request, CancellationToken cancellationToken)
+    {
+        var details = ValidationEngine.PlanStyles(request.Styles);
+        using var _ = await writeLock.AcquireAsync(cancellationToken);
+        var styles = details.ToStyles(await settings.ListPlanStylesAsync(cancellationToken));
+
+        await settings.SavePlanStylesAsync(styles, cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+        return await DescribeStylesAsync(styles, cancellationToken);
+    }
+
     public async Task CheckWeeklyScheduleAsync(CancellationToken cancellationToken)
     {
         var state = await settings.GetScheduleAsync(cancellationToken);
@@ -320,17 +365,21 @@ internal sealed class PlanManager(
     {
         if (await plans.FindByWeekAsync(command.WeekStart, cancellationToken) is null)
         {
-            await StageAsync(command.WeekStart, replace: false, favorPantry: false, "schedule", cancellationToken);
+            var style = await StyleAsync(id: null, cancellationToken);
+            await StageAsync(command.WeekStart, replace: false, favorPantry: false, "schedule", style, [], cancellationToken);
         }
     }
 
     public DateTimeOffset? NextScheduledStaging() => planning.NextScheduledStaging(clock.GetLocalNow());
 
-    private async Task<PlanResponse> StageAsync(DateOnly weekStart, bool replace, bool favorPantry, string trigger, CancellationToken cancellationToken)
+    private async Task<PlanResponse> StageAsync(
+        DateOnly weekStart, bool replace, bool favorPantry, string trigger, PlanStyle style, IReadOnlyList<Guid> keep,
+        CancellationToken cancellationToken)
     {
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var existing = await validation.WeekToStageAsync(weekStart, replace, cancellationToken);
         var stock = await SnapshotAsync(cancellationToken);
+        var kept = existing?.Meals.Where(meal => keep.Contains(meal.Id) && !meal.IsLeftover).ToList() ?? [];
 
         var draft = planning.Plan(new PlanRequest(
             weekStart,
@@ -340,7 +389,9 @@ internal sealed class PlanManager(
             clock.GetUtcNow(),
             // Staging the same week again should offer something different.
             Seed: existing is null ? null : Random.Shared.Next(),
-            PantryBoost: favorPantry ? options.Weights.RegeneratePantryBoost : 1));
+            PantryBoost: favorPantry ? options.Weights.RegeneratePantryBoost : 1,
+            Style: style,
+            Kept: kept));
 
         if (existing is not null)
         {
@@ -394,6 +445,40 @@ internal sealed class PlanManager(
         {
             await ReconcileAsync(changed, stock, cancellationToken, stores);
         }
+    }
+
+    /// <summary>The style with this id, or else the household's default: its default style, then the first starter style.</summary>
+    private async Task<PlanStyle> StyleAsync(Guid? id, CancellationToken cancellationToken)
+    {
+        var saved = await settings.ListPlanStylesAsync(cancellationToken);
+        return ValidationEngine.StyleWithId(saved, knownStyles.All(), id) ?? DefaultStyle(saved);
+    }
+
+    /// <summary>The saved style with this name, as when a plan is made again; the default style when it has gone.</summary>
+    private async Task<PlanStyle> StyleNamedAsync(string name, CancellationToken cancellationToken)
+    {
+        var saved = await settings.ListPlanStylesAsync(cancellationToken);
+        return saved.Concat(knownStyles.All()).FirstOrDefault(style => string.Equals(style.Name, name, StringComparison.OrdinalIgnoreCase))
+            ?? DefaultStyle(saved);
+    }
+
+    private PlanStyle DefaultStyle(IReadOnlyList<PlanStyle> saved) =>
+        saved.FirstOrDefault(style => style.IsDefault) ?? saved.FirstOrDefault() ?? knownStyles.All().FirstOrDefault() ?? PlanStyle.Classic();
+
+    private async Task<PlanStylesResponse> DescribeStylesAsync(IReadOnlyList<PlanStyle> styles, CancellationToken cancellationToken)
+    {
+        var tags = (await recipes.ListActiveAsync(cancellationToken))
+            .SelectMany(recipe => recipe.Tags)
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Select(tag => tag.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return new PlanStylesResponse(
+            styles.Select(style => style.ToResponse()).ToList(),
+            knownStyles.All().Select(style => style.ToResponse(saved: false)).ToList(),
+            tags,
+            catalog.Entries.Where(entry => !entry.PantryStaple).Select(entry => entry.Name).Order(StringComparer.Ordinal).ToList());
     }
 
     private GroceryStoresResponse DescribeStores(IReadOnlyList<GroceryStore> stores) => new(

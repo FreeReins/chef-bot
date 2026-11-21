@@ -4,12 +4,15 @@ namespace ChefBot.Core.Managers.Contracts.Services;
 
 /// <summary>
 /// Plans weeks and keeps each plan, its leftover lunches and its shopping list in step. Every change to a plan
-/// goes through here: staging, confirming, swapping or cooking meals, recording purchases, and choosing the stores
-/// the shopping list is split between. It also keeps the items put on the shopping list by hand, which need no plan.
+/// goes through here: staging, confirming, swapping, moving or cooking meals, recording purchases, and choosing the
+/// stores the shopping list is split between and the plan styles weeks are planned in. It also keeps the items put on the shopping list by hand, which need no plan.
 /// </summary>
 public interface IPlanManager
 {
-    /// <summary>Proposes a plan for a week and saves it as staged. Publishes <see cref="PlanStaged"/>.</summary>
+    /// <summary>
+    /// Proposes a plan for a week in a plan style and saves it as staged. Meals listed in <see cref="StagePlanRequest.Keep"/>
+    /// are carried over from the week's current plan. Publishes <see cref="PlanStaged"/>.
+    /// </summary>
     Task<PlanResponse> StageAsync(StagePlanRequest request, CancellationToken cancellationToken);
 
     /// <summary>
@@ -25,6 +28,9 @@ public interface IPlanManager
     Task<PlanResponse> GetCurrentAsync(CancellationToken cancellationToken);
 
     Task<PlanResponse> GetAsync(Guid planId, CancellationToken cancellationToken);
+
+    /// <summary>Every plan whose week hasn't ended, earliest first: this week's and any staged for later weeks.</summary>
+    Task<IReadOnlyList<PlanSummaryResponse>> ListOpenAsync(CancellationToken cancellationToken);
 
     /// <summary>Makes a staged plan the working plan, which opens it up for shopping.</summary>
     Task<PlanResponse> ConfirmAsync(Guid planId, CancellationToken cancellationToken);
@@ -43,6 +49,12 @@ public interface IPlanManager
 
     /// <summary>Replaces a meal with a recipe or a free-form meal.</summary>
     Task<PlanResponse> ReplaceMealAsync(Guid planId, Guid mealId, ReplaceMealRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Moves a dinner or breakfast to another day of its week, swapping it with a meal of the same kind already there.
+    /// Leftover lunches and the shopping list follow.
+    /// </summary>
+    Task<PlanResponse> MoveMealAsync(Guid planId, Guid mealId, MoveMealRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Marks a meal as planned, cooked or skipped. Cooking a meal takes its ingredients out of the pantry where
@@ -101,6 +113,12 @@ public interface IPlanManager
     /// With no stores, shopping lists are grouped by food group.
     /// </summary>
     Task<GroceryStoresResponse> SaveStoresAsync(SaveGroceryStoresRequest request, CancellationToken cancellationToken);
+
+    /// <summary>The household's plan styles, the starter styles that can be added, and the tags and ingredients rules can use.</summary>
+    Task<PlanStylesResponse> GetStylesAsync(CancellationToken cancellationToken);
+
+    /// <summary>Replaces the household's plan styles. Plans already made keep the style they were made with.</summary>
+    Task<PlanStylesResponse> SaveStylesAsync(SavePlanStylesRequest request, CancellationToken cancellationToken);
 
     /// <summary>
     /// Stages next week's plan when the weekly schedule's time has come, once per week. When the planner is set to

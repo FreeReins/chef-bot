@@ -1,12 +1,12 @@
 // Each view has its own address, so it can be bookmarked, reloaded or opened in a new tab:
-//   /meals  /schedule  /shopping  /pantry  /recipes  /recipes/{id}  /recipes/samples  /people  /settings/{section}
+//   /plan  /shopping  /pantry  /recipes  /recipes/{id}  /recipes/samples  /people  /settings/{section}
 // The address is the source of truth: links and buttons call go(path), and showAddress() shows what it names.
 import { api } from './api.js';
 import { app, run, isAdmin, clearErrors } from './app.svelte.js';
 
-const TAB_KEYS = ['meals', 'schedule', 'shopping', 'pantry', 'recipes', 'people', 'settings'];
+const TAB_KEYS = ['plan', 'shopping', 'pantry', 'recipes', 'people', 'settings'];
 /** Tabs that were renamed, so old bookmarks still land somewhere sensible. */
-const RENAMED_TABS = { ingredients: 'shopping' };
+const RENAMED_TABS = { ingredients: 'shopping', meals: 'plan', schedule: 'plan' };
 const ADMIN_TABS = ['people'];
 
 /** Moves to an address inside the page and shows it. */
@@ -18,15 +18,15 @@ export async function go(path, { replace = false } = {}) {
   await run(showAddress);
 }
 
-/** Shows the view the address bar names, once signed in. Unknown addresses go to the meals. */
+/** Shows the view the address bar names, once signed in. Unknown addresses go to the plan. */
 export async function showAddress() {
-  const [first = 'meals', second = null] = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+  const [first = 'plan', second = null] = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
   if (RENAMED_TABS[first]) {
     history.replaceState(null, '', `/${RENAMED_TABS[first]}`);
     return showAddress();
   }
   if (!TAB_KEYS.includes(first) || (ADMIN_TABS.includes(first) && !isAdmin())) {
-    history.replaceState(null, '', '/meals');
+    history.replaceState(null, '', '/plan');
     return showAddress();
   }
 

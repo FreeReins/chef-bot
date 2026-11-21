@@ -1,8 +1,12 @@
 // Keyboard and focus behaviour that axe can't see: where focus goes, and which keys move it.
 import { test, expect, open } from './fixtures.js';
+import * as data from './data.js';
+
+const staged = { 'GET /api/plans': [data.summary(data.plan('Staged'))], 'GET /api/plans/*': data.plan('Staged') };
+const stew = data.plan().meals.find((meal) => meal.title === 'Beef and Barley Stew');
 
 test('the confirm dialog starts on Cancel, and Escape cancels', async ({ page, api }) => {
-  await open(page, '/meals');
+  await open(page, '/plan');
   const opener = page.getByRole('button', { name: 'Clear plan' });
   await opener.click();
   const dialog = page.getByRole('dialog', { name: 'Clear this plan?' });
@@ -57,7 +61,7 @@ test('a Settings section link moves focus to the section', async ({ page }) => {
 });
 
 test('every control in the header and the tabs shows where focus is', async ({ page }) => {
-  await open(page, '/meals');
+  await open(page, '/plan');
   const controls = page.locator('header.top :is(a, button), nav.tabs a');
   const count = await controls.count();
   expect(count).toBeGreaterThan(5);
@@ -73,4 +77,84 @@ test('every control in the header and the tabs shows where focus is', async ({ p
     expect(focused.outline, `the focus outline on "${focused.text}"`).not.toBe('none');
     expect(focused.width, `the focus outline on "${focused.text}"`).not.toBe('0px');
   }
+});
+
+test('a meal moves to another day from its Move menu, and focus stays on that menu', async ({ page, api }) => {
+  api.set(staged);
+  await open(page, '/plan');
+  const menu = page.getByRole('combobox', { name: 'Move Beef and Barley Stew to another day' });
+  await menu.focus();
+  await menu.selectOption('2026-11-25');
+
+  await expect(page.locator('section', { has: page.getByRole('heading', { name: /^Wednesday/ }) })).toContainText('Beef and Barley Stew');
+  await expect(menu).toBeFocused();
+  await expect(menu).toHaveValue('2026-11-25');
+  expect(api.requests).toContain(`POST /api/plans/${data.ids.plan}/meals/${stew.id}/move`);
+});
+
+test('dragging a dinner onto another day moves it', async ({ page, api, isMobile }) => {
+  test.skip(isMobile, 'Touch screens move meals with the Move menu instead.');
+  api.set(staged);
+  await open(page, '/plan');
+  const friday = page.locator('section', { has: page.getByRole('heading', { name: /^Friday/ }) });
+
+  const stewCard = page.locator('article', { hasText: 'Beef and Barley Stew' });
+  await expect(stewCard).toHaveAttribute('draggable', 'true');
+
+  // The browser's own drag events, carrying one shared DataTransfer, as a mouse drag sends them.
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+  await stewCard.dispatchEvent('dragstart', { dataTransfer });
+  await friday.dispatchEvent('dragover', { dataTransfer });
+  await expect(friday).toContainText('Drop to move to Friday');
+  await friday.dispatchEvent('drop', { dataTransfer });
+
+  await expect(friday).toContainText('Beef and Barley Stew');
+  expect(api.requests).toContain(`POST /api/plans/${data.ids.plan}/meals/${stew.id}/move`);
+});
+
+test('Keep marks a meal, and Shuffle sends the kept meals', async ({ page, api }) => {
+  api.set({ ...staged, 'POST /api/plans/stage': data.plan('Staged') });
+  await open(page, '/plan');
+  const keep = page.getByRole('button', { name: 'Keep Beef and Barley Stew' });
+  await keep.click();
+  await expect(keep).toHaveAttribute('aria-pressed', 'true');
+
+  const shuffled = page.waitForRequest((request) => request.url().endsWith('/api/plans/stage'));
+  await page.getByRole('button', { name: 'Shuffle the rest (keeping 1)' }).click();
+
+  expect((await shuffled).postDataJSON()).toMatchObject({ weekStart: '2026-11-22', keep: [stew.id] });
+  await expect(page.getByRole('button', { name: 'Keep Beef and Barley Stew' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('the plan and the plan style editor fit the window without scrolling sideways', async ({ page, api }) => {
+  const fits = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+  api.set(staged);
+  await open(page, '/plan');
+  await page.getByText(/items? to buy/).click();
+  expect(await fits()).toBe(true);
+
+  await open(page, '/settings/styles');
+  await page.getByRole('button', { name: 'Edit Classic week' }).click();
+  await page.getByRole('button', { name: 'Add a rule' }).click();
+  await page.getByRole('combobox', { name: 'what it looks for' }).last().selectOption('Ingredient');
+  expect(await fits()).toBe(true);
+});
+
+test('Swap opens a dialog of replacements; Escape closes it and choosing one replaces the meal', async ({ page, api }) => {
+  api.set({ ...staged, 'PUT /api/plans/*/meals/*': data.plan('Staged') });
+  await open(page, '/plan');
+  const swap = page.getByRole('button', { name: 'Swap Beef and Barley Stew' });
+  await swap.click();
+  const dialog = page.getByRole('dialog', { name: 'Swap Beef and Barley Stew' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Recipes that use what you have');
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(swap).toBeFocused();
+
+  await swap.click();
+  await dialog.getByRole('button', { name: 'Use this' }).first().click();
+  await expect(dialog).toBeHidden();
+  expect(api.requests).toContain(`PUT /api/plans/${data.ids.plan}/meals/${stew.id}`);
 });

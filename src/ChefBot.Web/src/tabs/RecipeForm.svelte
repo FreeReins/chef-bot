@@ -1,6 +1,6 @@
 <!-- The fields of a recipe, for adding one on the Recipes tab and editing one on its own page. -->
 <script>
-  const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Other'];
+  const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
 
   /** recipe: the one being edited, or null for a new one. save(draft) receives a RecipeDraft. */
   let { recipe = null, button, save, cancel = null } = $props();

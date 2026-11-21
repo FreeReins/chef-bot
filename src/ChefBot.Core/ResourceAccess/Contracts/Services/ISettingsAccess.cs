@@ -30,4 +30,10 @@ internal interface ISettingsAccess
 
     /// <summary>Makes the saved stores exactly these, matched by id: others are removed.</summary>
     Task SaveStoresAsync(IReadOnlyList<GroceryStore> stores, CancellationToken cancellationToken);
+
+    /// <summary>The household's plan styles in their saved order. Empty when none are saved.</summary>
+    Task<List<PlanStyle>> ListPlanStylesAsync(CancellationToken cancellationToken);
+
+    /// <summary>Makes the saved plan styles exactly these, matched by id: others are removed.</summary>
+    Task SavePlanStylesAsync(IReadOnlyList<PlanStyle> styles, CancellationToken cancellationToken);
 }

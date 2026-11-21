@@ -10,4 +10,5 @@ public sealed record BackupSummary(
     int PantryItems,
     int ManualShoppingItems,
     int Users,
-    int GroceryStores);
+    int GroceryStores,
+    int PlanStyles);
