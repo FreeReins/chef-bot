@@ -190,6 +190,29 @@ internal static class Mapping
             };
         }).ToList();
 
+    /// <summary>
+    /// The to-do apps to save, from their drafts: a saved one keeps its id and, when no new token is given, its token.
+    /// Todoist needs no address, so none is kept for it.
+    /// </summary>
+    public static List<ShoppingTarget> ToShoppingTargets(this IReadOnlyList<ShoppingTargetDraft> drafts, IReadOnlyList<ShoppingTarget> current) =>
+        drafts.Select((draft, index) =>
+        {
+            var saved = current.FirstOrDefault(target => target.Id == draft.Id);
+            return new ShoppingTarget
+            {
+                Id = saved?.Id ?? Guid.CreateVersion7(),
+                Name = draft.Name.Trim(),
+                Kind = draft.Kind,
+                Url = draft.Kind == ShoppingTargetKind.Todoist ? string.Empty : draft.Url?.Trim() ?? string.Empty,
+                Token = draft.Token?.Trim() ?? saved?.Token ?? string.Empty,
+                List = draft.Kind == ShoppingTargetKind.Webhook ? string.Empty : draft.List?.Trim() ?? string.Empty,
+                Position = index,
+            };
+        }).ToList();
+
+    public static ShoppingTargetResponse ToResponse(this ShoppingTarget target) =>
+        new(target.Id, target.Name, target.Kind, target.Url, target.List, target.Token.Length > 0);
+
     public static PlanSummaryResponse ToSummary(this MealPlan plan) =>
         new(plan.Id, plan.WeekStart, WeekLayout.WeekEnd(plan.WeekStart), plan.Status, plan.StyleName);
 

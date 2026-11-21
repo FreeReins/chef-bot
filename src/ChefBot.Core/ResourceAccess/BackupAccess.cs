@@ -43,6 +43,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
             Schedule = await db.Set<ScheduleStateEntity>().AsNoTracking().ToListAsync(cancellationToken),
             GroceryStores = await db.GroceryStores.AsNoTracking().ToListAsync(cancellationToken),
             PlanStyles = await db.PlanStyles.AsNoTracking().ToListAsync(cancellationToken),
+            ShoppingTargets = await db.ShoppingTargets.AsNoTracking().ToListAsync(cancellationToken),
         };
 
         // A planned meal points at its recipe by id; the recipe itself is written once, under Recipes.
@@ -126,6 +127,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         await db.Set<ScheduleStateEntity>().ExecuteDeleteAsync(cancellationToken);
         await db.GroceryStores.ExecuteDeleteAsync(cancellationToken);
         await db.PlanStyles.ExecuteDeleteAsync(cancellationToken);
+        await db.ShoppingTargets.ExecuteDeleteAsync(cancellationToken);
 
         db.ChangeTracker.Clear();
         db.AddRange(contents.Recipes);
@@ -140,6 +142,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         db.AddRange(contents.Schedule);
         db.AddRange(contents.GroceryStores);
         db.AddRange(contents.PlanStyles);
+        db.AddRange(contents.ShoppingTargets);
 
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -182,6 +185,9 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
 
         /// <summary>Empty in backups made before households could keep their own plan styles.</summary>
         public List<PlanStyleEntity> PlanStyles { get; set; } = [];
+
+        /// <summary>The to-do apps, with their access tokens. Empty in backups made before the shopping list could be sent to one.</summary>
+        public List<ShoppingTargetEntity> ShoppingTargets { get; set; } = [];
     }
 
     /// <summary>

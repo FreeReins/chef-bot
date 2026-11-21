@@ -306,6 +306,9 @@ try each call. Both need you to be signed in.
 | `GET` `POST /api/shopping/items` | The items added to the shopping list by hand, which need no plan, or add one: `{"name": "milk", "quantity": 2, "unit": "l"}` (amount and unit optional; adding the same thing again adds to its amount) |
 | `POST /api/shopping/items/{itemId}/purchase`, `POST /api/shopping/items/purchase-all`, `DELETE /api/shopping/items/{itemId}` | Mark a hand-added item (or all of them) bought, which puts it in the pantry, or take it off the list. Body `{}` or, for one item, `{"expiresOn": "2026-11-20", "quantity": 2}` |
 | `POST /api/shopping/items/{itemId}/store` | Buy a hand-added item's ingredient at another store from now on, as for a plan's item |
+| `GET /api/shopping/targets`, `PUT /api/shopping/targets` | The to-do apps the shopping list can be sent to: `{"id", "name", "kind", "url", "list", "hasToken"}`, with `kind` one of `HomeAssistant`, `Todoist` or `Webhook`. Tokens are never sent back. `PUT` (admin) replaces them all: `{"targets": [{"id": null, "name": "Kitchen list", "kind": "HomeAssistant", "url": "http://homeassistant.local:8123", "list": "todo.shopping_list", "token": "..."}]}`; a target sent with `"token": null` keeps its saved token |
+| `POST /api/shopping/targets/{targetId}/test` | Add one test item to a to-do app (admin). Answers `{"sent", "total", "problem"}` |
+| `POST /api/shopping/send` | Add what is left to buy to a to-do app: `{"targetId": "...", "planId": "..."}`, the plan's items not yet bought plus the hand-added ones (only those without `planId`). Nothing is ticked off in ChefBot, and sending again adds the items again. Answers `{"sent", "total", "problem"}`; items go one at a time, so a problem stops the rest |
 | `GET /api/stores`, `PUT /api/stores` | The household's stores, the known stores and the ingredient names they can list. `PUT` replaces the stores (admin) |
 | `GET /api/plan-styles`, `PUT /api/plan-styles` | The household's plan styles, the starter styles, and the recipe tags and ingredient names rules can use. `PUT` replaces the styles: `{"styles": [{"name": "Crockpot week", "isDefault": true, "cookingDays": ["Sunday", "Wednesday"], "leftoverLunches": true, "breakfasts": 0, "snacks": 2, "sweets": 0, "drinks": 1, "rules": [{"limit": "AtLeast", "count": 2, "slot": "Dinner", "match": "SlowCooker"}]}]}`. A rule's `limit` is `AtLeast`, `AtMost`, `Exactly` or `None`; `match` is `SlowCooker`, `Tag` or `Ingredient` (with `values`) or `ReadyWithin` (with `minutes`); `day` puts matching dinners on a day first |
 | `GET` `POST /api/pantry`, `PATCH` `DELETE /api/pantry/{id}` | Read and correct the pantry |
@@ -484,6 +487,24 @@ automation:
 ```
 
 The webhook address for this example is `http://your-home-assistant:8123/api/webhook/chefbot`.
+
+### Sending the shopping list to a to-do app
+
+The Shopping tab can send what is left to buy to a to-do app, one item per thing to buy, such as "fish fillets,
+600 g", with its store and meals where the app keeps a description. An admin sets the apps up under
+**Settings → To-do apps**, and **Send a test item** there checks each one.
+
+- **Home Assistant** reaches any to-do list Home Assistant has: its own Shopping List, Local To-do, or one it syncs
+  with Bring!, Todoist, Google Tasks and others. Give Home Assistant's address, the list's entity (such as
+  `todo.shopping_list`) and a long-lived access token from your Home Assistant profile page, under **Security**.
+  ChefBot calls `todo.add_item` for each item.
+- **Todoist** needs an API token from Todoist's **Settings → Integrations → Developer**, and optionally a project id
+  (the Inbox otherwise).
+- **Webhook** posts the whole list at once as `{"type": "shopping_list", "sentAt": "...", "items": [{"title",
+  "description"}]}`, for an automation to handle. A token, if given, is sent as a bearer token.
+
+Tokens are kept in the database, and in backups, and never shown again once saved. Sending adds items each time,
+so send once you've finished changing the plan.
 
 ### Backups
 

@@ -91,3 +91,56 @@ test('a recipe and the whole library download as schema.org files', async ({ pag
   await expect(all).toHaveAttribute('href', '/api/recipes/export');
   await expect(all).toHaveAttribute('download', '');
 });
+
+test('the shopping list is sent to a to-do app, and the page says how many items went', async ({ page, api }) => {
+  const [kitchen] = data.shoppingTargets();
+  let sent = null;
+  api.set({
+    'GET /api/shopping/targets': data.shoppingTargets(),
+    'POST /api/shopping/send': (request) => {
+      sent = request.postDataJSON();
+      return { sent: 3, total: 3, problem: null };
+    },
+  });
+  await open(page, '/shopping');
+  await page.getByRole('button', { name: 'Send to Kitchen list' }).click();
+
+  await expect(page.getByText('3 items went to Kitchen list.')).toBeVisible();
+  expect(sent).toEqual({ targetId: kitchen.id, planId: data.plan().id });
+});
+
+test('a to-do app that refuses part of the list shows how far it got', async ({ page, api }) => {
+  api.set({
+    'GET /api/shopping/targets': data.shoppingTargets(),
+    'POST /api/shopping/send': { sent: 1, total: 3, problem: "Kitchen list didn't accept the access token (HTTP 401). Check the token in Settings." },
+  });
+  await open(page, '/shopping');
+  await page.getByRole('button', { name: 'Send to Kitchen list' }).click();
+
+  await expect(page.getByText(/1 of 3 items went to Kitchen list\. Kitchen list didn't accept/)).toBeVisible();
+});
+
+test('a new to-do app is saved without echoing a token, and a saved token is kept by sending none', async ({ page, api }) => {
+  let saved = null;
+  api.set({
+    'GET /api/shopping/targets': data.shoppingTargets(),
+    'PUT /api/shopping/targets': (request) => {
+      saved = request.postDataJSON();
+      return data.shoppingTargets();
+    },
+  });
+  await open(page, '/settings/todo-apps');
+  await page.getByRole('button', { name: 'Add a to-do app' }).click();
+  const fresh = page.getByRole('group', { name: 'New to-do app' });
+  await fresh.getByLabel('Kind').selectOption('Todoist');
+  await fresh.getByLabel('Access token').fill('abc123');
+  await fresh.getByLabel('Name').fill('Todoist'); // last: the group is named after it
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await expect(page.getByText('To-do apps saved.')).toBeVisible();
+  expect(saved.targets.map((target) => [target.name, target.kind, target.token])).toEqual([
+    ['Kitchen list', 'HomeAssistant', null],
+    ['Automation', 'Webhook', null],
+    ['Todoist', 'Todoist', 'abc123'],
+  ]);
+});

@@ -1,13 +1,14 @@
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wolverine.Http;
 
 namespace ChefBot.Api.Endpoints;
 
 /// <summary>
-/// The items put on the shopping list by hand. They need no plan, and buying one puts it in the pantry. Each
-/// change returns the whole hand-added list.
+/// The items put on the shopping list by hand, and sending the list to to-do apps. Hand-added items need no plan,
+/// and buying one puts it in the pantry. Each change to them returns the whole hand-added list.
 /// </summary>
 public static class ShoppingEndpoints
 {
@@ -47,4 +48,31 @@ public static class ShoppingEndpoints
     public static Task<IReadOnlyList<ManualShoppingItemResponse>> SetStore(
         ShoppingStoreRequest request, Guid itemId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
         plans.SetManualItemStoreAsync(itemId, request, cancellationToken);
+
+    /// <summary>The to-do apps the shopping list can be sent to. Their tokens are never included, only <c>hasToken</c>.</summary>
+    [WolverineGet("/api/shopping/targets")]
+    public static Task<IReadOnlyList<ShoppingTargetResponse>> Targets([FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.GetShoppingTargetsAsync(cancellationToken);
+
+    /// <summary>Replaces the to-do apps. A target sent without a <c>token</c> keeps its saved one. Admins only.</summary>
+    [WolverinePut("/api/shopping/targets")]
+    [Authorize(Policy = Sessions.AdminPolicy)]
+    public static Task<IReadOnlyList<ShoppingTargetResponse>> SaveTargets(
+        SaveShoppingTargetsRequest request, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.SaveShoppingTargetsAsync(request, cancellationToken);
+
+    /// <summary>Adds one test item to a to-do app, to check its settings. Admins only.</summary>
+    [WolverinePost("/api/shopping/targets/{targetId}/test")]
+    [Authorize(Policy = Sessions.AdminPolicy)]
+    public static Task<SendShoppingListResult> TestTarget(Guid targetId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.SendTestShoppingItemAsync(targetId, cancellationToken);
+
+    /// <summary>
+    /// Adds what is left to buy to a to-do app: <c>{"targetId": "...", "planId": "..."}</c>. Without a plan only the
+    /// hand-added items go. Nothing is ticked off in ChefBot.
+    /// </summary>
+    [WolverinePost("/api/shopping/send")]
+    public static Task<SendShoppingListResult> Send(
+        SendShoppingListRequest request, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.SendShoppingListAsync(request, cancellationToken);
 }

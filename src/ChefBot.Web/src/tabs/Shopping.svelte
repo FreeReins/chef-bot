@@ -15,6 +15,8 @@
   import Copy from '@lucide/svelte/icons/copy';
   import Printer from '@lucide/svelte/icons/printer';
   import Download from '@lucide/svelte/icons/download';
+  import ListTodo from '@lucide/svelte/icons/list-todo';
+  import { api } from '../lib/api.js';
   import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
 
   // With a plan the pantry comes with its ingredients view; without one it is loaded on its own, as on the Pantry tab.
@@ -87,6 +89,22 @@
     run(async () => download(`shopping-list-${app.plan?.weekStart ?? todayIso()}.csv`, 'text/csv;charset=utf-8', shoppingCsv(sections)));
   }
 
+  // Sending to a to-do app adds every item there again, so a second press waits for the first to finish.
+  let sendingTo = $state(null);
+
+  async function sendTo(target) {
+    sendingTo = target.id;
+    await run(async () => {
+      const result = await api('POST', '/api/shopping/send', { targetId: target.id, planId: app.plan?.id ?? null });
+      if (result.problem) {
+        toast(`${result.sent} of ${plural(result.total, 'item')} went to ${target.name}. ${result.problem}`, 'error');
+      } else {
+        toast(`${plural(result.sent, 'item')} went to ${target.name}. Nothing is ticked off here until you buy it.`);
+      }
+    });
+    sendingTo = null;
+  }
+
   async function add(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -143,6 +161,11 @@
       {/if}
       <button class="small with-icon" onclick={() => window.print()}><Printer size={14} />Print</button>
       <button class="small with-icon" onclick={downloadCsv}><Download size={14} />Download CSV</button>
+      {#each app.shoppingTargets as target (target.id)}
+        <button class="small with-icon" onclick={() => sendTo(target)} disabled={sendingTo !== null}>
+          <ListTodo size={14} />{sendingTo === target.id ? `Sending to ${target.name}…` : `Send to ${target.name}`}
+        </button>
+      {/each}
     </div>
   {/if}
 

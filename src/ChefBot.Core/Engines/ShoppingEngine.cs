@@ -1,3 +1,4 @@
+using System.Globalization;
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
@@ -282,4 +283,28 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
         var remaining = wanted.Value - have;
         return remaining <= 0m ? (true, null) : (false, remaining);
     }
+
+    /// <summary>
+    /// What is left to buy as to-do items, by store (those with none last) and then by name: "fish fillets, 600 g",
+    /// described as "Corner Market · For Slaw Fish Tacos · Optional".
+    /// </summary>
+    public static IReadOnlyList<ToDoItem> ToDoItems(IEnumerable<OverviewLine> toBuy) =>
+        toBuy
+            .OrderBy(line => string.IsNullOrEmpty(line.Store))
+            .ThenBy(line => line.Store ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(line => line.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(line =>
+            {
+                var amount = line.Quantity is decimal quantity
+                    ? string.Join(' ', new[] { quantity.ToString("0.##", CultureInfo.InvariantCulture), line.Unit }.Where(part => part.Length > 0))
+                    : null;
+                var notes = new[]
+                {
+                    line.Store,
+                    line.UsedIn.Count > 0 ? $"For {string.Join(", ", line.UsedIn)}" : null,
+                    line.IsOptional ? "Optional" : null,
+                }.Where(note => !string.IsNullOrEmpty(note)).ToList();
+                return new ToDoItem(amount is null ? line.Name : $"{line.Name}, {amount}", notes.Count > 0 ? string.Join(" · ", notes) : null);
+            })
+            .ToList();
 }

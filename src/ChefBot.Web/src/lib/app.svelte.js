@@ -34,6 +34,7 @@ export const app = $state({
   ingredients: null,   // IngredientsResponse for the plan
   pantry: [],          // PantryItemResponse[], loaded by the Pantry tab when there is no plan to read it from
   manualItems: [],     // ManualShoppingItemResponse[]: what was put on the shopping list by hand, plan or not
+  shoppingTargets: [], // ShoppingTargetResponse[]: the to-do apps the shopping list can be sent to
   recipeCount: 0,      // how many recipes the library holds; the Recipes tab fetches them a page at a time
   recipesChanged: 0,   // goes up each time the library may have changed, so the open page of recipes reloads
   recipeName: null,    // the name of the recipe open on its own page, once loaded, for the browser tab's title
@@ -455,6 +456,18 @@ export function setShoppingStore(itemId, store) {
   });
 }
 
+// ---------- to-do apps ----------
+
+/** Loads the to-do apps the shopping list can be sent to. Their tokens never come back, only hasToken. */
+export async function loadShoppingTargets() {
+  app.shoppingTargets = await api('GET', '/api/shopping/targets');
+}
+
+/** Saves the to-do apps (admins only). A target sent with a null token keeps the one saved for it. */
+export async function saveShoppingTargets(targets) {
+  app.shoppingTargets = await api('PUT', '/api/shopping/targets', { targets });
+}
+
 // ---------- plan styles ----------
 
 /** Loads the household's plan styles, the starter styles, and the tags and ingredients rules can name. */
@@ -507,7 +520,7 @@ export async function enterApp() {
     history.replaceState(null, '', location.pathname);
     app.linkToken = null;
   }
-  await Promise.all([loadRecipes(), loadPlan(), loadManualItems(), loadSystem(), loadStores(), loadStyles(), isAdmin() ? loadPeople() : null]);
+  await Promise.all([loadRecipes(), loadPlan(), loadManualItems(), loadSystem(), loadStores(), loadShoppingTargets(), loadStyles(), isAdmin() ? loadPeople() : null]);
   await showAddress();
 }
 

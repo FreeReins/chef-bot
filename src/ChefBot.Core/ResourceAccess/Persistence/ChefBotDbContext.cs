@@ -25,6 +25,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     public DbSet<PlanStyleEntity> PlanStyles => Set<PlanStyleEntity>();
 
+    public DbSet<ShoppingTargetEntity> ShoppingTargets => Set<ShoppingTargetEntity>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // Enums are stored by name so the tables stay readable and survive reordering.
@@ -33,6 +35,7 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         configurationBuilder.Properties<MealStatus>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<PlanStatus>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<LinkPurpose>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<ShoppingTargetKind>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<decimal>().HavePrecision(12, 3);
     }
 
@@ -90,6 +93,7 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         });
 
         modelBuilder.Entity<GroceryStoreEntity>().ToTable("GroceryStores");
+        modelBuilder.Entity<ShoppingTargetEntity>().ToTable("ShoppingTargets");
         modelBuilder.Entity<PlanStyleEntity>(style =>
         {
             style.ToTable("PlanStyles");

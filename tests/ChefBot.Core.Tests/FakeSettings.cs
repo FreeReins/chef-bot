@@ -17,6 +17,8 @@ internal sealed class FakeSettings : ISettingsAccess
 
     public List<PlanStyle> Styles { get; set; } = [];
 
+    public List<ShoppingTarget> ShoppingTargets { get; set; } = [];
+
     public Task<SecuritySettings> GetSecurityAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Security));
 
     public Task SaveSecurityAsync(SecuritySettings settings, CancellationToken cancellationToken) => Set(() => Security = Copies.Of(settings));
@@ -38,6 +40,12 @@ internal sealed class FakeSettings : ISettingsAccess
 
     public Task SaveStoresAsync(IReadOnlyList<GroceryStore> stores, CancellationToken cancellationToken) =>
         Set(() => Stores = stores.Select(Copies.Of).ToList());
+
+    public Task<List<ShoppingTarget>> ListShoppingTargetsAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(ShoppingTargets.Select(Copies.Of).OrderBy(target => target.Position).ToList());
+
+    public Task SaveShoppingTargetsAsync(IReadOnlyList<ShoppingTarget> targets, CancellationToken cancellationToken) =>
+        Set(() => ShoppingTargets = targets.Select(Copies.Of).ToList());
 
     public Task<List<PlanStyle>> ListPlanStylesAsync(CancellationToken cancellationToken) =>
         Task.FromResult(Styles.Select(Copies.Of).OrderBy(style => style.Position).ToList());

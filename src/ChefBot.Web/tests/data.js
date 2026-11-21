@@ -315,3 +315,11 @@ export const alternatives = (forMeal) => ({
 
 // A 1×1 PNG for recipe photos.
 export const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+
+/** ShoppingTargetResponse[]: a Home Assistant list with its token saved, and a webhook without one. */
+export const shoppingTargets = () => [
+  { id: '00000000-0000-4000-8000-000000000501', name: 'Kitchen list', kind: 'HomeAssistant', url: 'http://homeassistant.local:8123',
+    list: 'todo.shopping_list', hasToken: true },
+  { id: '00000000-0000-4000-8000-000000000502', name: 'Automation', kind: 'Webhook', url: 'https://hooks.example/shopping',
+    list: '', hasToken: false },
+];

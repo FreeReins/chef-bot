@@ -107,6 +107,32 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
         }
     }
 
+    public async Task<List<ShoppingTarget>> ListShoppingTargetsAsync(CancellationToken cancellationToken) =>
+        (await db.ShoppingTargets.ToListAsync(cancellationToken))
+            .OrderBy(target => target.Position)
+            .Select(target => target.ToContract())
+            .ToList();
+
+    public async Task SaveShoppingTargetsAsync(IReadOnlyList<ShoppingTarget> targets, CancellationToken cancellationToken)
+    {
+        var tracked = await db.ShoppingTargets.ToDictionaryAsync(target => target.Id, cancellationToken);
+        var wanted = targets.Select(target => target.ToEntity()).ToList();
+        var wantedIds = wanted.Select(target => target.Id).ToHashSet();
+
+        db.ShoppingTargets.RemoveRange(tracked.Values.Where(target => !wantedIds.Contains(target.Id)));
+        foreach (var fresh in wanted)
+        {
+            if (tracked.TryGetValue(fresh.Id, out var row))
+            {
+                db.CopyInto(row, fresh);
+            }
+            else
+            {
+                db.ShoppingTargets.Add(fresh);
+            }
+        }
+    }
+
     public async Task<List<PlanStyle>> ListPlanStylesAsync(CancellationToken cancellationToken) =>
         (await db.PlanStyles.ToListAsync(cancellationToken))
             .OrderBy(style => style.Position)

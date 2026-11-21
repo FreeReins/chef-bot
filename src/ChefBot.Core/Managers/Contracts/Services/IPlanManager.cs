@@ -105,6 +105,25 @@ public interface IPlanManager
     Task<IReadOnlyList<ManualShoppingItemResponse>> SetManualItemStoreAsync(
         Guid itemId, ShoppingStoreRequest request, CancellationToken cancellationToken);
 
+    /// <summary>The to-do apps the shopping list can be sent to, in their saved order. Tokens are never included.</summary>
+    Task<IReadOnlyList<ShoppingTargetResponse>> GetShoppingTargetsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Replaces the to-do apps the shopping list can be sent to. A target sent without a token keeps its saved one.</summary>
+    /// <exception cref="RuleViolationException">A target is missing its address, list or token, or two share a name.</exception>
+    Task<IReadOnlyList<ShoppingTargetResponse>> SaveShoppingTargetsAsync(SaveShoppingTargetsRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Adds what is left to buy to a to-do app, one item per thing to buy with its amount, store and meals. Nothing
+    /// is ticked off in ChefBot. Sending again adds the items again.
+    /// </summary>
+    /// <exception cref="NotFoundException">The to-do app or the plan doesn't exist.</exception>
+    /// <exception cref="RuleViolationException">Nothing is left to buy.</exception>
+    Task<SendShoppingListResult> SendShoppingListAsync(SendShoppingListRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Adds one test item to a to-do app, so its settings can be checked.</summary>
+    /// <exception cref="NotFoundException">The to-do app doesn't exist.</exception>
+    Task<SendShoppingListResult> SendTestShoppingItemAsync(Guid targetId, CancellationToken cancellationToken);
+
     /// <summary>The household's stores, the known stores that can be added, and the ingredient names a store can list.</summary>
     Task<GroceryStoresResponse> GetStoresAsync(CancellationToken cancellationToken);
 

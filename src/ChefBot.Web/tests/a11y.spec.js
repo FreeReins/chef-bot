@@ -63,6 +63,7 @@ const VIEWS = [
   { name: 'shopping without a plan', path: '/shopping', answers: { ...noPlan, 'GET /api/shopping/items': data.manualItems() } },
   { name: 'shopping without a plan, empty list', path: '/shopping', answers: { ...noPlan, 'GET /api/pantry': [] } },
   { name: 'shopping, printed', path: '/shopping', act: (page) => page.emulateMedia({ media: 'print' }) },
+  { name: 'shopping with to-do apps to send to', path: '/shopping', answers: { 'GET /api/shopping/targets': data.shoppingTargets() } },
   { name: 'pantry with a plan', path: '/pantry' },
   { name: 'pantry without a plan', path: '/pantry', answers: noPlan },
   {
@@ -219,6 +220,16 @@ const VIEWS = [
     name: 'settings: backups with one opened', path: '/settings/backups',
     act: (page) => page.getByRole('button', { expanded: false }).first().click()
       .then(() => page.getByText('Recipe photos').waitFor()),
+  },
+  { name: 'settings: to-do apps', path: '/settings/todo-apps', answers: { 'GET /api/shopping/targets': data.shoppingTargets() } },
+  { name: 'settings: no to-do apps yet', path: '/settings/todo-apps' },
+  {
+    name: 'settings: adding a Todoist to-do app', path: '/settings/todo-apps',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Add a to-do app' }).click();
+      await page.getByLabel('Kind').selectOption('Todoist');
+      await page.getByText('not saved yet').waitFor();
+    },
   },
   {
     name: 'settings: logs with a long entry opened', path: '/settings/logs',

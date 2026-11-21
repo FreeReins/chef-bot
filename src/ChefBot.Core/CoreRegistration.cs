@@ -70,6 +70,8 @@ public static class CoreRegistration
         services.AddSingleton<IKnownStoreAccess>(new KnownStoreAccess(DataPath(configuration, "Data:KnownStores", "config/stores.json")));
         services.AddSingleton<IKnownPlanStyleAccess>(new KnownPlanStyleAccess(DataPath(configuration, "Data:PlanStyles", "config/plan-styles.json")));
         services.AddHttpClient<INotificationAccess, NotificationAccess>(client => client.Timeout = TimeSpan.FromSeconds(10));
+        // To-do apps are set up by an admin and are often on the home network (Home Assistant), so private addresses are allowed.
+        services.AddHttpClient<IToDoListAccess, ToDoListAccess>(client => client.Timeout = TimeSpan.FromSeconds(10));
         // Photos and recipe pages come from addresses people or web pages choose, so they only reach the public internet.
         services.AddHttpClient<IImageSourceAccess, ImageSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(20))
             .ConfigurePrimaryHttpMessageHandler(PublicWeb.Handler);

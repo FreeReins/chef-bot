@@ -27,6 +27,12 @@ internal interface ISettingsAccess
     /// <summary>Makes the saved stores exactly these, matched by id: others are removed.</summary>
     Task SaveStoresAsync(IReadOnlyList<GroceryStore> stores, CancellationToken cancellationToken);
 
+    /// <summary>The to-do apps the shopping list can be sent to, in their saved order. Empty when none are set up.</summary>
+    Task<List<ShoppingTarget>> ListShoppingTargetsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Makes the saved to-do apps exactly these, matched by id: others are removed.</summary>
+    Task SaveShoppingTargetsAsync(IReadOnlyList<ShoppingTarget> targets, CancellationToken cancellationToken);
+
     /// <summary>The household's plan styles in their saved order. Empty when none are saved.</summary>
     Task<List<PlanStyle>> ListPlanStylesAsync(CancellationToken cancellationToken);
 
