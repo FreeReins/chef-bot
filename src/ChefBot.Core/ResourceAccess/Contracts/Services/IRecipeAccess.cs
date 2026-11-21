@@ -11,6 +11,12 @@ internal interface IRecipeAccess
     /// <summary>Every recipe, archived ones included.</summary>
     Task<List<Recipe>> ListAllAsync(CancellationToken cancellationToken);
 
+    /// <summary>A slice of the recipes that can be planned matching the query, with their ingredients and photos.</summary>
+    Task<RecipeSearchResult> SearchActiveAsync(RecipeQuery query, CancellationToken cancellationToken);
+
+    /// <summary>How many recipes can be planned.</summary>
+    Task<int> CountActiveAsync(CancellationToken cancellationToken);
+
     Task<Recipe?> FindAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Adds the recipe, or updates the stored one with the same id.</summary>

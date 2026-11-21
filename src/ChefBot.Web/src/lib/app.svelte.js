@@ -33,7 +33,9 @@ export const app = $state({
   ingredients: null,   // IngredientsResponse for the plan
   pantry: [],          // PantryItemResponse[], loaded by the Pantry tab when there is no plan to read it from
   manualItems: [],     // ManualShoppingItemResponse[]: what was put on the shopping list by hand, plan or not
-  recipes: [],
+  recipeCount: 0,      // how many recipes the library holds; the Recipes tab fetches them a page at a time
+  recipesChanged: 0,   // goes up each time the library may have changed, so the open page of recipes reloads
+  recipeName: null,    // the name of the recipe open on its own page, once loaded, for the browser tab's title
   swap: null,          // { mealId, options } while a meal's alternatives are open
   toasts: [],          // { id, text, kind: 'note' | 'error' } shown in the corner by Toasts.svelte
   confirmation: null,  // { title, message, confirmLabel, danger } while ConfirmDialog.svelte is asking
@@ -303,7 +305,11 @@ export const setManualStore = (id, store) => run(async () => {
 
 // ---------- recipes ----------
 
-export const loadRecipes = async () => { app.recipes = await api('GET', '/api/recipes'); };
+/** Counts the library again, and tells the Recipes tab to reload its page. */
+export async function loadRecipes() {
+  app.recipeCount = (await api('GET', '/api/recipes/search?pageSize=1')).librarySize;
+  app.recipesChanged++;
+}
 
 /**
  * Imports one recipe file. A .zip, such as a Mealie backup, is sent as it is so its photos come too; other files are

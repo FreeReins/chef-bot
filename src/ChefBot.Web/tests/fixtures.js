@@ -8,11 +8,40 @@ const REPLY = Symbol('reply');
 /** An answer other than 200 with JSON, for example `reply(500, { detail: 'The server is down.' })`. */
 export const reply = (status, body = null, contentType = 'application/json') => ({ [REPLY]: true, status, body, contentType });
 
+const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
+
+/**
+ * Answers for a recipe library, as the server gives them: the whole list, one recipe by id (404 when it isn't there),
+ * and a search a page at a time.
+ */
+export const library = (recipes) => ({
+  'GET /api/recipes': recipes,
+  'GET /api/recipes/*': (request) => recipes.find((recipe) => new URL(request.url()).pathname.endsWith(`/${recipe.id}`))
+    ?? reply(404, { detail: 'There is no recipe with that id.' }),
+  'GET /api/recipes/search': (request) => {
+    const params = new URL(request.url()).searchParams;
+    const words = (params.get('query') ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+    const course = params.get('course');
+    const page = Math.max(1, Number(params.get('page') ?? 1));
+    const pageSize = Math.min(100, Math.max(1, Number(params.get('pageSize') ?? 25)));
+    const matches = recipes
+      .filter((recipe) => !course || recipe.course === course)
+      .filter((recipe) => words.every((word) => [recipe.name, ...recipe.ingredients, ...recipe.tags]
+        .some((text) => text.toLowerCase().includes(word))))
+      .sort((a, b) => COURSES.indexOf(a.course) - COURSES.indexOf(b.course) || a.name.localeCompare(b.name));
+    return {
+      recipes: matches.slice((page - 1) * pageSize, page * pageSize)
+        .map(({ id, name, course: kind, isSlowCooker, ingredients, tags }) => ({ id, name, course: kind, isSlowCooker, ingredients, tags })),
+      total: matches.length, page, pageSize, librarySize: recipes.length,
+    };
+  },
+});
+
 /** What every test starts with: an admin signed in, a confirmed plan for one week, and everything the Settings tab loads. */
 function defaults() {
   return {
     'GET /api/session': data.session(),
-    'GET /api/recipes': data.recipes(),
+    ...library(data.recipes()),
     'GET /api/plans': [data.summary(data.plan())],
     'GET /api/plans/*': data.plan(),
     'GET /api/plan-styles': data.planStyles(),

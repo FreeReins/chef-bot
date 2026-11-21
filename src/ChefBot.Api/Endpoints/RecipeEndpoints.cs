@@ -17,6 +17,20 @@ public static class RecipeEndpoints
     public static Task<IReadOnlyList<RecipeResponse>> List([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.ListAsync(cancellationToken);
 
+    /// <summary>
+    /// One page of the library, such as <c>/api/recipes/search?query=chicken&amp;course=Main&amp;page=2&amp;pageSize=25</c>.
+    /// Every parameter is optional: no query matches every recipe, and the page size defaults to 25 (100 at most).
+    /// </summary>
+    [WolverineGet("/api/recipes/search")]
+    public static Task<RecipePageResponse> Search(
+        string? query, RecipeCourse? course, int? page, int? pageSize, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.SearchAsync(new RecipeSearchRequest(query, course, page ?? 1, pageSize ?? 0), cancellationToken);
+
+    /// <summary>One recipe in full. An archived recipe is not found.</summary>
+    [WolverineGet("/api/recipes/{id}")]
+    public static Task<RecipeResponse> Get(Guid id, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.GetAsync(id, cancellationToken);
+
     /// <summary>Adds a recipe. Ingredients are free-text lines such as "1 lb chicken thighs".</summary>
     [WolverinePost("/api/recipes")]
     public static Task<RecipeResponse> Create(RecipeDraft request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>

@@ -15,6 +15,23 @@ internal sealed class FakeRecipes : IRecipeAccess
 
     public Task<List<Recipe>> ListAllAsync(CancellationToken cancellationToken) => Task.FromResult(Rows.Select(Copies.Of).ToList());
 
+    public Task<RecipeSearchResult> SearchActiveAsync(RecipeQuery query, CancellationToken cancellationToken)
+    {
+        var matching = Rows
+            .Where(r => !r.IsArchived && (query.Course is null || r.Course == query.Course))
+            .Where(r => query.Words.All(word => Contains(r.Name, word)
+                || r.Ingredients.Any(i => Contains(i.Text, word) || Contains(i.DisplayName, word))
+                || r.Tags.Any(tag => Contains(tag, word))))
+            .OrderBy(r => r.Course)
+            .ThenBy(r => r.Name, StringComparer.Ordinal)
+            .ThenBy(r => r.Id)
+            .ToList();
+        return Task.FromResult(new RecipeSearchResult(
+            matching.Skip(query.Skip).Take(query.Take).Select(Copies.Of).ToList(), matching.Count));
+    }
+
+    public Task<int> CountActiveAsync(CancellationToken cancellationToken) => Task.FromResult(Rows.Count(r => !r.IsArchived));
+
     public Task<Recipe?> FindAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(Rows.FirstOrDefault(r => r.Id == id) is { } row ? Copies.Of(row) : null);
 
@@ -43,4 +60,6 @@ internal sealed class FakeRecipes : IRecipeAccess
         ImageFiles[file.ImageId] = file;
         return Task.CompletedTask;
     }
+
+    private static bool Contains(string text, string word) => text.Contains(word, StringComparison.OrdinalIgnoreCase);
 }

@@ -49,6 +49,8 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(RecipeDraft))]
 [JsonSerializable(typeof(RecipeResponse))]
 [JsonSerializable(typeof(IReadOnlyList<RecipeResponse>))]
+[JsonSerializable(typeof(RecipeSearchRequest))]
+[JsonSerializable(typeof(RecipePageResponse))]
 [JsonSerializable(typeof(ImportFileRequest))]
 [JsonSerializable(typeof(FileImportResult))]
 [JsonSerializable(typeof(IReadOnlyList<RecipeFileFormatResponse>))]

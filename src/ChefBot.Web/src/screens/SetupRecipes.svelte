@@ -13,7 +13,7 @@
   let fromFiles = $state(0);
   let samplesAdded = $state(0);
 
-  const count = $derived(app.recipes.length);
+  const count = $derived(app.recipeCount);
 
   function toggle(choice, event) {
     event.preventDefault();

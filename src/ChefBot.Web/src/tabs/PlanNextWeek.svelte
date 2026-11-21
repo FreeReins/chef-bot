@@ -12,7 +12,7 @@
   let chosenName = $state(null);
   const chosen = $derived(choices.find((style) => style.name === chosenName) ?? defaultStyle(app.styles));
   const weekStart = $derived(nextWeekStart());
-  const noRecipes = $derived(app.recipes.length === 0);
+  const noRecipes = $derived(app.recipeCount === 0);
 </script>
 
 <section class="card plan-next" aria-labelledby="plan-next-title">

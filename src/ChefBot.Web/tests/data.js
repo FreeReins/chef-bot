@@ -188,6 +188,17 @@ export const recipes = () => [
   recipe(ids.crumble, 'Pear and Ginger Crumble', 'Sweet', { ingredients: ['pears', 'ginger', 'butter'] }),
 ];
 
+/** RecipeResponse[]: the usual recipes, then numbered ones up to `count` in all, so the library runs to several pages. */
+export const manyRecipes = (count) => {
+  const courses = ['Main', 'Breakfast', 'Snack', 'Sweet'];
+  const extra = Array.from({ length: Math.max(0, count - 6) }, (_, index) => recipe(
+    `00000000-0000-4000-8000-${String(900000000 + index).padStart(12, '0')}`,
+    `Test Recipe ${String(index + 1).padStart(2, '0')}`,
+    courses[index % courses.length],
+  ));
+  return [...recipes(), ...extra];
+};
+
 /** GroceryStoresResponse */
 export const stores = () => ({
   stores: [

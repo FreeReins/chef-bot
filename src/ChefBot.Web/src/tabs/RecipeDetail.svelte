@@ -10,12 +10,14 @@
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import ImagePlus from '@lucide/svelte/icons/image-plus';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
   const MAX_PHOTO_MB = 5;
 
   let { id } = $props();
 
-  const recipe = $derived(app.recipes.find((candidate) => candidate.id === id));
+  let recipe = $state(null);
+  let loaded = $state(false);
   let editing = $state(false);
   let shownId = $state(null); // the photo shown large; the cover when none was picked
   let uploading = $state(false);
@@ -36,10 +38,29 @@
     return [hours ? `${hours} h` : '', rest ? `${rest} min` : ''].filter(Boolean).join(' ');
   }
 
+  /** Shows a recipe the server sent back, and names the browser tab after it. */
+  function show(found) {
+    recipe = found;
+    app.recipeName = found?.name ?? null;
+  }
+
+  // The page is rebuilt for each recipe, so this runs once per id. A recipe that is gone shows the empty state.
+  app.recipeName = null;
+  run(async () => {
+    try {
+      show(await api('GET', `/api/recipes/${id}`));
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      show(null);
+    } finally {
+      loaded = true;
+    }
+  });
+
   async function save(draft) {
     let saved = false;
     await run(async () => {
-      await api('PUT', `/api/recipes/${recipe.id}`, draft);
+      show(await api('PUT', `/api/recipes/${recipe.id}`, draft));
       await loadRecipes();
       editing = false;
       saved = true;
@@ -82,7 +103,7 @@
     uploading = true;
     await run(async () => {
       const saved = await api('POST', `/api/recipes/${recipe.id}/images`, { data: await base64(file) });
-      await loadRecipes();
+      show(saved);
       shownId = saved.images.at(-1)?.id ?? null;
       toast('Photo added.');
     });
@@ -93,8 +114,7 @@
     if (!(await ask({ title: 'Remove this photo?', message: `It is deleted from ${recipe.name} for good.`,
       confirmLabel: 'Remove', danger: true }))) return;
     run(async () => {
-      await api('DELETE', `/api/recipes/${recipe.id}/images/${image.id}`);
-      await loadRecipes();
+      show(await api('DELETE', `/api/recipes/${recipe.id}/images/${image.id}`));
       shownId = null;
       toast('Photo removed.');
     });
@@ -103,7 +123,9 @@
 
 <p style="margin:1rem 0 0"><a class="back" href="/recipes"><ArrowLeft size={16} />All recipes</a></p>
 
-{#if !recipe}
+{#if !loaded}
+  <p class="loading muted" role="status" aria-label="Loading the recipe"><LoaderCircle size={24} /></p>
+{:else if !recipe}
   <div class="card empty">
     <h2>That recipe isn't in your library</h2>
     <p class="muted">It may have been archived, or the link is from another ChefBot. Pick one from your recipes instead.</p>

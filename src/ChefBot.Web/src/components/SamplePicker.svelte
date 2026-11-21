@@ -7,7 +7,7 @@
   import { SLOT_TITLES } from '../lib/format.js';
   import Chip from './Chip.svelte';
 
-  /** onadded(count) runs after the chosen samples are saved and `app.recipes` has been reloaded. */
+  /** onadded(count) runs after the chosen samples are saved and `app.recipeCount` has been reloaded. */
   let { onadded } = $props();
 
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink'];

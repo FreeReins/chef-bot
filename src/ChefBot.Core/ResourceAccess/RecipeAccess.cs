@@ -1,3 +1,4 @@
+using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Persistence;
@@ -8,6 +9,9 @@ namespace ChefBot.Core.ResourceAccess;
 /// <inheritdoc cref="IRecipeAccess"/>
 internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
 {
+    /// <summary>The character that makes the next <c>%</c>, <c>_</c> or itself in a LIKE pattern match literally.</summary>
+    private const string LikeEscape = "\\";
+
     private IQueryable<RecipeEntity> WithIngredients => db.Recipes.Include(recipe => recipe.Ingredients).Include(recipe => recipe.Images).AsSplitQuery();
 
     public async Task<List<Recipe>> ListActiveAsync(CancellationToken cancellationToken) =>
@@ -16,6 +20,46 @@ internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
 
     public async Task<List<Recipe>> ListAllAsync(CancellationToken cancellationToken) =>
         (await WithIngredients.ToListAsync(cancellationToken)).Select(recipe => recipe.ToContract()).ToList();
+
+    public async Task<RecipeSearchResult> SearchActiveAsync(RecipeQuery query, CancellationToken cancellationToken)
+    {
+        var matching = db.Recipes.AsNoTracking().Where(recipe => !recipe.IsArchived);
+        if (query.Course is RecipeCourse course)
+        {
+            matching = matching.Where(recipe => recipe.Course == course);
+        }
+
+        foreach (var word in query.Words)
+        {
+            var pattern = $"%{EscapeLike(word)}%";
+            matching = matching.Where(recipe =>
+                EF.Functions.ILike(recipe.Name, pattern, LikeEscape)
+                || recipe.Ingredients.Any(ingredient => EF.Functions.ILike(ingredient.Text, pattern, LikeEscape)
+                    || EF.Functions.ILike(ingredient.DisplayName, pattern, LikeEscape))
+                || recipe.Tags.Any(tag => EF.Functions.ILike(tag, pattern, LikeEscape)));
+        }
+
+        var total = await matching.CountAsync(cancellationToken);
+        var page = await matching
+            .OrderBy(recipe => recipe.Course == RecipeCourse.Main ? 0
+                : recipe.Course == RecipeCourse.Breakfast ? 1
+                : recipe.Course == RecipeCourse.Snack ? 2
+                : recipe.Course == RecipeCourse.Sweet ? 3
+                : recipe.Course == RecipeCourse.Drink ? 4
+                : 5)
+            .ThenBy(recipe => recipe.Name)
+            .ThenBy(recipe => recipe.Id)
+            .Skip(query.Skip)
+            .Take(query.Take)
+            .Include(recipe => recipe.Ingredients)
+            .Include(recipe => recipe.Images)
+            .AsSplitQuery()
+            .ToListAsync(cancellationToken);
+        return new RecipeSearchResult(page.Select(recipe => recipe.ToContract()).ToList(), total);
+    }
+
+    public Task<int> CountActiveAsync(CancellationToken cancellationToken) =>
+        db.Recipes.CountAsync(recipe => !recipe.IsArchived, cancellationToken);
 
     public async Task<Recipe?> FindAsync(Guid id, CancellationToken cancellationToken) =>
         (await TrackedAsync(id, cancellationToken))?.ToContract();
@@ -61,4 +105,9 @@ internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
     private async Task<RecipeEntity?> TrackedAsync(Guid id, CancellationToken cancellationToken) =>
         db.Recipes.Local.FirstOrDefault(recipe => recipe.Id == id)
         ?? await WithIngredients.FirstOrDefaultAsync(recipe => recipe.Id == id, cancellationToken);
+
+    private static string EscapeLike(string text) =>
+        text.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
 }

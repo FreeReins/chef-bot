@@ -117,6 +117,14 @@ internal static class Mapping
                 .ToList());
     }
 
+    public static RecipeSummaryResponse ToSummary(this Recipe recipe) => new(
+        recipe.Id,
+        recipe.Name,
+        recipe.Course,
+        recipe.IsSlowCooker,
+        recipe.Ingredients.OrderBy(ingredient => ingredient.Position).Select(Written).ToList(),
+        [.. recipe.Tags]);
+
     public static RecipeText ToText(this RecipeDraft draft) => new(
         draft.Name,
         draft.Course,

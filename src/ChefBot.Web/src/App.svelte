@@ -51,7 +51,7 @@
   const title = $derived.by(() => {
     if (app.screen === 'setup-samples') return 'Sample recipes';
     if (!inApp) return null;
-    if (app.recipeId) return app.recipes.find((recipe) => recipe.id === app.recipeId)?.name ?? 'Recipe';
+    if (app.recipeId) return app.recipeName ?? 'Recipe';
     return TABS.find((tab) => tab.key === app.tab)?.label;
   });
 

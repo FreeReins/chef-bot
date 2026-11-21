@@ -8,6 +8,16 @@ public interface IRecipeManager
     /// <summary>Recipes that can be planned, by name.</summary>
     Task<IReadOnlyList<RecipeResponse>> ListAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// One page of the recipes that can be planned, in course order and then by name, keeping those whose name,
+    /// ingredients or tags contain every word of the query. A page past the last comes back empty.
+    /// </summary>
+    Task<RecipePageResponse> SearchAsync(RecipeSearchRequest request, CancellationToken cancellationToken);
+
+    /// <summary>One recipe that can be planned, in full.</summary>
+    /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
+    Task<RecipeResponse> GetAsync(Guid id, CancellationToken cancellationToken);
+
     Task<RecipeResponse> CreateAsync(RecipeDraft draft, CancellationToken cancellationToken);
 
     /// <summary>Saves an edit.</summary>

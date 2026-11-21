@@ -15,7 +15,7 @@
       const chosen = $state.snapshot(stores);
       if (chosen.length || app.stores?.stores.length) await saveStores(chosen);
       app.storeDraft = null;
-      const total = app.recipes.length;
+      const total = app.recipeCount;
       await enterApp();
       await go(total ? '/plan' : '/recipes');
       const shopping = chosen.length

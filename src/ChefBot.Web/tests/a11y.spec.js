@@ -1,6 +1,6 @@
 // Every screen of the page, checked with axe in each project of playwright.config.js (light, dark, phone).
 // To cover a new screen or state, add a row to VIEWS: where to go, any answers to change, and what to click first.
-import { test, open, reply } from './fixtures.js';
+import { test, open, reply, library } from './fixtures.js';
 import { expectAccessible } from './axe.js';
 import * as data from './data.js';
 
@@ -36,7 +36,7 @@ const VIEWS = [
     },
   },
   { name: 'plan, nothing planned', path: '/plan', answers: noPlan },
-  { name: 'plan, nothing planned and no recipes', path: '/plan', answers: { ...noPlan, 'GET /api/recipes': [] } },
+  { name: 'plan, nothing planned and no recipes', path: '/plan', answers: { ...noPlan, ...library([]) } },
   { name: 'plan, nothing planned and no styles saved', path: '/plan',
     answers: { ...noPlan, 'GET /api/plan-styles': { ...data.planStyles(), styles: [] } } },
   { name: 'plan, this week confirmed and next week a draft', path: '/plan', answers: weeks(data.plan(), data.nextPlan()) },
@@ -56,6 +56,16 @@ const VIEWS = [
 
   // Recipes
   { name: 'recipes', path: '/recipes' },
+  {
+    name: 'recipes, searching with no match', path: '/recipes',
+    act: (page) => page.getByRole('searchbox', { name: 'Search' }).fill('zzz')
+      .then(() => page.getByText('No recipes match').waitFor()),
+  },
+  {
+    name: 'recipes, the second of several pages', path: '/recipes', answers: library(data.manyRecipes(60)),
+    act: (page) => page.getByRole('button', { name: 'Next' }).click()
+      .then(() => page.getByText('Page 2 of 3').waitFor()),
+  },
   { name: 'a recipe', path: `/recipes/${data.ids.tacos}` },
   {
     name: 'editing a recipe', path: `/recipes/${data.ids.tacos}`,
@@ -101,7 +111,7 @@ const VIEWS = [
 
   // Someone who isn't an admin sees fewer tabs and sections.
   { name: 'plan for a member', path: '/plan', answers: { 'GET /api/session': data.session(data.member()) } },
-  { name: 'plan for a member, no recipes', path: '/plan', answers: { ...noPlan, 'GET /api/recipes': [], 'GET /api/session': data.session(data.member()) } },
+  { name: 'plan for a member, no recipes', path: '/plan', answers: { ...noPlan, ...library([]), 'GET /api/session': data.session(data.member()) } },
   { name: 'settings for a member', path: '/settings/https', answers: { 'GET /api/session': data.session(data.member()) } },
 
   // Things laid over the page
@@ -140,7 +150,7 @@ test('setup wizard, every step', async ({ page, api }) => {
   api.set({
     'GET /api/session': { setupRequired: true, user: null },
     'POST /api/setup/account': data.admin(),
-    'GET /api/recipes': [],
+    ...library([]),
     'GET /api/plan-styles': { ...data.planStyles(), styles: [] },
   });
   await open(page, '/');

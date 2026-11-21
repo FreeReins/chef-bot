@@ -19,8 +19,34 @@ internal sealed class RecipeManager(
     ValidationEngine validation,
     TimeProvider clock) : IRecipeManager
 {
+    /// <summary>The page size used when a search asks for none.</summary>
+    private const int DefaultPageSize = 25;
+
+    private const int MaxPageSize = 100;
+
     public async Task<IReadOnlyList<RecipeResponse>> ListAsync(CancellationToken cancellationToken) =>
         (await recipes.ListActiveAsync(cancellationToken)).Select(recipe => recipe.ToResponse()).ToList();
+
+    public async Task<RecipePageResponse> SearchAsync(RecipeSearchRequest request, CancellationToken cancellationToken)
+    {
+        var page = Math.Max(request.Page, 1);
+        var pageSize = request.PageSize < 1 ? DefaultPageSize : Math.Min(request.PageSize, MaxPageSize);
+        var words = (request.Query ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var query = new RecipeQuery(words, request.Course, (int)Math.Min((long)(page - 1) * pageSize, int.MaxValue), pageSize);
+
+        var found = await recipes.SearchActiveAsync(query, cancellationToken);
+        var librarySize = await recipes.CountActiveAsync(cancellationToken);
+        return new RecipePageResponse(
+            found.Recipes.Select(recipe => recipe.ToSummary()).ToList(), found.Total, page, pageSize, librarySize);
+    }
+
+    public async Task<RecipeResponse> GetAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var recipe = await validation.RecipeAsync(id, cancellationToken);
+        return recipe.IsArchived
+            ? throw new NotFoundException("That recipe has been archived, so it is no longer in the library.")
+            : recipe.ToResponse();
+    }
 
     public async Task<RecipeResponse> CreateAsync(RecipeDraft draft, CancellationToken cancellationToken)
     {
