@@ -1,10 +1,11 @@
 using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace ChefBot.Core.ResourceAccess.Persistence;
 
-/// <summary>The PostgreSQL database: recipes, weekly plans, the pantry, the hand-added shopping list, accounts, stores, plan styles and settings.</summary>
+/// <summary>The PostgreSQL database: recipes, weekly plans, the pantry, the hand-added shopping list, accounts, stores, plan styles, settings and the food history.</summary>
 internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> options) : DbContext(options)
 {
     public DbSet<RecipeEntity> Recipes => Set<RecipeEntity>();
@@ -29,6 +30,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     public DbSet<ShoppingTargetEntity> ShoppingTargets => Set<ShoppingTargetEntity>();
 
+    public DbSet<FoodMomentEntity> FoodMoments => Set<FoodMomentEntity>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // Enums are stored by name so the tables stay readable and survive reordering.
@@ -38,6 +41,7 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         configurationBuilder.Properties<PlanStatus>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<LinkPurpose>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<ShoppingTargetKind>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<FoodMomentKind>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<decimal>().HavePrecision(12, 3);
     }
 
@@ -113,6 +117,12 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         modelBuilder.Entity<BackupSettingsEntity>().ToTable("BackupSettings");
         modelBuilder.Entity<ScheduleStateEntity>().ToTable("ScheduleState");
         modelBuilder.Entity<CalendarFeedEntity>().ToTable("CalendarFeed");
+        modelBuilder.Entity<FoodMomentEntity>(moment =>
+        {
+            moment.ToTable("FoodMoments");
+            moment.HasIndex(m => m.OccurredOn);
+            moment.HasIndex(m => m.MealId);
+        });
 
         UseKeysGeneratedInCode(modelBuilder);
     }

@@ -12,6 +12,7 @@ namespace ChefBot.Core.Managers;
 internal sealed class AccountManager(
     IAccountAccess accounts,
     ISettingsAccess settings,
+    IHistoryAccess history,
     IMessageAccess messages,
     ValidationEngine validation,
     SecurityEngine security,
@@ -32,6 +33,7 @@ internal sealed class AccountManager(
         await validation.SetupIsOpenAsync(cancellationToken);
         var user = await BuildUserAsync(account, isAdmin: true, cancellationToken);
         await accounts.SaveUserAsync(user, cancellationToken);
+        await RecordArrivalAsync(FoodMomentKind.KitchenOpened, user, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return user.ToAccountSession();
     }
@@ -99,6 +101,7 @@ internal sealed class AccountManager(
         var user = await BuildUserAsync(new NewAccount(request.Username, request.DisplayName, request.Password), isAdmin: false, cancellationToken);
         await accounts.SaveUserAsync(user, cancellationToken);
         await accounts.RemoveLinkAsync(invite.Id, cancellationToken);
+        await RecordArrivalAsync(FoodMomentKind.PersonJoined, user, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return user.ToAccountSession();
     }
@@ -318,4 +321,8 @@ internal sealed class AccountManager(
             CreatedAt = clock.GetUtcNow(),
         };
     }
+
+    /// <summary>Notes in the food history that someone arrived in the kitchen today.</summary>
+    private Task RecordArrivalAsync(FoodMomentKind kind, UserAccount user, CancellationToken cancellationToken) =>
+        history.AddAsync(new FoodMoment { OccurredOn = clock.Today(), Kind = kind, Title = user.DisplayName }, cancellationToken);
 }

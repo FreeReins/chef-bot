@@ -45,6 +45,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
             PlanStyles = await db.PlanStyles.AsNoTracking().ToListAsync(cancellationToken),
             ShoppingTargets = await db.ShoppingTargets.AsNoTracking().ToListAsync(cancellationToken),
             CalendarFeed = await db.Set<CalendarFeedEntity>().AsNoTracking().ToListAsync(cancellationToken),
+            FoodMoments = await db.FoodMoments.AsNoTracking().ToListAsync(cancellationToken),
         };
 
         // A planned meal points at its recipe by id; the recipe itself is written once, under Recipes.
@@ -144,6 +145,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         await db.PlanStyles.ExecuteDeleteAsync(cancellationToken);
         await db.ShoppingTargets.ExecuteDeleteAsync(cancellationToken);
         await db.Set<CalendarFeedEntity>().ExecuteDeleteAsync(cancellationToken);
+        await db.FoodMoments.ExecuteDeleteAsync(cancellationToken);
 
         db.ChangeTracker.Clear();
         db.AddRange(contents.Recipes);
@@ -160,6 +162,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         db.AddRange(contents.PlanStyles);
         db.AddRange(contents.ShoppingTargets);
         db.AddRange(contents.CalendarFeed);
+        db.AddRange(contents.FoodMoments);
 
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -208,6 +211,9 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
 
         /// <summary>The calendar feed's secret. Empty in backups made before the meal plan had a calendar feed.</summary>
         public List<CalendarFeedEntity> CalendarFeed { get; set; } = [];
+
+        /// <summary>The food history. Empty in backups made before ChefBot kept one.</summary>
+        public List<FoodMomentEntity> FoodMoments { get; set; } = [];
     }
 
     /// <summary>

@@ -65,6 +65,7 @@ public static class CoreRegistration
         services.AddScoped<IAccountAccess, AccountAccess>();
         services.AddScoped<ISettingsAccess, SettingsAccess>();
         services.AddScoped<IMessageAccess, MessageAccess>();
+        services.AddScoped<IHistoryAccess, HistoryAccess>();
         var backupFolder = DataPath(configuration, "Data:Backups", "backups");
         services.AddScoped<IBackupAccess>(provider => new BackupAccess(provider.GetRequiredService<ChefBotDbContext>(), backupFolder));
         services.AddSingleton<ISampleRecipeAccess>(new SampleRecipeAccess(DataPath(configuration, "Data:SampleRecipes", "config/sample-recipes.json")));
@@ -100,6 +101,7 @@ public static class CoreRegistration
         services.AddSingleton<SecurityEngine>();
         services.AddSingleton<NotificationEngine>();
         services.AddSingleton<CalendarEngine>();
+        services.AddSingleton<HistoryEngine>();
         services.AddScoped<ValidationEngine>();
 
         // Managers: one per request or message, sharing one database transaction.

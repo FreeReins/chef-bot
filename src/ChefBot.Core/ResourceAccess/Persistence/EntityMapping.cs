@@ -197,6 +197,18 @@ internal static partial class EntityMapping
         CreatedAt = entity.CreatedAt,
     };
 
+    public static FoodMoment ToContract(this FoodMomentEntity entity) => new()
+    {
+        Id = entity.Id,
+        OccurredOn = entity.OccurredOn,
+        Kind = entity.Kind,
+        RecipeId = entity.RecipeId,
+        MealId = entity.MealId,
+        Slot = entity.Slot,
+        Title = entity.Title,
+        Count = entity.Count,
+    };
+
     // ---------- contract to entity ----------
 
     public static RecipeEntity ToEntity(this Recipe recipe) => new()
@@ -378,6 +390,18 @@ internal static partial class EntityMapping
         Name = token.Name,
         TokenHash = token.TokenHash,
         CreatedAt = token.CreatedAt,
+    };
+
+    public static FoodMomentEntity ToEntity(this FoodMoment moment) => new()
+    {
+        Id = moment.Id,
+        OccurredOn = moment.OccurredOn,
+        Kind = moment.Kind,
+        RecipeId = moment.RecipeId,
+        MealId = moment.MealId,
+        Slot = moment.Slot,
+        Title = moment.Title,
+        Count = moment.Count,
     };
 
     // ---------- saving ----------

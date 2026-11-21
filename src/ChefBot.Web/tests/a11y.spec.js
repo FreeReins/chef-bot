@@ -149,6 +149,19 @@ const VIEWS = [
   { name: 'a recipe that is not in the library', path: '/recipes/00000000-0000-4000-8000-00000000ffff' },
   { name: 'sample recipes', path: '/recipes/samples' },
 
+  // The food history
+  { name: 'history', path: '/history' },
+  { name: 'history, nothing kept yet', path: '/history', answers: { 'GET /api/history': data.emptyHistory() } },
+  {
+    name: 'history, older months loaded', path: '/history',
+    act: async (page, api) => {
+      api.set({ 'GET /api/history': (request) => (new URL(request.url()).searchParams.has('before')
+        ? data.olderHistory() : data.history()) });
+      await page.getByRole('button', { name: 'Dig deeper' }).click();
+      await page.getByText('The very first forkful.').waitFor();
+    },
+  },
+
   // People and settings
   {
     name: 'people, after creating an invite link', path: '/people', answers: { 'POST /api/invites': data.issuedLink() },

@@ -1,4 +1,4 @@
-<!-- ChefBot's page: first-run setup, sign-in, then planning and reviewing a week, shopping, the pantry and (for
+<!-- ChefBot's page: first-run setup, sign-in, then planning and reviewing a week, shopping, the pantry, the food history and (for
      admins) inviting people. State and actions live in lib/app.svelte.js. -->
 <script>
   import { app, isAdmin, run, start, signOut } from './lib/app.svelte.js';
@@ -16,6 +16,7 @@
   import Shopping from './tabs/Shopping.svelte';
   import Pantry from './tabs/Pantry.svelte';
   import Recipes from './tabs/Recipes.svelte';
+  import History from './tabs/History.svelte';
   import People from './tabs/People.svelte';
   import Settings from './tabs/Settings.svelte';
   import Toasts from './components/Toasts.svelte';
@@ -25,6 +26,7 @@
   import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
   import Refrigerator from '@lucide/svelte/icons/refrigerator';
   import ChefHat from '@lucide/svelte/icons/chef-hat';
+  import ScrollText from '@lucide/svelte/icons/scroll-text';
   import Users from '@lucide/svelte/icons/users';
   import SettingsIcon from '@lucide/svelte/icons/settings';
   import CodeXml from '@lucide/svelte/icons/code-xml';
@@ -35,13 +37,14 @@
     { key: 'shopping', label: 'Shopping', icon: ShoppingCart },
     { key: 'pantry', label: 'Pantry', icon: Refrigerator },
     { key: 'recipes', label: 'Recipes', icon: ChefHat },
+    { key: 'history', label: 'History', icon: ScrollText },
     { key: 'people', label: 'People', icon: Users, adminOnly: true },
     { key: 'settings', label: 'Settings', icon: SettingsIcon },
   ].map((tab) => ({ ...tab, area: `var(--area-${tab.key})` }));
   const GATES = { 'setup-account': SetupAccount, 'setup-https': SetupHttps, 'setup-recipes': SetupRecipes,
     'setup-styles': SetupPlanStyle, 'setup-stores': SetupStores, 'setup-samples': SetupSamples,
     'sign-in': SignIn, join: Join, reset: Reset };
-  const TAB_VIEWS = { plan: Plan, shopping: Shopping, pantry: Pantry, recipes: Recipes, people: People, settings: Settings };
+  const TAB_VIEWS = { plan: Plan, shopping: Shopping, pantry: Pantry, recipes: Recipes, history: History, people: People, settings: Settings };
 
   const inApp = $derived(app.screen === 'app');
   const tabs = $derived(TABS.filter((tab) => !tab.adminOnly || isAdmin()));

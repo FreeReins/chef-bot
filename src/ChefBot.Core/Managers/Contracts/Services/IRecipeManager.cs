@@ -2,7 +2,10 @@ using ChefBot.Core.Managers.Contracts.Messages;
 
 namespace ChefBot.Core.Managers.Contracts.Services;
 
-/// <summary>The recipe library in ChefBot's own database, and importing into it from files, web pages and samples.</summary>
+/// <summary>
+/// The recipe library in ChefBot's own database, importing into it from files, web pages and samples, and the
+/// household's food history.
+/// </summary>
 public interface IRecipeManager
 {
     /// <summary>Recipes that can be planned, by name.</summary>
@@ -79,6 +82,12 @@ public interface IRecipeManager
     /// <exception cref="ConflictException">That page, or a recipe with the same name, is already in the library.</exception>
     /// <exception cref="RecipeSourceException">The page couldn't be downloaded.</exception>
     Task<WebImportResponse> ImportFromWebAsync(WebRecipeRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The household's food history, newest month first: recipes that joined or retired, what was cooked, with
+    /// debuts, fan favourites, comebacks and milestone dinners picked out, big shopping hauls and people joining.
+    /// </summary>
+    Task<HistoryResponse> GetHistoryAsync(HistoryRequest request, CancellationToken cancellationToken);
 
     /// <summary>The setup wizard's sample recipes, marked when already in the library.</summary>
     Task<IReadOnlyList<SampleRecipeResponse>> GetSamplesAsync(CancellationToken cancellationToken);

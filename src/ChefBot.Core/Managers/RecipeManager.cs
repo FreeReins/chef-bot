@@ -5,6 +5,7 @@ using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
+using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Managers;
 
@@ -14,8 +15,10 @@ internal sealed class RecipeManager(
     IImageSourceAccess images,
     IWebPageAccess web,
     ISampleRecipeAccess samples,
+    IHistoryAccess history,
     IMessageAccess messages,
     TransformationEngine transformation,
+    HistoryEngine storyteller,
     ValidationEngine validation,
     TimeProvider clock) : IRecipeManager
 {
@@ -58,6 +61,7 @@ internal sealed class RecipeManager(
         var recipe = new Recipe();
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
+        await RecordAsync(FoodMomentKind.RecipeAdded, recipe, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return recipe.ToResponse();
     }
@@ -77,6 +81,11 @@ internal sealed class RecipeManager(
     public async Task ArchiveAsync(Guid id, CancellationToken cancellationToken)
     {
         var recipe = await validation.RecipeAsync(id, cancellationToken);
+        if (!recipe.IsArchived)
+        {
+            await RecordAsync(FoodMomentKind.RecipeRetired, recipe, cancellationToken);
+        }
+
         recipe.IsArchived = true;
         await recipes.SaveAsync(recipe, cancellationToken);
         await messages.CommitAsync(cancellationToken);
@@ -189,6 +198,7 @@ internal sealed class RecipeManager(
         var recipe = new Recipe();
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
+        await RecordAsync(FoodMomentKind.RecipeAdded, recipe, cancellationToken);
         await RequestImagesAsync(recipe);
         await messages.CommitAsync(cancellationToken);
         return new WebImportResponse(recipe.ToResponse(), reader.Name);
@@ -211,6 +221,9 @@ internal sealed class RecipeManager(
         return new AddSamplesResponse(await AddNewAsync(chosen, cancellationToken));
     }
 
+    public async Task<HistoryResponse> GetHistoryAsync(HistoryRequest request, CancellationToken cancellationToken) =>
+        storyteller.Tell(await history.ListAsync(cancellationToken), await recipes.ListAllAsync(cancellationToken), request);
+
     /// <summary>Adds the recipes whose names aren't in the library yet.</summary>
     /// <returns>How many were added.</returns>
     private async Task<int> AddNewAsync(IReadOnlyList<RecipeText> candidates, CancellationToken cancellationToken) =>
@@ -232,6 +245,7 @@ internal sealed class RecipeManager(
             transformation.ApplyText(text, recipe, clock.GetUtcNow());
             var photo = photos.TryGetValue(recipe.Name, out var data) ? PhotoFile(recipe, data) : null;
             await recipes.SaveAsync(recipe, cancellationToken);
+            await RecordAsync(FoodMomentKind.RecipeAdded, recipe, cancellationToken);
             if (photo is not null)
             {
                 await recipes.SaveImageFileAsync(photo, cancellationToken);
@@ -274,6 +288,12 @@ internal sealed class RecipeManager(
             await messages.PublishAsync(new FetchRecipeImages(recipe.Id));
         }
     }
+
+    /// <summary>Notes in the food history that something happened to a recipe today.</summary>
+    private Task RecordAsync(FoodMomentKind kind, Recipe recipe, CancellationToken cancellationToken) =>
+        history.AddAsync(
+            new FoodMoment { OccurredOn = clock.Today(), Kind = kind, RecipeId = recipe.Id, Title = recipe.Name },
+            cancellationToken);
 
     /// <summary>A recipe that can be planned.</summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>

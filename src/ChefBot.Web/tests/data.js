@@ -341,3 +341,53 @@ export const issuedApiToken = (name = 'Kitchen tablet') => ({
   id: 'a7f0c2d1-0000-4000-8000-000000000003', name,
   token: 'chefbot_9e359d02660d4d63bdc9fba67942c7e46a4231d31489474d517c20b37ac3631b', createdAt: '2026-11-08T12:00:00Z',
 });
+
+/** HistoryMoment */
+const moment = (date, kind, extra = {}) => ({ date, kind, title: null, recipeId: null, count: null, dishes: [], ...extra });
+
+/** HistoryResponse: two months of a household's food story, with older months still to load. */
+export const history = () => ({
+  chapters: [
+    {
+      month: '2026-11-01', dinners: 6, topDish: 'Slaw Fish Tacos', topDishCooks: 3, topTag: 'Weeknight',
+      moments: [
+        moment('2026-11-07', 'WeekOfPlates', { count: 3, dishes: [
+          { title: 'Slaw Fish Tacos', recipeId: ids.tacos, date: '2026-11-03' },
+          { title: 'Chickpea Curry', recipeId: ids.curry, date: '2026-11-05' },
+          { title: 'Pizza night', recipeId: null, date: '2026-11-07' },
+        ] }),
+        moment('2026-11-06', 'FanFavourite', { title: 'Slaw Fish Tacos', recipeId: ids.tacos, count: 5 }),
+        moment('2026-11-04', 'Haul', { count: 23 }),
+        moment('2026-11-02', 'Comeback', { title: 'Beef and Barley Stew', recipeId: ids.stew, count: 132 }),
+        moment('2026-11-01', 'DinnerMilestone', { title: 'Chickpea Curry', recipeId: ids.curry, count: 100 }),
+      ],
+    },
+    {
+      month: '2026-10-01', dinners: 2, topDish: null, topDishCooks: 0, topTag: null,
+      moments: [
+        moment('2026-10-20', 'Debut', { title: 'Chickpea Curry', recipeId: ids.curry }),
+        moment('2026-10-18', 'RecipeRetired', { title: 'Beige Casserole' }),
+        moment('2026-10-12', 'RecipeStampede', { count: 42, dishes: [
+          { title: 'Overnight Oats', recipeId: ids.oats, date: '2026-10-12' },
+          { title: 'Maple Granola', recipeId: ids.granola, date: '2026-10-12' },
+        ] }),
+        moment('2026-10-10', 'RecipeAdded', { title: 'Apple Crumble', recipeId: ids.crumble }),
+        moment('2026-10-03', 'PersonJoined', { title: 'Sam' }),
+        moment('2026-10-01', 'KitchenOpened', { title: 'Jamie' }),
+      ],
+    },
+  ],
+  olderBefore: '2026-10-01', since: '2026-03-01', totalDinners: 128,
+});
+
+/** HistoryResponse with nothing kept yet. */
+export const emptyHistory = () => ({ chapters: [], olderBefore: null, since: null, totalDinners: 0 });
+
+/** HistoryResponse: the month before history(), the very first one kept. */
+export const olderHistory = () => ({
+  chapters: [{
+    month: '2026-09-01', dinners: 0, topDish: null, topDishCooks: 0, topTag: null,
+    moments: [moment('2026-09-14', 'RecipeAdded', { title: 'Slaw Fish Tacos', recipeId: ids.tacos })],
+  }],
+  olderBefore: null, since: '2026-09-14', totalDinners: 128,
+});

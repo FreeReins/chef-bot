@@ -24,6 +24,7 @@ internal sealed class PlanManager(
     IKnownStoreAccess knownStores,
     IKnownPlanStyleAccess knownStyles,
     IToDoListAccess toDoLists,
+    IHistoryAccess history,
     IMessageAccess messages,
     PlanningEngine planning,
     ShoppingEngine shopping,
@@ -191,6 +192,7 @@ internal sealed class PlanManager(
             items.RemoveAll(finished.Contains);
         }
 
+        await RecordCookingAsync(meal, request.Status, cancellationToken);
         meal.Status = request.Status;
         var stock = new PantrySnapshot(items, clock.Today(), options.ExpiringSoonDays);
         await ReconcileAsync(plan, stock, cancellationToken);
@@ -252,8 +254,9 @@ internal sealed class PlanManager(
     {
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var bought = await StockManualItemsAsync(request, cancellationToken);
+        await RecordHaulAsync(bought, request, cancellationToken);
         await messages.CommitAsync(cancellationToken);
-        if (bought)
+        if (bought > 0)
         {
             await ReconcileAfterBuyingAsync(changed: null, cancellationToken);
         }
@@ -358,15 +361,17 @@ internal sealed class PlanManager(
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var plan = await validation.PlanAsync(planId, cancellationToken);
         ValidationEngine.CanShopFor(plan);
-        foreach (var item in plan.ShoppingItems.Where(item => !item.IsPurchased))
+        var toBuy = plan.ShoppingItems.Where(item => !item.IsPurchased).ToList();
+        foreach (var item in toBuy)
         {
             await StockAsync(item, new PurchaseDetails(request.PurchasedOn), cancellationToken);
         }
 
         var boughtByHand = await StockManualItemsAsync(request, cancellationToken);
+        await RecordHaulAsync(toBuy.Count + boughtByHand, request, cancellationToken);
         await plans.SaveAsync(plan, cancellationToken);
         await messages.CommitAsync(cancellationToken);
-        if (boughtByHand)
+        if (boughtByHand > 0)
         {
             await ReconcileAfterBuyingAsync(plan, cancellationToken);
         }
@@ -588,8 +593,47 @@ internal sealed class PlanManager(
         await messages.CommitAsync(cancellationToken);
     }
 
-    /// <summary>Buys everything added by hand on the same day. Returns false when there was nothing to buy.</summary>
-    private async Task<bool> StockManualItemsAsync(PurchaseAllRequest request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Keeps the food history in step with a meal's new status: cooking a meal, other than leftovers, adds a moment,
+    /// and taking "cooked" back removes it. A meal marked cooked before its day counts as cooked today.
+    /// </summary>
+    private async Task RecordCookingAsync(PlannedMeal meal, MealStatus status, CancellationToken cancellationToken)
+    {
+        if (meal.Status == MealStatus.Cooked)
+        {
+            await history.RemoveForMealAsync(meal.Id, cancellationToken);
+        }
+
+        if (status == MealStatus.Cooked && !meal.IsLeftover)
+        {
+            var today = clock.Today();
+            await history.AddAsync(
+                new FoodMoment
+                {
+                    OccurredOn = meal.Date is { } day && day < today ? day : today,
+                    Kind = FoodMomentKind.Cooked,
+                    RecipeId = meal.RecipeId,
+                    MealId = meal.Id,
+                    Slot = meal.Slot,
+                    Title = meal.Title,
+                },
+                cancellationToken);
+        }
+    }
+
+    /// <summary>Notes a shopping trip that bought everything left on the list in the food history.</summary>
+    private async Task RecordHaulAsync(int bought, PurchaseAllRequest request, CancellationToken cancellationToken)
+    {
+        if (bought > 0)
+        {
+            await history.AddAsync(
+                new FoodMoment { OccurredOn = request.PurchasedOn ?? clock.Today(), Kind = FoodMomentKind.Haul, Count = bought },
+                cancellationToken);
+        }
+    }
+
+    /// <summary>Buys everything added by hand on the same day. Returns how many things were bought.</summary>
+    private async Task<int> StockManualItemsAsync(PurchaseAllRequest request, CancellationToken cancellationToken)
     {
         var list = await shoppingList.ListAsync(cancellationToken);
         foreach (var item in list)
@@ -597,7 +641,7 @@ internal sealed class PlanManager(
             await StockAsync(item, new PurchaseDetails(request.PurchasedOn), cancellationToken);
         }
 
-        return list.Count > 0;
+        return list.Count;
     }
 
     /// <summary>Saves something bought to the pantry. Returns the day it was bought.</summary>

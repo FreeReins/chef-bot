@@ -19,6 +19,8 @@ internal sealed class TestCore
 
     public FakeAccounts Accounts { get; } = new();
 
+    public FakeHistory History { get; } = new();
+
     public FakeSettings Settings { get; } = new();
 
     public FakeImageSource Images { get; } = new();
@@ -49,13 +51,14 @@ internal sealed class TestCore
     private ValidationEngine Validation => new(Plans, Recipes, Pantry, ShoppingList, Accounts, new NoBackups());
 
     public PlanManager PlanManager() => new(
-        Plans, Recipes, Pantry, ShoppingList, Settings, KnownStores, KnownStyles, ToDoLists, Messages,
+        Plans, Recipes, Pantry, ShoppingList, Settings, KnownStores, KnownStyles, ToDoLists, History, Messages,
         new PlanningEngine(TestData.Catalog, Options, Schedule), TestData.Shopping, TestData.Suggestions, new CalendarEngine(Calendar), TestData.Transformation,
         Validation, TestData.Catalog, Options, new PlanWriteLock(), Clock);
 
     public PantryManager PantryManager() => new(Pantry, Messages, TestData.Transformation, Validation, TestData.Catalog, Options, Clock);
 
-    public RecipeManager RecipeManager() => new(Recipes, Images, Web, new NoSamples(), Messages, TestData.Transformation, Validation, Clock);
+    public RecipeManager RecipeManager() => new(
+        Recipes, Images, Web, new NoSamples(), History, Messages, TestData.Transformation, new HistoryEngine(), Validation, Clock);
 
-    public AccountManager AccountManager() => new(Accounts, Settings, Messages, Validation, new SecurityEngine(), new PlainHasher(), Clock);
+    public AccountManager AccountManager() => new(Accounts, Settings, History, Messages, Validation, new SecurityEngine(), new PlainHasher(), Clock);
 }
