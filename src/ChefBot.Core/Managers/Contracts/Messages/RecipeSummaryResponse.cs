@@ -7,10 +7,12 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="IsSlowCooker">True when it is made in a slow cooker.</param>
 /// <param name="Ingredients">Its ingredient lines as written.</param>
 /// <param name="Tags">Its tags.</param>
+/// <param name="CoverUrl">The address of its first stored photo, for a card in the list, or null when it has none.</param>
 public sealed record RecipeSummaryResponse(
     Guid Id,
     string Name,
     RecipeCourse Course,
     bool IsSlowCooker,
     IReadOnlyList<string> Ingredients,
-    IReadOnlyList<string> Tags);
+    IReadOnlyList<string> Tags,
+    string? CoverUrl);

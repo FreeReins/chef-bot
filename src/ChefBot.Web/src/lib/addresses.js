@@ -1,5 +1,6 @@
 // Each view has its own address, so it can be bookmarked, reloaded or opened in a new tab:
 //   /plan  /shopping  /pantry  /recipes  /recipes/{id}  /recipes/samples  /people  /settings/{section}
+// and the Recipes dialogs: /recipes/new/{link|write|files}  /recipes/{id}/{edit|photos}
 // The address is the source of truth: links and buttons call go(path), and showAddress() shows what it names.
 import { api } from './api.js';
 import { app, run, isAdmin, clearErrors } from './app.svelte.js';
@@ -8,19 +9,34 @@ const TAB_KEYS = ['plan', 'shopping', 'pantry', 'recipes', 'people', 'settings']
 /** Tabs that were renamed, so old bookmarks still land somewhere sensible. */
 const RENAMED_TABS = { ingredients: 'shopping', meals: 'plan', schedule: 'plan' };
 const ADMIN_TABS = ['people'];
+/** The tabs of the Add a recipe dialog, and the dialogs a recipe's page opens. */
+const ADD_TABS = ['link', 'write', 'files'];
+const RECIPE_DIALOGS = ['edit', 'photos'];
 
 /** Moves to an address inside the page and shows it. */
 export async function go(path, { replace = false } = {}) {
-  if (path !== location.pathname + location.search) {
-    history[replace ? 'replaceState' : 'pushState'](null, '', path);
+  const here = location.pathname + location.search;
+  if (path !== here) {
+    // Each new entry remembers the address it was opened from, so closeDialog() can step back to it.
+    if (replace) history.replaceState(history.state, '', path);
+    else history.pushState({ from: here }, '', path);
   }
   clearErrors();
   await run(showAddress);
 }
 
+/**
+ * Closes a dialog that has its own address by moving to `base`, the address behind it. When the dialog was opened from
+ * there, this goes back in history instead, so Back afterwards doesn't reopen it.
+ */
+export async function closeDialog(base) {
+  if (history.state?.from === base) history.back();
+  else await go(base, { replace: true });
+}
+
 /** Shows the view the address bar names, once signed in. Unknown addresses go to the plan. */
 export async function showAddress() {
-  const [first = 'plan', second = null] = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+  const [first = 'plan', second = null, third = null] = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
   if (RENAMED_TABS[first]) {
     history.replaceState(null, '', `/${RENAMED_TABS[first]}`);
     return showAddress();
@@ -30,8 +46,16 @@ export async function showAddress() {
     return showAddress();
   }
 
+  if (first === 'recipes' && second === 'new' && !ADD_TABS.includes(third)) {
+    history.replaceState(null, '', '/recipes/new/link');
+    return showAddress();
+  }
+
   app.tab = first;
-  app.recipeId = first === 'recipes' && second !== 'samples' ? second : null;
+  app.recipeId = first === 'recipes' && second !== 'samples' && second !== 'new' ? second : null;
+  app.recipeDialog = first !== 'recipes' ? null
+    : second === 'new' ? `new-${third}`
+      : app.recipeId && RECIPE_DIALOGS.includes(third) ? third : null;
   if (first === 'settings' && second) app.settingsSection = second;
   app.swap = null;
 

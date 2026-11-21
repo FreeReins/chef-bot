@@ -31,7 +31,8 @@ export const library = (recipes) => ({
       .sort((a, b) => COURSES.indexOf(a.course) - COURSES.indexOf(b.course) || a.name.localeCompare(b.name));
     return {
       recipes: matches.slice((page - 1) * pageSize, page * pageSize)
-        .map(({ id, name, course: kind, isSlowCooker, ingredients, tags }) => ({ id, name, course: kind, isSlowCooker, ingredients, tags })),
+        .map(({ id, name, course: kind, isSlowCooker, ingredients, tags, images }) =>
+          ({ id, name, course: kind, isSlowCooker, ingredients, tags, coverUrl: images[0]?.url ?? null })),
       total: matches.length, page, pageSize, librarySize: recipes.length,
     };
   },

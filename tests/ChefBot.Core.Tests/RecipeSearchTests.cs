@@ -124,4 +124,20 @@ public class RecipeSearchTests
         await Assert.That(full.IngredientDetails.Count).IsEqualTo(2);
         await Assert.That(async () => await recipes.GetAsync(Guid.NewGuid(), CancellationToken.None)).Throws<NotFoundException>();
     }
+
+    [Test]
+    public async Task A_recipe_in_the_list_carries_its_first_photo_as_its_cover()
+    {
+        var recipes = await LibraryAsync();
+        var curry = (await recipes.SearchAsync(Search("curry"), CancellationToken.None)).Recipes[0];
+        byte[] png = [0x89, (byte)'P', (byte)'N', (byte)'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3];
+
+        var first = await recipes.AddImageAsync(curry.Id, new AddRecipeImageRequest(png), CancellationToken.None);
+        await recipes.AddImageAsync(curry.Id, new AddRecipeImageRequest(png), CancellationToken.None);
+        var page = await recipes.SearchAsync(Search(), CancellationToken.None);
+
+        await Assert.That(curry.CoverUrl).IsNull();
+        await Assert.That(page.Recipes.Single(recipe => recipe.Id == curry.Id).CoverUrl).IsEqualTo(first.Images[0].Url);
+        await Assert.That(page.Recipes.Single(recipe => recipe.Name == "Lentil Soup").CoverUrl).IsNull();
+    }
 }

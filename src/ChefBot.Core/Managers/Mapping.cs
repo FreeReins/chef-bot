@@ -109,7 +109,7 @@ internal static class Mapping
             recipe.Images
                 .Where(image => image.IsStored)
                 .OrderBy(image => image.Position)
-                .Select(image => new RecipeImageResponse(image.Id, $"/api/recipes/{recipe.Id}/images/{image.Id}"))
+                .Select(image => new RecipeImageResponse(image.Id, ImageUrl(recipe, image)))
                 .ToList(),
             ingredients
                 .Select(ingredient => new RecipeIngredientResponse(
@@ -123,7 +123,8 @@ internal static class Mapping
         recipe.Course,
         recipe.IsSlowCooker,
         recipe.Ingredients.OrderBy(ingredient => ingredient.Position).Select(Written).ToList(),
-        [.. recipe.Tags]);
+        [.. recipe.Tags],
+        recipe.Images.Where(image => image.IsStored).OrderBy(image => image.Position).Select(image => ImageUrl(recipe, image)).FirstOrDefault());
 
     public static RecipeText ToText(this RecipeDraft draft) => new(
         draft.Name,
@@ -251,6 +252,9 @@ internal static class Mapping
         counts.ShoppingItems, counts.PantryItems, counts.ManualShoppingItems, counts.Users, counts.GroceryStores, counts.PlanStyles);
 
     public static DeliveryResult ToResponse(this Delivery delivery) => new(delivery.Delivered, delivery.Problem);
+
+    /// <summary>Where the page fetches one of a recipe's stored photos.</summary>
+    private static string ImageUrl(Recipe recipe, RecipeImage image) => $"/api/recipes/{recipe.Id}/images/{image.Id}";
 
     /// <summary>The ingredient line as written, or rebuilt from its parts for rows saved before lines were kept.</summary>
     private static string Written(RecipeIngredient ingredient) =>

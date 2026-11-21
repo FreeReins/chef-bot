@@ -66,11 +66,23 @@ const VIEWS = [
     act: (page) => page.getByRole('button', { name: 'Next' }).click()
       .then(() => page.getByText('Page 2 of 3').waitFor()),
   },
+  {
+    name: 'recipes as a list', path: '/recipes',
+    act: (page) => page.getByRole('button', { name: 'List' }).click(),
+  },
+  { name: 'recipes, an empty library', path: '/recipes', answers: library([]) },
+  { name: 'add a recipe from a link', path: '/recipes/new/link' },
+  { name: 'add a recipe by typing it in', path: '/recipes/new/write' },
+  { name: 'add recipes from files', path: '/recipes/new/files' },
   { name: 'a recipe', path: `/recipes/${data.ids.tacos}` },
   {
-    name: 'editing a recipe', path: `/recipes/${data.ids.tacos}`,
-    act: (page) => page.getByRole('button', { name: 'Edit', exact: true }).click(),
+    name: 'a recipe with its menu open', path: `/recipes/${data.ids.tacos}`,
+    act: (page) => page.getByRole('button', { name: /^More actions/ }).click()
+      .then(() => page.getByRole('button', { name: 'Archive recipe' }).waitFor()),
   },
+  { name: 'a recipe without photos', path: `/recipes/${data.ids.stew}` },
+  { name: 'editing a recipe', path: `/recipes/${data.ids.tacos}/edit` },
+  { name: 'a recipe\'s photos', path: `/recipes/${data.ids.tacos}/photos` },
   { name: 'a recipe that is not in the library', path: '/recipes/00000000-0000-4000-8000-00000000ffff' },
   { name: 'sample recipes', path: '/recipes/samples' },
 

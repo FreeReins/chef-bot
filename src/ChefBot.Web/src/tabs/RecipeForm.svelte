@@ -1,9 +1,10 @@
-<!-- The fields of a recipe, for adding one on the Recipes tab and editing one on its own page. -->
+<!-- The fields of a recipe, for adding one in the Add a recipe dialog and editing one from its own page. -->
 <script>
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
 
-  /** recipe: the one being edited, or null for a new one. save(draft) receives a RecipeDraft. */
-  let { recipe = null, button, save, cancel = null } = $props();
+  /** recipe: the one being edited, or null for a new one. save(draft) receives a RecipeDraft. plain: no card around
+      it, for inside a dialog. */
+  let { recipe = null, button, save, cancel = null, plain = false } = $props();
 
   const prefix = $derived(recipe ? `edit-${recipe.id}` : 'recipe');
 
@@ -41,7 +42,7 @@
   }
 </script>
 
-<form class="stack card" {onsubmit}>
+<form class="stack" class:card={!plain} {onsubmit}>
   <label>Name <input id="{prefix}-name" name="name" required value={recipe?.name ?? ''}></label>
   <label>Course
     <select id="{prefix}-course" name="course" value={recipe?.course ?? 'Main'}>
