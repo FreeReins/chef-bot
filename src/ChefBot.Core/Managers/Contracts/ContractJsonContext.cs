@@ -31,6 +31,8 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(SaveShoppingTargetsRequest))]
 [JsonSerializable(typeof(SendShoppingListRequest))]
 [JsonSerializable(typeof(SendShoppingListResult))]
+// The calendar feed
+[JsonSerializable(typeof(CalendarFeedResponse))]
 [JsonSerializable(typeof(CheckWeeklySchedule))]
 [JsonSerializable(typeof(ShoppingStoreRequest))]
 [JsonSerializable(typeof(GroceryStoresResponse))]
@@ -68,6 +70,7 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(AddRecipeImageRequest))]
 [JsonSerializable(typeof(RecipeImageContent))]
 [JsonSerializable(typeof(RecipeExportFile))]
+[JsonSerializable(typeof(RecipeExportFormat))]
 [JsonSerializable(typeof(FetchRecipeImages))]
 [JsonSerializable(typeof(WebRecipeRequest))]
 [JsonSerializable(typeof(WebImportResponse))]

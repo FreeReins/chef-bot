@@ -169,6 +169,43 @@ public class AccountTests
     }
 
     [Test]
+    public async Task Sign_ins_sent_at_once_cant_check_more_passwords_than_the_limit()
+    {
+        var (accounts, core) = Create();
+        await accounts.CreateFirstAdminAsync(Jamie, default);
+        await accounts.UpdateSecurityAsync(Rules(maxFailed: 3, lockoutMinutes: 10), default);
+
+        // Three other attempts have been counted and are still having their passwords checked.
+        core.Accounts.User("jamie").FailedSignIns = 3;
+
+        // A fourth isn't checked, so even the right password is refused.
+        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", Jamie.Password), default))).IsTrue();
+        await Assert.That(core.Accounts.User("jamie").FailedSignIns).IsEqualTo(4);
+    }
+
+    [Test]
+    public async Task Every_attempt_is_counted_before_its_password_is_checked()
+    {
+        var (accounts, core) = Create();
+        await accounts.CreateFirstAdminAsync(Jamie, default);
+        await accounts.UpdateSecurityAsync(Rules(maxFailed: 3, lockoutMinutes: 10), default);
+
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
+        await Assert.That(core.Accounts.User("jamie").FailedSignIns).IsEqualTo(2);
+        await Assert.That(core.Accounts.User("jamie").LockedUntil is null).IsTrue();
+
+        // The attempt that reaches the limit locks the account. Once the lockout ends, counting starts again.
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
+        await Assert.That(core.Accounts.User("jamie").LockedUntil).IsEqualTo(core.Clock.Now.AddMinutes(10));
+
+        core.Clock.Now += TimeSpan.FromMinutes(11);
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
+        await Assert.That(core.Accounts.User("jamie").FailedSignIns).IsEqualTo(1);
+        await Assert.That(core.Accounts.User("jamie").LockedUntil is null).IsTrue();
+    }
+
+    [Test]
     public async Task Lockout_can_be_switched_off_and_its_limits_are_checked()
     {
         var (accounts, core) = Create();
@@ -193,6 +230,28 @@ public class AccountTests
         await accounts.UpdateSecurityAsync(new SecurityRequest(5, 15, RequireHttps: true), default);
 
         await Assert.That(core.Messages.Published.OfType<SecuritySettingsChanged>().Single().RequireHttps).IsTrue();
+    }
+
+    [Test]
+    public async Task Https_is_required_by_default_when_it_is_served()
+    {
+        var (accounts, core) = Create();
+
+        await Assert.That((await accounts.UseDefaultHttpsRuleAsync(servesHttps: false, default)).RequireHttps).IsFalse();
+        await Assert.That(core.Settings.Security.IsSaved).IsFalse();
+
+        await Assert.That((await accounts.UseDefaultHttpsRuleAsync(servesHttps: true, default)).RequireHttps).IsTrue();
+        await Assert.That(core.Settings.Security.RequireHttps).IsTrue();
+    }
+
+    [Test]
+    public async Task The_https_default_leaves_rules_an_admin_saved_alone()
+    {
+        var (accounts, core) = Create();
+        await accounts.UpdateSecurityAsync(Rules(maxFailed: 5, lockoutMinutes: 15), default);
+
+        await Assert.That((await accounts.UseDefaultHttpsRuleAsync(servesHttps: true, default)).RequireHttps).IsFalse();
+        await Assert.That(core.Settings.Security.RequireHttps).IsFalse();
     }
 
     [Test]

@@ -179,7 +179,41 @@ public static class ServiceRegistration
         app.UseForwardedHeaders(forwarded);
     }
 
-    /// <summary>Sends plain HTTP requests to HTTPS when an admin has turned "always use HTTPS" on.</summary>
+    /// <summary>
+    /// The browser rules for ChefBot's own page: scripts, style sheets, images and API calls only from ChefBot
+    /// itself, no plugins, and no other site showing ChefBot in a frame. Inline style attributes stay allowed,
+    /// since the page's components use them for layout; inline scripts and style elements are refused.
+    /// </summary>
+    private const string ContentSecurityPolicy =
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; style-src-elem 'self'; " +
+        "style-src-attr 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; " +
+        "base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+
+    /// <summary>For the Swagger page at /docs, whose bundled script and styles ChefBot doesn't control: framing only.</summary>
+    private const string DocsContentSecurityPolicy = "frame-ancestors 'none'; object-src 'none'";
+
+    /// <summary>
+    /// Adds the security headers to every response: the Content-Security-Policy above, no guessing at file types
+    /// (so a stored photo is only ever shown as an image), no framing by other sites, and no addresses sent to
+    /// other sites when a link is followed.
+    /// </summary>
+    public static void UseChefBotSecurityHeaders(this WebApplication app)
+    {
+        app.Use(async (context, next) =>
+        {
+            var headers = context.Response.Headers;
+            headers.ContentSecurityPolicy = context.Request.Path.StartsWithSegments("/docs") ? DocsContentSecurityPolicy : ContentSecurityPolicy;
+            headers.XContentTypeOptions = "nosniff";
+            headers.XFrameOptions = "DENY"; // for browsers that predate frame-ancestors
+            headers["Referrer-Policy"] = "same-origin";
+            await next(context);
+        });
+    }
+
+    /// <summary>
+    /// Sends plain HTTP requests to HTTPS when "always use HTTPS" is on, and with a certificate you provide, tells
+    /// browsers to use HTTPS by themselves next time (HSTS).
+    /// </summary>
     public static void UseChefBotHttpsRedirect(this WebApplication app)
     {
         app.Use(async (context, next) =>
@@ -190,6 +224,11 @@ public static class ServiceRegistration
                 // Temporary, so turning the setting off again takes effect in every browser.
                 context.Response.Redirect(policy.HttpsUrl(context.Request), permanent: false, preserveMethod: true);
                 return;
+            }
+
+            if (policy.ShouldSendHsts(context.Request))
+            {
+                context.Response.Headers.StrictTransportSecurity = HttpsPolicy.HstsHeader;
             }
 
             await next(context);
@@ -215,9 +254,9 @@ public static class ServiceRegistration
     }
 
     /// <summary>
-    /// Runs once the app and its message bus have started: saves the starting values from the configuration,
-    /// writes a password reset link to the log when Accounts:RecoverUsername is set, and says when the weekly
-    /// schedule next stages a plan.
+    /// Runs once the app and its message bus have started: saves the starting values from the configuration and
+    /// the "always use HTTPS" default, writes a password reset link to the log when Accounts:RecoverUsername is set,
+    /// and says when the weekly schedule next stages a plan.
     /// </summary>
     public static async Task ApplyChefBotStartupSettingsAsync(this IServiceProvider services)
     {
@@ -228,6 +267,11 @@ public static class ServiceRegistration
         // A webhook in the configuration is the starting value until one is saved on the Settings tab.
         await scope.ServiceProvider.GetRequiredService<IMaintenanceManager>()
             .UseDefaultWebhookAsync(configuration["Notifications:WebhookUrl"], CancellationToken.None);
+
+        // When ChefBot serves HTTPS, plain HTTP visitors are sent to it until an admin decides otherwise.
+        var rules = await scope.ServiceProvider.GetRequiredService<IAccountManager>()
+            .UseDefaultHttpsRuleAsync(services.GetRequiredService<CertificateStore>().IsEnabled, CancellationToken.None);
+        services.GetRequiredService<HttpsPolicy>().RequireHttps = rules.RequireHttps;
 
         if (scope.ServiceProvider.GetRequiredService<IPlanManager>().NextScheduledStaging() is { } next)
         {

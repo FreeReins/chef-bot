@@ -4,13 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ChefBot</title>
-  <!-- Light or dark as chosen in this browser, before the first paint; lib/theme.svelte.js keeps it after that. -->
-  <script>
-    try {
-      const theme = localStorage.getItem('chefbot-theme');
-      if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-    } catch { /* follow the device */ }
-  </script>
+  <!-- Light or dark as chosen in this browser, before the first paint: public/theme.js. -->
+  <script src="/theme.js"></script>
   <script type="module" src="/src/main.js"></script>
 </head>
 <body>

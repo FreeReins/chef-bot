@@ -62,4 +62,10 @@ public interface IAccountManager
 
     /// <summary>Changes the lockout rules and whether plain HTTP is redirected to HTTPS. Publishes <see cref="SecuritySettingsChanged"/>.</summary>
     Task<SecurityResponse> UpdateSecurityAsync(SecurityRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Turns "always use HTTPS" on when ChefBot serves HTTPS itself and no admin has saved the sign-in rules yet, so
+    /// passwords aren't sent over plain HTTP by default. Rules an admin saved are left alone. Returns the rules now.
+    /// </summary>
+    Task<SecurityResponse> UseDefaultHttpsRuleAsync(bool servesHttps, CancellationToken cancellationToken);
 }

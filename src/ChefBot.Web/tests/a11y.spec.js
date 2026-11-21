@@ -83,6 +83,11 @@ const VIEWS = [
   // Recipes
   { name: 'recipes', path: '/recipes' },
   {
+    name: 'recipes, the download all choices open', path: '/recipes',
+    act: (page) => page.getByRole('button', { name: 'Download all' }).click()
+      .then(() => page.getByRole('link', { name: 'Download as PDF' }).waitFor()),
+  },
+  {
     name: 'recipes, searching with no match', path: '/recipes',
     act: (page) => page.getByRole('searchbox', { name: 'Search' }).fill('zzz')
       .then(() => page.getByText('No recipes match').waitFor()),
@@ -223,6 +228,13 @@ const VIEWS = [
   },
   { name: 'settings: to-do apps', path: '/settings/todo-apps', answers: { 'GET /api/shopping/targets': data.shoppingTargets() } },
   { name: 'settings: no to-do apps yet', path: '/settings/todo-apps' },
+  { name: 'settings: calendar feed off', path: '/settings/calendar' },
+  { name: 'settings: calendar feed on', path: '/settings/calendar', answers: { 'GET /api/calendar/feed': data.calendarFeed() } },
+  {
+    name: 'settings: asking before giving the calendar a new address', path: '/settings/calendar',
+    answers: { 'GET /api/calendar/feed': data.calendarFeed() },
+    act: (page) => page.getByRole('button', { name: 'Make a new address' }).click().then(() => page.getByRole('dialog').waitFor()),
+  },
   {
     name: 'settings: adding a Todoist to-do app', path: '/settings/todo-apps',
     act: async (page) => {
@@ -240,6 +252,8 @@ const VIEWS = [
   { name: 'plan for a member', path: '/plan', answers: { 'GET /api/session': data.session(data.member()) } },
   { name: 'plan for a member, no recipes', path: '/plan', answers: { ...noPlan, ...library([]), 'GET /api/session': data.session(data.member()) } },
   { name: 'settings for a member', path: '/settings/https', answers: { 'GET /api/session': data.session(data.member()) } },
+  { name: 'calendar for a member', path: '/settings/calendar',
+    answers: { 'GET /api/session': data.session(data.member()), 'GET /api/calendar/feed': data.calendarFeed() } },
 
   // Things laid over the page
   {

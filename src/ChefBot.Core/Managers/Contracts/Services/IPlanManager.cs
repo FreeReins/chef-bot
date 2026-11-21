@@ -105,6 +105,22 @@ public interface IPlanManager
     Task<IReadOnlyList<ManualShoppingItemResponse>> SetManualItemStoreAsync(
         Guid itemId, ShoppingStoreRequest request, CancellationToken cancellationToken);
 
+    /// <summary>The meal plan's calendar feed, with its address under <paramref name="site"/>, ChefBot's own address.</summary>
+    Task<CalendarFeedResponse> GetCalendarFeedAsync(Uri site, CancellationToken cancellationToken);
+
+    /// <summary>Turns the calendar feed on with a new address. An address made before stops working.</summary>
+    Task<CalendarFeedResponse> StartCalendarFeedAsync(Uri site, CancellationToken cancellationToken);
+
+    /// <summary>Turns the calendar feed off. Its address stops working.</summary>
+    Task<CalendarFeedResponse> StopCalendarFeedAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The calendar feed's text (iCalendar): the meals of the confirmed plans from last week on, linking to their
+    /// recipes under <paramref name="site"/>.
+    /// </summary>
+    /// <exception cref="NotFoundException">The feed is off, or <paramref name="token"/> isn't its secret.</exception>
+    Task<string> GetCalendarAsync(string token, Uri site, CancellationToken cancellationToken);
+
     /// <summary>The to-do apps the shopping list can be sent to, in their saved order. Tokens are never included.</summary>
     Task<IReadOnlyList<ShoppingTargetResponse>> GetShoppingTargetsAsync(CancellationToken cancellationToken);
 

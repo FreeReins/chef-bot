@@ -13,15 +13,17 @@ namespace ChefBot.Api.Endpoints;
 /// <summary>System-wide settings: sign-in rules and HTTPS, and the server's recent log.</summary>
 public static class SystemEndpoints
 {
+    /// <summary>The sign-in rules. "Always use HTTPS" reads as off while HTTPS is switched off, since it does nothing then.</summary>
     [Authorize(Policy = Sessions.AdminPolicy)]
     [WolverineGet("/api/system/security")]
-    public static Task<SecurityResponse> GetSecurity([FromServices] IAccountManager accounts, CancellationToken cancellationToken) =>
-        accounts.GetSecurityAsync(cancellationToken);
+    public static async Task<SecurityResponse> GetSecurity(
+        [FromServices] IAccountManager accounts, [FromServices] CertificateStore certificates, CancellationToken cancellationToken) =>
+        InEffect(await accounts.GetSecurityAsync(cancellationToken), certificates);
 
     /// <summary>Changes the lockout rules and whether plain HTTP visitors are sent to HTTPS. Takes effect at once.</summary>
     [Authorize(Policy = Sessions.AdminPolicy)]
     [WolverinePut("/api/system/security")]
-    public static Task<SecurityResponse> UpdateSecurity(
+    public static async Task<SecurityResponse> UpdateSecurity(
         SecurityRequest request,
         [FromServices] IAccountManager accounts,
         [FromServices] CertificateStore certificates,
@@ -33,7 +35,7 @@ public static class SystemEndpoints
             throw new RuleViolationException("HTTPS is switched off (Https:Mode is Off), so it can't be required.");
         }
 
-        return accounts.UpdateSecurityAsync(request, cancellationToken);
+        return InEffect(await accounts.UpdateSecurityAsync(request, cancellationToken), certificates);
     }
 
     /// <summary>The log entries written since startup (the last <see cref="LogBuffer.Capacity"/>), oldest first. Pass
@@ -66,6 +68,13 @@ public static class SystemEndpoints
         var pem = certificates.ExportPem() ?? throw new NotFoundException("HTTPS is switched off, so there is no certificate.");
         return Results.File(Encoding.ASCII.GetBytes(pem), "application/x-x509-ca-cert", "chefbot.crt");
     }
+
+    /// <summary>
+    /// The rules as they act now. "Always use HTTPS" saved while HTTPS was on reads as off once HTTPS is switched
+    /// off, so saving other rules from the page doesn't fail on it.
+    /// </summary>
+    private static SecurityResponse InEffect(SecurityResponse rules, CertificateStore certificates) =>
+        rules with { RequireHttps = rules.RequireHttps && certificates.IsEnabled };
 
     private static HttpsStatusResponse Describe(HttpContext http, CertificateStore certificates, HttpsPolicy policy) => new(
         certificates.Options.Mode,

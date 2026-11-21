@@ -19,9 +19,16 @@ internal sealed class FakeSettings : ISettingsAccess
 
     public List<ShoppingTarget> ShoppingTargets { get; set; } = [];
 
+    public CalendarFeed CalendarFeed { get; set; } = new();
+
     public Task<SecuritySettings> GetSecurityAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Security));
 
-    public Task SaveSecurityAsync(SecuritySettings settings, CancellationToken cancellationToken) => Set(() => Security = Copies.Of(settings));
+    public Task SaveSecurityAsync(SecuritySettings settings, CancellationToken cancellationToken) =>
+        Set(() =>
+        {
+            Security = Copies.Of(settings);
+            Security.IsSaved = true;
+        });
 
     public Task<NotificationSettings> GetNotificationsAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Notifications));
 
@@ -34,6 +41,10 @@ internal sealed class FakeSettings : ISettingsAccess
     public Task<ScheduleState> GetScheduleAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Schedule));
 
     public Task SaveScheduleAsync(ScheduleState state, CancellationToken cancellationToken) => Set(() => Schedule = Copies.Of(state));
+
+    public Task<CalendarFeed> GetCalendarFeedAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(CalendarFeed));
+
+    public Task SaveCalendarFeedAsync(CalendarFeed feed, CancellationToken cancellationToken) => Set(() => CalendarFeed = Copies.Of(feed));
 
     public Task<List<GroceryStore>> ListStoresAsync(CancellationToken cancellationToken) =>
         Task.FromResult(Stores.Select(Copies.Of).OrderBy(store => store.Position).ToList());

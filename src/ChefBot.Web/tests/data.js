@@ -323,3 +323,9 @@ export const shoppingTargets = () => [
   { id: '00000000-0000-4000-8000-000000000502', name: 'Automation', kind: 'Webhook', url: 'https://hooks.example/shopping',
     list: '', hasToken: false },
 ];
+
+/** CalendarFeedResponse with the feed turned on. */
+export const calendarFeed = () => ({
+  url: 'https://chefbot.local:8443/api/calendar/0f3a9c2e7b5d41e8a6c0f3a9c2e7b5d41e8a6c0f3a9c2e7b5d41e8a6c0f3a9c2e/meals.ics',
+  createdAt: '2026-11-20T09:00:00Z',
+});

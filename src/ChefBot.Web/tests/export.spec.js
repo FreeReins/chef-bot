@@ -79,17 +79,34 @@ test('the shopping list downloads as CSV', async ({ page }) => {
   expect(rows).toContain('coconut milk,1,can,,Other,yes,Chickpea Curry');
 });
 
-test('a recipe and the whole library download as schema.org files', async ({ page }) => {
+test('a recipe and the whole library download as PDF, Markdown, text and schema.org files', async ({ page }) => {
+  const formats = [
+    ['Download as PDF', '?format=pdf'],
+    ['Download as Markdown', '?format=markdown'],
+    ['Download as text', '?format=text'],
+    ['Download recipe file', ''], // schema.org, the endpoint's default
+  ];
+
   await open(page, `/recipes/${data.ids.tacos}`);
   await page.getByRole('button', { name: /^More actions/ }).click();
-  const one = page.getByRole('link', { name: 'Download recipe file' });
-  await expect(one).toHaveAttribute('href', `/api/recipes/${data.ids.tacos}/export`);
-  await expect(one).toHaveAttribute('download', '');
+  for (const [name, query] of formats) {
+    const link = page.getByRole('link', { name });
+    await expect(link).toHaveAttribute('href', `/api/recipes/${data.ids.tacos}/export${query}`);
+    await expect(link).toHaveAttribute('download', '');
+  }
 
   await open(page, '/recipes');
-  const all = page.getByRole('link', { name: 'Download all' });
-  await expect(all).toHaveAttribute('href', '/api/recipes/export');
-  await expect(all).toHaveAttribute('download', '');
+  const all = page.getByRole('button', { name: 'Download all' });
+  await expect(all).toHaveAttribute('aria-expanded', 'false');
+  await all.click();
+  await expect(all).toHaveAttribute('aria-expanded', 'true');
+  for (const [name, query] of formats) {
+    const link = page.getByRole('link', { name });
+    await expect(link).toHaveAttribute('href', `/api/recipes/export${query}`);
+    await expect(link).toHaveAttribute('download', '');
+  }
+  await all.click();
+  await expect(page.getByRole('link', { name: 'Download as PDF' })).toBeHidden();
 });
 
 test('the shopping list is sent to a to-do app, and the page says how many items went', async ({ page, api }) => {
@@ -143,4 +160,27 @@ test('a new to-do app is saved without echoing a token, and a saved token is kep
     ['Automation', 'Webhook', null],
     ['Todoist', 'Todoist', 'abc123'],
   ]);
+});
+
+test('an admin turns the calendar feed on, and its address can be copied or subscribed to', async ({ page, api }) => {
+  await recordHandOver(page, { sheet: false });
+  api.set({ 'POST /api/calendar/feed': data.calendarFeed() });
+  await open(page, '/settings/calendar');
+  await page.getByRole('button', { name: 'Turn on the calendar feed' }).click();
+
+  await expect(page.getByLabel('Calendar address')).toHaveValue(data.calendarFeed().url);
+  await expect(page.getByRole('link', { name: 'Subscribe on this device' }))
+    .toHaveAttribute('href', data.calendarFeed().url.replace('https:', 'webcal:'));
+  await page.getByRole('button', { name: 'Copy address' }).click();
+  await expect(page.getByText('The calendar address was copied.')).toBeVisible();
+  expect((await handedOver(page)).at(-1).text).toBe(data.calendarFeed().url);
+});
+
+test('a member sees the calendar address but can\'t change it', async ({ page, api }) => {
+  api.set({ 'GET /api/session': data.session(data.member()), 'GET /api/calendar/feed': data.calendarFeed() });
+  await open(page, '/settings/calendar');
+
+  await expect(page.getByLabel('Calendar address')).toHaveValue(data.calendarFeed().url);
+  await expect(page.getByRole('button', { name: 'Make a new address' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Turn off' })).toHaveCount(0);
 });

@@ -19,6 +19,22 @@ internal interface IAccountAccess
 
     Task RemoveUserAsync(Guid id, CancellationToken cancellationToken);
 
+    // The three sign-in counters below change the database straight away, in one statement each, instead of at the
+    // next commit. Sign-ins tried at the same moment then each see the others' attempts, so they can't check more
+    // passwords between them than the lockout rules allow.
+
+    /// <summary>
+    /// Counts a sign-in attempt for an account that isn't locked, before its password is checked. A lockout that has
+    /// run out is cleared, and counting starts again from one.
+    /// </summary>
+    Task<SignInAttempt> CountSignInAttemptAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken);
+
+    /// <summary>Forgets the counted attempts and any lockout, after a successful sign-in.</summary>
+    Task ClearSignInAttemptsAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Refuses sign-in to the account until <paramref name="until"/>.</summary>
+    Task LockAsync(Guid userId, DateTimeOffset until, CancellationToken cancellationToken);
+
     Task<AccessLink?> FindLinkAsync(Guid id, CancellationToken cancellationToken);
 
     Task<AccessLink?> FindLinkByTokenHashAsync(string tokenHash, CancellationToken cancellationToken);

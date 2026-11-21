@@ -18,12 +18,15 @@ public interface IRecipeManager
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
     Task<RecipeResponse> GetAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>One recipe as a schema.org JSON-LD file, for other recipe apps or to import into another ChefBot.</summary>
+    /// <summary>
+    /// One recipe as a file: schema.org JSON-LD for other recipe apps or another ChefBot, or a PDF, Markdown or text
+    /// file to read and keep.
+    /// </summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
-    Task<RecipeExportFile> ExportAsync(Guid id, CancellationToken cancellationToken);
+    Task<RecipeExportFile> ExportAsync(Guid id, RecipeExportFormat format, CancellationToken cancellationToken);
 
-    /// <summary>Every recipe that can be planned, in one schema.org JSON-LD file.</summary>
-    Task<RecipeExportFile> ExportAllAsync(CancellationToken cancellationToken);
+    /// <summary>Every recipe that can be planned, in name order, in one file of the given format.</summary>
+    Task<RecipeExportFile> ExportAllAsync(RecipeExportFormat format, CancellationToken cancellationToken);
 
     Task<RecipeResponse> CreateAsync(RecipeDraft draft, CancellationToken cancellationToken);
 

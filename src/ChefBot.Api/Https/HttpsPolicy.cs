@@ -15,8 +15,19 @@ public sealed class HttpsPolicy(CertificateStore certificates)
         set => _requireHttps = value;
     }
 
+    /// <summary>A year, the usual length. Browsers remember it from the last HTTPS visit.</summary>
+    public const string HstsHeader = "max-age=31536000";
+
     public bool ShouldRedirect(HttpRequest request) =>
         _requireHttps && certificates.IsEnabled && !request.IsHttps && !request.Path.StartsWithSegments("/health");
+
+    /// <summary>
+    /// True when browsers should be told to use only HTTPS for this site from now on. Only with a certificate you
+    /// provide: a browser that has seen HSTS won't let anyone click past a certificate warning, and a self-signed
+    /// certificate shows one until each device trusts it. Behind a proxy (Https:Mode Off), the proxy sends HSTS.
+    /// </summary>
+    public bool ShouldSendHsts(HttpRequest request) =>
+        _requireHttps && certificates.Options.Mode == HttpsMode.Certificate && request.IsHttps;
 
     /// <summary>The same address over HTTPS, on the port people reach ChefBot's HTTPS on.</summary>
     public string HttpsUrl(HttpRequest request)

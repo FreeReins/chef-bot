@@ -13,6 +13,8 @@
   import LayoutGrid from '@lucide/svelte/icons/layout-grid';
   import List from '@lucide/svelte/icons/list';
   import Download from '@lucide/svelte/icons/download';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import RecipeDownloads from '../components/RecipeDownloads.svelte';
 
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
   const PAGE_SIZE = 24;
@@ -28,6 +30,7 @@
   let result = $state(null); // RecipePageResponse for the page shown
   let listTop = $state();
   let layout = $state(remembered());
+  let downloadsOpen = $state(false); // whether the "Download all" choices show
 
   function remembered() {
     try { return localStorage.getItem(LAYOUT_KEY) === 'list' ? 'list' : 'grid'; } catch { return 'grid'; }
@@ -100,11 +103,17 @@
       <div class="row-actions">
         {#if isAdmin()}<a class="button" href="/recipes/samples">Browse sample recipes</a>{/if}
         {#if librarySize > 0}
-          <a class="button add" href="/api/recipes/export" download title="Every recipe in one schema.org file, which other recipe apps import">
-            <Download size={18} />Download all</a>
+          <button type="button" class="add" aria-expanded={downloadsOpen} aria-controls="download-all"
+                  onclick={() => (downloadsOpen = !downloadsOpen)}><Download size={18} />Download all<ChevronDown size={16} /></button>
         {/if}
         <a class="button primary add" href="/recipes/new/link"><Plus size={18} />Add recipe</a>
       </div>
+    </div>
+    <!-- Every recipe in one file: a PDF, Markdown, text, or the schema.org file other recipe apps import. It opens in
+         the page rather than over it, so on a phone it never covers the search. -->
+    <div id="download-all" class="card downloads" hidden={!downloadsOpen}>
+      <span>Download every recipe in one file:</span>
+      <RecipeDownloads href="/api/recipes/export" onpick={() => (downloadsOpen = false)} />
     </div>
 
     {#if librarySize > 0}
@@ -207,6 +216,8 @@
   .head { align-items: center; margin-top: 1rem; }
   .head h2 { margin: 0; }
   .add { display: inline-flex; align-items: center; gap: .35rem; }
+  .downloads:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; }
+  .downloads span { color: var(--muted); margin-right: .25rem; }
   .filters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: end; }
   .filters label { display: grid; gap: .25rem; }
   .filters .grow { flex: 1; min-width: 12rem; }

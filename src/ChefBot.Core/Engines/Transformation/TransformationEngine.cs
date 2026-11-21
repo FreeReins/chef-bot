@@ -10,7 +10,8 @@ namespace ChefBot.Core.Engines.Transformation;
 
 /// <summary>
 /// Turns outside data into ChefBot's own: recipe files, recipe web pages, typed-in recipes into stored recipes,
-/// ingredient names into pantry items and free-form meals. It also writes recipes back out as schema.org files.
+/// ingredient names into pantry items and free-form meals. It also writes recipes back out: as schema.org files, or
+/// as PDF, Markdown or plain text to read.
 /// Reads and saves nothing.
 /// </summary>
 internal sealed class TransformationEngine(
@@ -85,18 +86,51 @@ internal sealed class TransformationEngine(
         return format.ReadArchive(archive);
     }
 
-    /// <summary>The media type of the files <see cref="ExportFile(Recipe)"/> writes.</summary>
+    /// <summary>The media type of schema.org JSON-LD files.</summary>
     public const string JsonLdType = "application/ld+json";
 
-    /// <summary>One recipe as a schema.org JSON-LD file, named after it.</summary>
-    public static RecipeExportFile ExportFile(Recipe recipe) =>
-        new($"{FileSlug(recipe.Name)}.json", JsonLdType, SchemaRecipeWriter.Write(recipe));
+    /// <summary>The media type of PDF files.</summary>
+    public const string PdfType = "application/pdf";
 
-    /// <summary>Several recipes, in name order, as one schema.org JSON-LD file named after the day.</summary>
-    public static RecipeExportFile ExportFile(IEnumerable<Recipe> recipes, DateOnly today) => new(
-        $"chefbot-recipes-{today:yyyy-MM-dd}.json",
-        JsonLdType,
-        SchemaRecipeWriter.Write(recipes.OrderBy(recipe => recipe.Name, StringComparer.OrdinalIgnoreCase)));
+    /// <summary>The media type of Markdown files.</summary>
+    public const string MarkdownType = "text/markdown; charset=utf-8";
+
+    /// <summary>The media type of plain text files.</summary>
+    public const string TextType = "text/plain; charset=utf-8";
+
+    /// <summary>One recipe as a file of the given format, named after it.</summary>
+    public static RecipeExportFile ExportFile(Recipe recipe, RecipeExportFormat format)
+    {
+        var (extension, type) = FileType(format);
+        var data = format == RecipeExportFormat.Json ? SchemaRecipeWriter.Write(recipe) : Readable([recipe], format);
+        return new RecipeExportFile($"{FileSlug(recipe.Name)}.{extension}", type, data);
+    }
+
+    /// <summary>Several recipes, in name order, as one file of the given format named after the day.</summary>
+    public static RecipeExportFile ExportFile(IEnumerable<Recipe> recipes, DateOnly today, RecipeExportFormat format)
+    {
+        var (extension, type) = FileType(format);
+        var ordered = recipes.OrderBy(recipe => recipe.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        var data = format == RecipeExportFormat.Json ? SchemaRecipeWriter.Write(ordered) : Readable(ordered, format);
+        return new RecipeExportFile($"chefbot-recipes-{today:yyyy-MM-dd}.{extension}", type, data);
+    }
+
+    private static (string Extension, string Type) FileType(RecipeExportFormat format) => format switch
+    {
+        RecipeExportFormat.Json => ("json", JsonLdType),
+        RecipeExportFormat.Pdf => ("pdf", PdfType),
+        RecipeExportFormat.Markdown => ("md", MarkdownType),
+        RecipeExportFormat.Text => ("txt", TextType),
+        _ => throw new ArgumentOutOfRangeException(nameof(format), format, "There is no such export format."),
+    };
+
+    /// <summary>Recipes as a file to read rather than import.</summary>
+    private static byte[] Readable(IReadOnlyList<Recipe> recipes, RecipeExportFormat format) => format switch
+    {
+        RecipeExportFormat.Pdf => RecipePdfWriter.Write(recipes),
+        RecipeExportFormat.Markdown => RecipeMarkdownWriter.Write(recipes),
+        _ => RecipeTextWriter.Write(recipes),
+    };
 
     /// <summary>A name as a file name: "Slaw Fish Tacos!" is "slaw-fish-tacos". Letters in any alphabet stay.</summary>
     public static string FileSlug(string name)

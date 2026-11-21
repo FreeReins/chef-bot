@@ -90,11 +90,12 @@ it was. `--delete-data` removes those too; download a backup from **Settings →
 one. It deletes the secret and the database together because PostgreSQL only takes the password when the
 database is first created, so a new secret wouldn't match an old database.
 
-Open <http://localhost:8080>. The first visit starts the setup wizard:
+Open <http://localhost:8080>. It sends you on to <https://localhost:8443>, where the browser warns about
+the certificate the first time (see [HTTPS](#https)). The first visit starts the setup wizard:
 
 1. **Create your account.** This first account is the admin.
 2. **Secure connection.** Shows the HTTPS address, lets you name the certificate for the address you use,
-   download it, and choose to always use HTTPS.
+   download it, and choose whether to always use HTTPS. It starts on.
 3. **Add your recipes.** Pick one or both:
    - **Import my recipes** from a recipe file (JSON in ChefBot's own shape, a Mealie backup .zip with its
      photos or the `database.json` from one, a Mealie recipe export or schema.org recipes from a website), as many files as you like.
@@ -127,6 +128,7 @@ Unused links can also be revoked, and accounts removed, from the same tab.
   link in `journalctl --user -u chefbot`. Clear the setting afterwards.
 - **Lockout.** After 5 wrong passwords in a row an account is locked for 15 minutes. An admin can change both
   numbers on the Settings tab (0 attempts turns lockout off) and can unlock someone early on the People tab.
+  Sign-ins sent all at once count too: only the first 5 have their passwords checked.
 
 ### HTTPS
 
@@ -139,7 +141,9 @@ next to HTTP on 8080. Nothing needs to be installed or issued.
 - For that to work the certificate must name the address you use. Enter it in the wizard or on the Settings
   tab, or set `Https__Hostnames=chefbot.local,192.168.1.20` in `chefbot.env`. A new certificate is used
   immediately, no restart.
-- **Always use HTTPS** (wizard or Settings) sends plain HTTP visitors to the HTTPS address.
+- **Always use HTTPS** (wizard or Settings) sends plain HTTP visitors to the HTTPS address, so passwords never
+  cross the network unencrypted. It is on from the start whenever ChefBot serves HTTPS, until an admin saves
+  the sign-in settings. After that, the saved choice stays.
 - The certificate is kept in the `chefbot-keys` volume, lasts about two years and is renewed in its last
   30 days. A renewed certificate has to be accepted or installed again.
 - To use your own certificate, or to run behind a reverse proxy, see
@@ -224,6 +228,11 @@ volumes:
   ```
   With rootless Podman, user 1654 inside the container is a different id on the host; run
   `podman unshare chown 1654 /srv/chefbot/certs/privkey.pem` after copying instead of `-o 1654`.
+- **Browsers remember to use HTTPS.** With your own certificate and "Always use HTTPS" on, ChefBot sends
+  `Strict-Transport-Security` for a year, so browsers go straight to HTTPS without trying HTTP first. Keep a
+  valid certificate for that address for that long. A browser that has seen the header won't let anyone click
+  past a certificate warning. A self-signed certificate never gets the header, because it warns until each
+  device trusts it.
 
 ### Behind a reverse proxy
 
@@ -239,7 +248,8 @@ When Caddy, Traefik, nginx or similar handles HTTPS, let it talk to ChefBot over
   believes: addresses or networks, separated by commas. With it, ChefBot knows visitors arrived over HTTPS, so
   sign-in cookies are marked secure and the Settings page says HTTPS is handled by the proxy. Leave it empty
   when nothing sits in front of ChefBot, or anyone could claim to be on HTTPS.
-- **Leave "Always use HTTPS" off.** Redirecting is the proxy's job.
+- **"Always use HTTPS" stays off.** Redirecting to HTTPS, and sending `Strict-Transport-Security`, is the
+  proxy's job.
 - Point the proxy at port 8080. Port 8443 isn't used in this mode.
 
 ### Upgrading
@@ -308,6 +318,9 @@ try each call. Both need you to be signed in.
 | `POST /api/shopping/items/{itemId}/store` | Buy a hand-added item's ingredient at another store from now on, as for a plan's item |
 | `GET /api/shopping/targets`, `PUT /api/shopping/targets` | The to-do apps the shopping list can be sent to: `{"id", "name", "kind", "url", "list", "hasToken"}`, with `kind` one of `HomeAssistant`, `Todoist` or `Webhook`. Tokens are never sent back. `PUT` (admin) replaces them all: `{"targets": [{"id": null, "name": "Kitchen list", "kind": "HomeAssistant", "url": "http://homeassistant.local:8123", "list": "todo.shopping_list", "token": "..."}]}`; a target sent with `"token": null` keeps its saved token |
 | `POST /api/shopping/targets/{targetId}/test` | Add one test item to a to-do app (admin). Answers `{"sent", "total", "problem"}` |
+| `GET /api/calendar/feed` | The calendar feed's address, `{"url", "createdAt"}`, or `{"url": null}` when it is off |
+| `POST` `DELETE /api/calendar/feed` | Turn the calendar feed on with a new address (the old one stops working), or off (admin) |
+| `GET /api/calendar/{token}/meals.ics` | The calendar feed as iCalendar text: each breakfast, lunch and dinner of the confirmed weeks from last week on, at the times under `Calendar`. Needs no sign-in, only the secret in the address. 404 when the feed is off or the secret is wrong |
 | `POST /api/shopping/send` | Add what is left to buy to a to-do app: `{"targetId": "...", "planId": "..."}`, the plan's items not yet bought plus the hand-added ones (only those without `planId`). Nothing is ticked off in ChefBot, and sending again adds the items again. Answers `{"sent", "total", "problem"}`; items go one at a time, so a problem stops the rest |
 | `GET /api/stores`, `PUT /api/stores` | The household's stores, the known stores and the ingredient names they can list. `PUT` replaces the stores (admin) |
 | `GET /api/plan-styles`, `PUT /api/plan-styles` | The household's plan styles, the starter styles, and the recipe tags and ingredient names rules can use. `PUT` replaces the styles: `{"styles": [{"name": "Crockpot week", "isDefault": true, "cookingDays": ["Sunday", "Wednesday"], "leftoverLunches": true, "breakfasts": 0, "snacks": 2, "sweets": 0, "drinks": 1, "rules": [{"limit": "AtLeast", "count": 2, "slot": "Dinner", "match": "SlowCooker"}]}]}`. A rule's `limit` is `AtLeast`, `AtMost`, `Exactly` or `None`; `match` is `SlowCooker`, `Tag` or `Ingredient` (with `values`) or `ReadyWithin` (with `minutes`); `day` puts matching dinners on a day first |
@@ -315,8 +328,8 @@ try each call. Both need you to be signed in.
 | `GET` `POST /api/recipes`, `PUT` `DELETE /api/recipes/{id}` | Manage local recipes. A recipe has `name`, `course`, `servings`, `isSlowCooker` and `ingredients` (lines such as `"2 cups kale"`), and optionally `description`, `instructions` (a list of steps), `prepMinutes`, `cookMinutes`, `totalMinutes`, `sourceUrl`, `author`, `yieldText`, `notes` and `tags`. Responses add `images`, `ingredientDetails` (each line's quantity, unit and food) and `stepDetails` (for each step: the `timers` it gives in seconds, a `headStart` such as preheating the oven, boiling water or a long wait, and the positions of the `ingredients` it names) |
 | `GET /api/recipes/search?query=chicken&course=Main&page=1&pageSize=25` | One page of the library, in course order and then by name. Every parameter is optional: `query` keeps recipes whose name, ingredients or tags contain each of its words (any case), `pageSize` defaults to 25 (at most 100). Answers `{"recipes": [...], "total", "page", "pageSize", "librarySize"}`, where each recipe has only `id`, `name`, `course`, `isSlowCooker`, `ingredients`, `tags` and `coverUrl` (its first photo, or null) |
 | `GET /api/recipes/{id}` | One recipe in full. 404 when it doesn't exist or has been archived |
-| `GET /api/recipes/{id}/export` | One recipe as a schema.org JSON-LD file to download (`application/ld+json`), which Mealie, Tandoor and other recipe apps import, as does ChefBot's own import. It adds `course`, `isSlowCooker` and `notes`, which schema.org has no word for. Photos are listed only when they came from the web, by their original address. 404 when the recipe doesn't exist or has been archived |
-| `GET /api/recipes/export` | Every recipe that can be planned in one schema.org JSON-LD file, as a `@graph` |
+| `GET /api/recipes/{id}/export?format=json` | One recipe as a file to download, named after it. `format` is optional: `json` (the default) gives a schema.org JSON-LD file (`.json`, `application/ld+json`), which Mealie, Tandoor and other recipe apps import, as does ChefBot's own import. It adds `course`, `isSlowCooker` and `notes`, which schema.org has no word for, and lists photos only when they came from the web, by their original address. `pdf` gives a PDF to print or keep (`.pdf`): text only, without photos, on US Letter pages; letters outside western European alphabets print as `?`. `markdown` gives Markdown (`.md`) and `text` plain text (`.txt`), both UTF-8. A format it doesn't know gives JSON-LD. 404 when the recipe doesn't exist or has been archived |
+| `GET /api/recipes/export?format=json` | Every recipe that can be planned, in name order, in one file named `chefbot-recipes-<date>`. `format` works as above: JSON-LD lists the recipes as a `@graph`, the PDF starts each recipe on a new page, and Markdown and text put a rule between them |
 | `POST /api/recipes/{id}/images` | Add a photo: `{"data": "<base64>"}`, a JPEG, PNG, WebP or GIF of up to 5 MB, at most 10 per recipe |
 | `GET` `DELETE /api/recipes/{id}/images/{imageId}` | Get a photo as an image file, or remove it |
 | `POST /api/recipes/import/file` | Import a recipe file: `{"fileName": "recipes.json", "content": "..."}`. Names already in the library are skipped |
@@ -371,6 +384,8 @@ using `__` between levels (for example `Planner__DinnerPortions=4`). With the Po
 | `Planner:AvoidRepeatDays` | `28` | Don't repeat a recipe planned this recently |
 | `Planner:Weights` | see file | How strongly sharing, season, pantry use and variety count |
 | `Schedule:Enabled`, `Day`, `Time` | `true`, `Saturday`, `09:00` | When next week is staged automatically |
+| `Calendar:BreakfastTime`, `LunchTime`, `DinnerTime` | `08:00`, `12:30`, `18:30` | When meals appear in the calendar feed |
+| `Calendar:MealMinutes`, `SlowCookerHours` | `45`, `8` | How long each meal's event lasts, and how many hours before a slow cooker dinner its reminder goes off (`0` for none) |
 | `Classifier` | see file | Tag words that sort imported recipes into courses |
 | `Notifications:WebhookUrl` | empty | The starting webhook address, until one is saved on the Settings tab |
 | `Planner:Weights:RegeneratePantryBoost` | `4` | How much more pantry food counts in "Replan from pantry" |
@@ -506,11 +521,26 @@ The Shopping tab can send what is left to buy to a to-do app, one item per thing
 Tokens are kept in the database, and in backups, and never shown again once saved. Sending adds items each time,
 so send once you've finished changing the plan.
 
+### The meal plan in your calendar
+
+Under **Settings → Calendar**, an admin turns on a calendar feed, and everyone in the household can subscribe to
+it. Calendar apps then show each confirmed week's breakfasts, lunches and dinners at mealtimes, each with a link
+to its recipe, and remind you to start the slow cooker. The address carries a secret instead of a sign-in, and
+**Make a new address** stops the old one working.
+
+[docs/calendar.md](docs/calendar.md) says what the calendar shows and which calendar apps can reach a ChefBot on a
+home network. It has step-by-step instructions for iPhone and Mac, Android (with ICSx⁵), Google Calendar, Outlook,
+Thunderbird and GNOME Calendar.
+
 ### Backups
 
 ChefBot writes a backup every day at 03:00 and keeps the newest 14. On the Settings tab an admin can change
 the time, how many to keep, a maximum age in days, make a backup immediately, download one, delete one, or
 **restore** one, which replaces everything in ChefBot with that backup.
+
+- **After a restore, everyone signs in again**, the admin who restored included. Passwords go back to what
+  they were when the backup was made. Sessions from before the restore stop working, including any started
+  before a later password change, so restoring an old backup can't bring back a session that change ended.
 
 - Backups are compressed JSON files holding ChefBot's own data: recipes and their photos, plans, the pantry,
   accounts and settings. Photos make backups larger, by up to 5 MB each. They are stored in the `chefbot-backups` Podman volume. To keep them in a host folder instead, see the

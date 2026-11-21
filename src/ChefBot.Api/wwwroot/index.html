@@ -4,15 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ChefBot</title>
-  <!-- Light or dark as chosen in this browser, before the first paint; lib/theme.svelte.js keeps it after that. -->
-  <script>
-    try {
-      const theme = localStorage.getItem('chefbot-theme');
-      if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-    } catch { /* follow the device */ }
-  </script>
-  <script type="module" crossorigin src="/assets/index-BLxLnGeM.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-BgsK5PXx.css">
+  <!-- Light or dark as chosen in this browser, before the first paint: public/theme.js. -->
+  <script src="/theme.js"></script>
+  <script type="module" crossorigin src="/assets/index-BxUkzPFy.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-Cxul_1Yv.css">
 </head>
 <body>
   <noscript><p>ChefBot needs JavaScript. Turn it on for this site, then reload the page.</p></noscript>

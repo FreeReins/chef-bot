@@ -44,6 +44,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
             GroceryStores = await db.GroceryStores.AsNoTracking().ToListAsync(cancellationToken),
             PlanStyles = await db.PlanStyles.AsNoTracking().ToListAsync(cancellationToken),
             ShoppingTargets = await db.ShoppingTargets.AsNoTracking().ToListAsync(cancellationToken),
+            CalendarFeed = await db.Set<CalendarFeedEntity>().AsNoTracking().ToListAsync(cancellationToken),
         };
 
         // A planned meal points at its recipe by id; the recipe itself is written once, under Recipes.
@@ -114,6 +115,17 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         // One transaction: either everything is replaced, or nothing changes.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
+        // Everyone signs in again after a restore. Passwords go back to the backup's, and so would the session
+        // versions, which would bring back sessions that a password change since then had ended (a stolen cookie,
+        // say). So each account's version moves past both its current one and the backup's, which no cookie
+        // carries. An account removed since the backup has no current version; its sessions ended when it was
+        // removed, unless its password also changed between the backup and the removal.
+        var currentVersions = await db.Users.AsNoTracking().ToDictionaryAsync(user => user.Id, user => user.SessionVersion, cancellationToken);
+        foreach (var user in contents.Users)
+        {
+            user.SessionVersion = Math.Max(user.SessionVersion, currentVersions.GetValueOrDefault(user.Id)) + 1;
+        }
+
         // Children go with their parents: the database deletes them through its foreign keys.
         await db.AccessLinks.ExecuteDeleteAsync(cancellationToken);
         await db.MealPlans.ExecuteDeleteAsync(cancellationToken);
@@ -128,6 +140,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         await db.GroceryStores.ExecuteDeleteAsync(cancellationToken);
         await db.PlanStyles.ExecuteDeleteAsync(cancellationToken);
         await db.ShoppingTargets.ExecuteDeleteAsync(cancellationToken);
+        await db.Set<CalendarFeedEntity>().ExecuteDeleteAsync(cancellationToken);
 
         db.ChangeTracker.Clear();
         db.AddRange(contents.Recipes);
@@ -143,6 +156,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
         db.AddRange(contents.GroceryStores);
         db.AddRange(contents.PlanStyles);
         db.AddRange(contents.ShoppingTargets);
+        db.AddRange(contents.CalendarFeed);
 
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -188,6 +202,9 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
 
         /// <summary>The to-do apps, with their access tokens. Empty in backups made before the shopping list could be sent to one.</summary>
         public List<ShoppingTargetEntity> ShoppingTargets { get; set; } = [];
+
+        /// <summary>The calendar feed's secret. Empty in backups made before the meal plan had a calendar feed.</summary>
+        public List<CalendarFeedEntity> CalendarFeed { get; set; } = [];
     }
 
     /// <summary>

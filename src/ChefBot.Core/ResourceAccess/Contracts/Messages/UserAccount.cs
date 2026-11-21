@@ -18,7 +18,10 @@ internal sealed class UserAccount
 
     public DateTimeOffset CreatedAt { get; set; }
 
-    /// <summary>Wrong passwords in a row since the last successful sign-in or lockout.</summary>
+    /// <summary>
+    /// Sign-in attempts since the last successful sign-in or the end of a lockout. Each is counted before its
+    /// password is checked, so this includes attempts still being checked.
+    /// </summary>
     public int FailedSignIns { get; set; }
 
     /// <summary>Sign-in is refused until this time, after too many wrong passwords.</summary>

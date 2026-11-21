@@ -27,6 +27,8 @@ internal sealed class TestCore
 
     public FakeToDoLists ToDoLists { get; } = new();
 
+    public CalendarOptions Calendar { get; } = new();
+
     public FakeMessages Messages { get; } = new();
 
     public FakeKnownStores KnownStores { get; } = new();
@@ -48,7 +50,7 @@ internal sealed class TestCore
 
     public PlanManager PlanManager() => new(
         Plans, Recipes, Pantry, ShoppingList, Settings, KnownStores, KnownStyles, ToDoLists, Messages,
-        new PlanningEngine(TestData.Catalog, Options, Schedule), TestData.Shopping, TestData.Suggestions, TestData.Transformation,
+        new PlanningEngine(TestData.Catalog, Options, Schedule), TestData.Shopping, TestData.Suggestions, new CalendarEngine(Calendar), TestData.Transformation,
         Validation, TestData.Catalog, Options, new PlanWriteLock(), Clock);
 
     public PantryManager PantryManager() => new(Pantry, Messages, TestData.Transformation, Validation, TestData.Catalog, Options, Clock);

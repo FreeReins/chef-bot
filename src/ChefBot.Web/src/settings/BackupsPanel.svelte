@@ -61,7 +61,7 @@
 
   async function restore(file) {
     if (!(await ask({ title: 'Restore this backup?',
-      message: `Everything in ChefBot is replaced with the backup from ${new Date(file.createdAt).toLocaleString()}. Anything saved since then is lost.`,
+      message: `Everything in ChefBot is replaced with the backup from ${new Date(file.createdAt).toLocaleString()}. Anything saved since then is lost. Passwords go back to what they were then, and everyone, you included, has to sign in again.`,
       confirmLabel: 'Restore backup', danger: true }))) return;
     run(async () => {
       await api('POST', `/api/system/backups/${file.name}/restore`);

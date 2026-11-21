@@ -46,7 +46,7 @@ public class RecipeExportTests
         var recipes = new TestCore().RecipeManager();
         var saved = await recipes.CreateAsync(Tacos, default);
 
-        var file = await recipes.ExportAsync(saved.Id, default);
+        var file = await recipes.ExportAsync(saved.Id, RecipeExportFormat.Json, default);
 
         await Assert.That(file.FileName).IsEqualTo("slaw-fish-tacos.json");
         await Assert.That(file.ContentType).IsEqualTo("application/ld+json");
@@ -72,7 +72,7 @@ public class RecipeExportTests
         var recipes = new TestCore().RecipeManager();
         var saved = await recipes.CreateAsync(Tacos with { IsSlowCooker = true }, default);
 
-        var file = await recipes.ExportAsync(saved.Id, default);
+        var file = await recipes.ExportAsync(saved.Id, RecipeExportFormat.Json, default);
         var read = TestData.Transformation.ReadFile(file.FileName, Text(file)).Recipes.Single();
 
         await Assert.That(read.Name).IsEqualTo(Tacos.Name);
@@ -101,7 +101,7 @@ public class RecipeExportTests
         var archived = await recipes.CreateAsync(new RecipeDraft("Old Stew", RecipeCourse.Main, ["1 lb beef"]), default);
         await recipes.ArchiveAsync(archived.Id, default);
 
-        var file = await recipes.ExportAllAsync(default);
+        var file = await recipes.ExportAllAsync(RecipeExportFormat.Json, default);
         var read = TestData.Transformation.ReadFile(file.FileName, Text(file));
 
         await Assert.That(file.FileName).StartsWith("chefbot-recipes-");
@@ -116,7 +116,7 @@ public class RecipeExportTests
         var saved = await recipes.CreateAsync(Tacos, default);
         await recipes.ArchiveAsync(saved.Id, default);
 
-        await Assert.That(await Throws<NotFoundException>(() => recipes.ExportAsync(saved.Id, default))).IsTrue();
+        await Assert.That(await Throws<NotFoundException>(() => recipes.ExportAsync(saved.Id, RecipeExportFormat.Json, default))).IsTrue();
     }
 
     [Test]

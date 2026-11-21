@@ -188,6 +188,19 @@ public class WebRecipeTests
     [Arguments("fd00::1", false)]
     [Arguments("fe80::1", false)]
     [Arguments("::ffff:192.168.1.10", false)]
+    [Arguments("64:ff9b::808:808", true)]           // NAT64 to 8.8.8.8
+    [Arguments("64:ff9b::c0a8:10a", false)]         // NAT64 to 192.168.1.10
+    [Arguments("64:ff9b::a9fe:a9fe", false)]        // NAT64 to 169.254.169.254
+    [Arguments("64:ff9b:1::808:808", false)]        // NAT64 for local use
+    [Arguments("2002:808:808::1", true)]            // 6to4 from 8.8.8.8
+    [Arguments("2002:7f00:1::1", false)]            // 6to4 from 127.0.0.1
+    [Arguments("2002:a00:1::1", false)]             // 6to4 from 10.0.0.1
+    [Arguments("::10.0.0.1", false)]                // IPv4-compatible
+    [Arguments("::ffff:0:a00:1", false)]            // IPv4-translated 10.0.0.1
+    [Arguments("2001:0:4136:e378::1", false)]       // Teredo
+    [Arguments("2001:db8::1", false)]               // documentation
+    [Arguments("100::1", false)]                    // discard-only
+    [Arguments("2001:4860:4860::8888", true)]       // an ordinary public address under 2001::/16
     public async Task Only_public_internet_addresses_are_downloaded_from(string address, bool isPublic)
     {
         await Assert.That(PublicWeb.IsPublic(IPAddress.Parse(address))).IsEqualTo(isPublic);

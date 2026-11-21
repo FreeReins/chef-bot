@@ -21,6 +21,11 @@ internal interface ISettingsAccess
 
     Task SaveScheduleAsync(ScheduleState state, CancellationToken cancellationToken);
 
+    /// <summary>The calendar feed; one with an empty token when it has never been turned on.</summary>
+    Task<CalendarFeed> GetCalendarFeedAsync(CancellationToken cancellationToken);
+
+    Task SaveCalendarFeedAsync(CalendarFeed feed, CancellationToken cancellationToken);
+
     /// <summary>The household's stores in their saved order. Empty when none are set up.</summary>
     Task<List<GroceryStore>> ListStoresAsync(CancellationToken cancellationToken);
 

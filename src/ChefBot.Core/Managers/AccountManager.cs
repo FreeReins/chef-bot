@@ -47,22 +47,43 @@ internal sealed class AccountManager(
             throw new NotSignedInException(security.LockedMessage(user, now));
         }
 
-        if (passwords.Verify(user.PasswordHash, request.Password ?? string.Empty))
+        var password = request.Password ?? string.Empty;
+        var rules = await settings.GetSecurityAsync(cancellationToken);
+        if (!security.CountsSignIns(rules))
         {
-            if (security.NeedsUnlock(user))
-            {
-                security.Unlock(user);
-                await accounts.SaveUserAsync(user, cancellationToken);
-                await messages.CommitAsync(cancellationToken);
-            }
+            return passwords.Verify(user.PasswordHash, password)
+                ? user.ToAccountSession()
+                : throw new NotSignedInException(SecurityEngine.WrongDetails);
+        }
 
+        // The attempt is counted in the database before the password is checked, so many sign-ins sent at once
+        // can't check more passwords between them than the rules allow. These counters don't wait for a commit.
+        var attempt = await accounts.CountSignInAttemptAsync(user.Id, now, cancellationToken);
+        if (attempt.Number is not int number)
+        {
+            throw new NotSignedInException(attempt.LockedUntil is DateTimeOffset until
+                ? security.LockedMessage(until, now)
+                : SecurityEngine.WrongDetails);
+        }
+
+        if (security.IsPastLimit(number, rules))
+        {
+            throw new NotSignedInException(security.LockedMessage(now + TimeSpan.FromMinutes(rules.LockoutMinutes), now));
+        }
+
+        if (passwords.Verify(user.PasswordHash, password))
+        {
+            await accounts.ClearSignInAttemptsAsync(user.Id, cancellationToken);
             return user.ToAccountSession();
         }
 
-        var message = security.RecordFailedSignIn(user, await settings.GetSecurityAsync(cancellationToken), now);
-        await accounts.SaveUserAsync(user, cancellationToken);
-        await messages.CommitAsync(cancellationToken);
-        throw new NotSignedInException(message);
+        if (security.LockAfterWrongPassword(number, rules, now) is DateTimeOffset lockedUntil)
+        {
+            await accounts.LockAsync(user.Id, lockedUntil, cancellationToken);
+            throw new NotSignedInException(security.LockedMessage(lockedUntil, now));
+        }
+
+        throw new NotSignedInException(SecurityEngine.WrongDetails);
     }
 
     public async Task<LinkDetails> DescribeLinkAsync(string token, CancellationToken cancellationToken)
@@ -194,6 +215,19 @@ internal sealed class AccountManager(
         await settings.SaveSecurityAsync(rules, cancellationToken);
         await messages.PublishAsync(new SecuritySettingsChanged(rules.RequireHttps));
         await messages.CommitAsync(cancellationToken);
+        return rules.ToResponse();
+    }
+
+    public async Task<SecurityResponse> UseDefaultHttpsRuleAsync(bool servesHttps, CancellationToken cancellationToken)
+    {
+        var rules = await settings.GetSecurityAsync(cancellationToken);
+        if (servesHttps && !rules.IsSaved)
+        {
+            rules.RequireHttps = true;
+            await settings.SaveSecurityAsync(rules, cancellationToken);
+            await messages.CommitAsync(cancellationToken);
+        }
+
         return rules.ToResponse();
     }
 

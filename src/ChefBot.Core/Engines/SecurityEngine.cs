@@ -22,24 +22,20 @@ internal sealed class SecurityEngine
 
     public string LockedMessage(UserAccount user, DateTimeOffset now) => LockedMessage(user.LockedUntil!.Value - now);
 
-    /// <summary>Counts a wrong password and locks the account once there are too many in a row.</summary>
-    /// <returns>What to tell the person signing in.</returns>
-    public string RecordFailedSignIn(UserAccount user, SecuritySettings rules, DateTimeOffset now)
-    {
-        user.FailedSignIns++;
-        if (rules.MaxFailedSignIns <= 0 || user.FailedSignIns < rules.MaxFailedSignIns)
-        {
-            return WrongDetails;
-        }
+    public string LockedMessage(DateTimeOffset until, DateTimeOffset now) => LockedMessage(until - now);
 
-        var lockout = TimeSpan.FromMinutes(rules.LockoutMinutes);
-        user.FailedSignIns = 0;
-        user.LockedUntil = now + lockout;
-        return LockedMessage(lockout);
-    }
+    /// <summary>True when the rules lock accounts, so sign-in attempts need counting.</summary>
+    public bool CountsSignIns(SecuritySettings rules) => rules.MaxFailedSignIns > 0;
 
-    /// <summary>True when there is anything to clear after a successful sign-in.</summary>
-    public bool NeedsUnlock(UserAccount user) => user.FailedSignIns != 0 || user.LockedUntil is not null;
+    /// <summary>
+    /// True when attempt <paramref name="number"/> is past the limit. That happens when several sign-ins arrive at
+    /// once: the earlier ones use up the attempts the rules allow, so this one's password isn't checked at all.
+    /// </summary>
+    public bool IsPastLimit(int number, SecuritySettings rules) => CountsSignIns(rules) && number > rules.MaxFailedSignIns;
+
+    /// <summary>When the account unlocks if attempt <paramref name="number"/> had a wrong password, or null if it stays unlocked.</summary>
+    public DateTimeOffset? LockAfterWrongPassword(int number, SecuritySettings rules, DateTimeOffset now) =>
+        CountsSignIns(rules) && number >= rules.MaxFailedSignIns ? now + TimeSpan.FromMinutes(rules.LockoutMinutes) : null;
 
     public void Unlock(UserAccount user)
     {

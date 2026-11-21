@@ -28,6 +28,7 @@ internal sealed class PlanManager(
     PlanningEngine planning,
     ShoppingEngine shopping,
     SuggestionEngine suggestions,
+    CalendarEngine calendar,
     TransformationEngine transformation,
     ValidationEngine validation,
     IngredientCatalog catalog,
@@ -272,6 +273,35 @@ internal sealed class PlanManager(
         await ReconcileOpenPlansAsync(stores, changed: null, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return DescribeManualItems(await shoppingList.ListAsync(cancellationToken), stores);
+    }
+
+    public async Task<CalendarFeedResponse> GetCalendarFeedAsync(Uri site, CancellationToken cancellationToken) =>
+        Describe(await settings.GetCalendarFeedAsync(cancellationToken), site);
+
+    public async Task<CalendarFeedResponse> StartCalendarFeedAsync(Uri site, CancellationToken cancellationToken)
+    {
+        var feed = new CalendarFeed { Token = CalendarEngine.NewToken(), CreatedAt = clock.GetUtcNow() };
+        await settings.SaveCalendarFeedAsync(feed, cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+        return Describe(feed, site);
+    }
+
+    public async Task<CalendarFeedResponse> StopCalendarFeedAsync(CancellationToken cancellationToken)
+    {
+        await settings.SaveCalendarFeedAsync(new CalendarFeed(), cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+        return new CalendarFeedResponse(null, null);
+    }
+
+    public async Task<string> GetCalendarAsync(string token, Uri site, CancellationToken cancellationToken)
+    {
+        if (!CalendarEngine.Matches(await settings.GetCalendarFeedAsync(cancellationToken), token))
+        {
+            throw new NotFoundException("There is no calendar at that address. Copy the address again from ChefBot's settings.");
+        }
+
+        var weeks = await plans.ListOpenAsync(clock.Today().AddDays(-7), cancellationToken);
+        return calendar.Write(weeks.Where(plan => plan.Status == PlanStatus.Confirmed), site, clock.GetUtcNow());
     }
 
     public async Task<IReadOnlyList<ShoppingTargetResponse>> GetShoppingTargetsAsync(CancellationToken cancellationToken) =>
@@ -584,4 +614,8 @@ internal sealed class PlanManager(
 
     private async Task<PantrySnapshot> SnapshotAsync(CancellationToken cancellationToken) =>
         new(await pantry.ListAsync(cancellationToken), clock.Today(), options.ExpiringSoonDays);
+
+    private static CalendarFeedResponse Describe(CalendarFeed feed, Uri site) => feed.Token.Length == 0
+        ? new CalendarFeedResponse(null, null)
+        : new CalendarFeedResponse(new Uri(site, $"api/calendar/{feed.Token}/meals.ics").AbsoluteUri, feed.CreatedAt);
 }

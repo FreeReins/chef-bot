@@ -19,11 +19,16 @@ export async function share(title, text) {
       // Some browsers have the share sheet but refuse it here, for example without a click; copy instead.
     }
   }
+  await copyText(text);
+  return 'copied';
+}
+
+/** Puts text on the clipboard. Browsers only allow it over a secure connection, so this says so when they refuse. */
+export async function copyText(text) {
   if (!navigator.clipboard?.writeText) {
-    throw new Error('This browser can only copy over a secure connection. Open ChefBot over HTTPS, or print the page instead.');
+    throw new Error('This browser can only copy over a secure connection. Open ChefBot over HTTPS, or select the text and copy it yourself.');
   }
   await navigator.clipboard.writeText(text);
-  return 'copied';
 }
 
 /** Saves text as a file, named `name`, through the browser's usual download. */

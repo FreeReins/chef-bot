@@ -37,6 +37,7 @@ builder.Services.AddWolverineHttp();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseChefBotSecurityHeaders();
 app.UseChefBotProxyHeaders();
 app.UseChefBotHttpsRedirect();
 app.UseDefaultFiles();

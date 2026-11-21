@@ -26,15 +26,23 @@ public static class RecipeEndpoints
         string? query, RecipeCourse? course, int? page, int? pageSize, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.SearchAsync(new RecipeSearchRequest(query, course, page ?? 1, pageSize ?? 0), cancellationToken);
 
-    /// <summary>Every recipe that can be planned, as one schema.org JSON-LD file to download.</summary>
+    /// <summary>
+    /// Every recipe that can be planned, as one file to download: schema.org JSON-LD unless <c>format</c> asks for
+    /// <c>Pdf</c>, <c>Markdown</c> or <c>Text</c> (in any case). A format it doesn't know gives JSON-LD.
+    /// </summary>
     [WolverineGet("/api/recipes/export")]
-    public static async Task<IResult> ExportAll([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
-        Download(await recipes.ExportAllAsync(cancellationToken));
+    public static async Task<IResult> ExportAll(
+        RecipeExportFormat? format, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        Download(await recipes.ExportAllAsync(Format(format), cancellationToken));
 
-    /// <summary>One recipe as a schema.org JSON-LD file to download. An archived recipe is not found.</summary>
+    /// <summary>
+    /// One recipe as a file to download: schema.org JSON-LD unless <c>format</c> asks for <c>Pdf</c>, <c>Markdown</c>
+    /// or <c>Text</c>. An archived recipe is not found.
+    /// </summary>
     [WolverineGet("/api/recipes/{id}/export")]
-    public static async Task<IResult> Export(Guid id, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
-        Download(await recipes.ExportAsync(id, cancellationToken));
+    public static async Task<IResult> Export(
+        Guid id, RecipeExportFormat? format, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        Download(await recipes.ExportAsync(id, Format(format), cancellationToken));
 
     /// <summary>One recipe in full. An archived recipe is not found.</summary>
     [WolverineGet("/api/recipes/{id}")]
@@ -143,4 +151,8 @@ public static class RecipeEndpoints
         recipes.AddSamplesAsync(request, cancellationToken);
 
     private static IResult Download(RecipeExportFile file) => Results.File(file.Data, file.ContentType, file.FileName);
+
+    /// <summary>The format asked for; JSON-LD when none was, or when it is a number that names no format.</summary>
+    private static RecipeExportFormat Format(RecipeExportFormat? format) =>
+        format is { } asked && Enum.IsDefined(asked) ? asked : RecipeExportFormat.Json;
 }

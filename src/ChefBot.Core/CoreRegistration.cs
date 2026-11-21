@@ -48,6 +48,7 @@ public static class CoreRegistration
         services.AddSingleton(planner);
         services.AddSingleton(configuration.GetSection("Classifier").Get<ClassifierOptions>() ?? new ClassifierOptions());
         services.AddSingleton(configuration.GetSection("Schedule").Get<WeeklyScheduleOptions>() ?? new WeeklyScheduleOptions());
+        services.AddSingleton(configuration.GetSection("Calendar").Get<CalendarOptions>() ?? new CalendarOptions());
         services.AddSingleton(IngredientCatalog.FromJson(File.ReadAllText(DataPath(configuration, "Data:IngredientCatalog", "config/ingredients.json"))));
         services.TryAddSingleton(TimeProvider.System);
 
@@ -98,6 +99,7 @@ public static class CoreRegistration
         services.AddSingleton<SuggestionEngine>();
         services.AddSingleton<SecurityEngine>();
         services.AddSingleton<NotificationEngine>();
+        services.AddSingleton<CalendarEngine>();
         services.AddScoped<ValidationEngine>();
 
         // Managers: one per request or message, sharing one database transaction.

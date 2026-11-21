@@ -43,12 +43,12 @@ internal sealed class RecipeManager(
     public async Task<RecipeResponse> GetAsync(Guid id, CancellationToken cancellationToken) =>
         (await ActiveAsync(id, cancellationToken)).ToResponse();
 
-    public async Task<RecipeExportFile> ExportAsync(Guid id, CancellationToken cancellationToken) =>
-        TransformationEngine.ExportFile(await ActiveAsync(id, cancellationToken));
+    public async Task<RecipeExportFile> ExportAsync(Guid id, RecipeExportFormat format, CancellationToken cancellationToken) =>
+        TransformationEngine.ExportFile(await ActiveAsync(id, cancellationToken), format);
 
-    public async Task<RecipeExportFile> ExportAllAsync(CancellationToken cancellationToken) =>
+    public async Task<RecipeExportFile> ExportAllAsync(RecipeExportFormat format, CancellationToken cancellationToken) =>
         TransformationEngine.ExportFile(
-            await recipes.ListActiveAsync(cancellationToken), DateOnly.FromDateTime(clock.GetLocalNow().DateTime));
+            await recipes.ListActiveAsync(cancellationToken), DateOnly.FromDateTime(clock.GetLocalNow().DateTime), format);
 
     public async Task<RecipeResponse> CreateAsync(RecipeDraft draft, CancellationToken cancellationToken)
     {

@@ -10,7 +10,13 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
 {
     public async Task<SecuritySettings> GetSecurityAsync(CancellationToken cancellationToken) =>
         await RowAsync<SecuritySettingsEntity>(cancellationToken) is { } row
-            ? new SecuritySettings { MaxFailedSignIns = row.MaxFailedSignIns, LockoutMinutes = row.LockoutMinutes, RequireHttps = row.RequireHttps }
+            ? new SecuritySettings
+            {
+                MaxFailedSignIns = row.MaxFailedSignIns,
+                LockoutMinutes = row.LockoutMinutes,
+                RequireHttps = row.RequireHttps,
+                IsSaved = true,
+            }
             : new SecuritySettings();
 
     public Task SaveSecurityAsync(SecuritySettings settings, CancellationToken cancellationToken) =>
@@ -80,6 +86,14 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
 
     public Task SaveScheduleAsync(ScheduleState state, CancellationToken cancellationToken) =>
         SaveRowAsync(new ScheduleStateEntity { LastStagedWeek = state.LastStagedWeek }, cancellationToken);
+
+    public async Task<CalendarFeed> GetCalendarFeedAsync(CancellationToken cancellationToken) =>
+        await RowAsync<CalendarFeedEntity>(cancellationToken) is { } row
+            ? new CalendarFeed { Token = row.Token, CreatedAt = row.CreatedAt }
+            : new CalendarFeed();
+
+    public Task SaveCalendarFeedAsync(CalendarFeed feed, CancellationToken cancellationToken) =>
+        SaveRowAsync(new CalendarFeedEntity { Token = feed.Token, CreatedAt = feed.CreatedAt }, cancellationToken);
 
     public async Task<List<GroceryStore>> ListStoresAsync(CancellationToken cancellationToken) =>
         (await db.GroceryStores.ToListAsync(cancellationToken))

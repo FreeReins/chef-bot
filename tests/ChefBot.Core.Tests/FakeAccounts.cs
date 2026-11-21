@@ -34,6 +34,40 @@ internal sealed class FakeAccounts : IAccountAccess
         return Task.CompletedTask;
     }
 
+    public Task<SignInAttempt> CountSignInAttemptAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var user = Users.FirstOrDefault(u => u.Id == userId);
+        if (user is null || user.LockedUntil > now)
+        {
+            return Task.FromResult(new SignInAttempt(null, user?.LockedUntil));
+        }
+
+        user.FailedSignIns = user.LockedUntil is null ? user.FailedSignIns + 1 : 1;
+        user.LockedUntil = null;
+        return Task.FromResult(new SignInAttempt(user.FailedSignIns, null));
+    }
+
+    public Task ClearSignInAttemptsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        foreach (var user in Users.Where(u => u.Id == userId))
+        {
+            user.FailedSignIns = 0;
+            user.LockedUntil = null;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task LockAsync(Guid userId, DateTimeOffset until, CancellationToken cancellationToken)
+    {
+        foreach (var user in Users.Where(u => u.Id == userId))
+        {
+            user.LockedUntil = until;
+        }
+
+        return Task.CompletedTask;
+    }
+
     public Task<AccessLink?> FindLinkAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(Links.FirstOrDefault(l => l.Id == id) is { } row ? Copies.Of(row) : null);
 

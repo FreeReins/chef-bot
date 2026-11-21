@@ -42,6 +42,39 @@ internal sealed class AccountAccess(ChefBotDbContext db) : IAccountAccess
         }
     }
 
+    public async Task<SignInAttempt> CountSignInAttemptAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        // Only an unlocked account is counted. A LockedUntil still set here has run out, so counting starts again.
+        var counted = await db.Users
+            .Where(user => user.Id == userId && (user.LockedUntil == null || user.LockedUntil <= now))
+            .ExecuteUpdateAsync(
+                set => set
+                    .SetProperty(user => user.FailedSignIns, user => user.LockedUntil == null ? user.FailedSignIns + 1 : 1)
+                    .SetProperty(user => user.LockedUntil, (DateTimeOffset?)null),
+                cancellationToken);
+
+        // Read back separately. The count only goes up until a sign-in succeeds, so this is never lower than this
+        // attempt's own number, and an attempt that reads a number past the limit really is past it.
+        var state = await db.Users.AsNoTracking()
+            .Where(user => user.Id == userId)
+            .Select(user => new { user.FailedSignIns, user.LockedUntil })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return counted == 1 && state is not null
+            ? new SignInAttempt(state.FailedSignIns, null)
+            : new SignInAttempt(null, state?.LockedUntil);
+    }
+
+    public Task ClearSignInAttemptsAsync(Guid userId, CancellationToken cancellationToken) =>
+        db.Users.Where(user => user.Id == userId).ExecuteUpdateAsync(
+            set => set.SetProperty(user => user.FailedSignIns, 0).SetProperty(user => user.LockedUntil, (DateTimeOffset?)null),
+            cancellationToken);
+
+    public Task LockAsync(Guid userId, DateTimeOffset until, CancellationToken cancellationToken) =>
+        db.Users.Where(user => user.Id == userId).ExecuteUpdateAsync(
+            set => set.SetProperty(user => user.LockedUntil, until),
+            cancellationToken);
+
     public async Task<AccessLink?> FindLinkAsync(Guid id, CancellationToken cancellationToken) =>
         (await db.AccessLinks.FindAsync([id], cancellationToken))?.ToContract();
 

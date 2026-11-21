@@ -104,6 +104,7 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         modelBuilder.Entity<NotificationSettingsEntity>().ToTable("NotificationSettings");
         modelBuilder.Entity<BackupSettingsEntity>().ToTable("BackupSettings");
         modelBuilder.Entity<ScheduleStateEntity>().ToTable("ScheduleState");
+        modelBuilder.Entity<CalendarFeedEntity>().ToTable("CalendarFeed");
 
         UseKeysGeneratedInCode(modelBuilder);
     }
