@@ -6,7 +6,7 @@ site_description: >-
   ChefBot is a free, self-hosted meal planner: weekly meal plans, a smart grocery list and a pantry tracker that
   helps you waste less food. Install, use, run and troubleshoot it.
 # The in-app copy (Dockerfile) builds with SITE_URL empty, so every address in it stays relative to /help.
-site_url: !ENV [SITE_URL, 'https://jamiethenextkevinbaconhamm.github.io/chef-bot/']
+site_url: !ENV [SITE_URL, 'https://freereins.github.io/chef-bot/']
 repo_url: https://github.com/FreeReins/chef-bot
 repo_name: chef-bot
 edit_uri: edit/main/docs/

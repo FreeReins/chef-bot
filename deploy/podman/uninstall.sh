@@ -13,7 +13,7 @@ config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 units="$config_home/containers/systemd/chefbot"
 settings="$config_home/chefbot/chefbot.env"
 volume=chefbot-data
-images=(ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest localhost/chefbot:latest)
+images=(ghcr.io/freereins/chef-bot:latest localhost/chefbot:latest)
 # Quadlet makes a service from each unit, including the volume. Stopping that doesn't delete the volume.
 services=(chefbot.service "$volume-volume.service")
 

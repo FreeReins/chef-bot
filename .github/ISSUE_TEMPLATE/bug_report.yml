@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time. Many problems have a quick fix in
-        [Troubleshooting](https://jamiethenextkevinbaconhamm.github.io/chef-bot/troubleshooting/).
+        [Troubleshooting](https://freereins.github.io/chef-bot/troubleshooting/).
   - type: checkboxes
     id: checked
     attributes:

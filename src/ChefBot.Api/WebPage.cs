@@ -13,7 +13,7 @@ public static class WebPage
 
     private const string HelpNotBuilt =
         "The help pages aren't built into this copy of ChefBot. Read them in the docs folder of the repository, or at " +
-        "https://jamiethenextkevinbaconhamm.github.io/chef-bot/.";
+        "https://freereins.github.io/chef-bot/.";
 
     /// <summary>
     /// Only the page's own files are compressed. API answers are left alone: compressing them over HTTPS next to

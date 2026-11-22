@@ -11,7 +11,7 @@ says where each platform wants the file. On Windows you can also skip containers
 
 ## What every platform needs
 
-- **One container:** `ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest`. Its database runs inside it.
+- **One container:** `ghcr.io/freereins/chef-bot:latest`. Its database runs inside it.
 - **One place to keep data:** `/data`. Use a named volume, or a host folder owned by user id **1654**.
 - **Two ports:** 8080 (HTTP) and 8443 (HTTPS). If you change the HTTPS one, set `Https__PublicPort`.
 - **`TZ`** set to your time zone.

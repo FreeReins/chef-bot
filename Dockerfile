@@ -73,7 +73,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 LABEL org.opencontainers.image.source="https://github.com/FreeReins/chef-bot" \
       org.opencontainers.image.title="ChefBot" \
       org.opencontainers.image.description="Self-hosted meal planner: weekly meal plans, a smart shopping list and a pantry tracker that helps you waste less food." \
-      org.opencontainers.image.documentation="https://jamiethenextkevinbaconhamm.github.io/chef-bot/" \
+      org.opencontainers.image.documentation="https://freereins.github.io/chef-bot/" \
       org.opencontainers.image.url="https://github.com/FreeReins/chef-bot" \
       org.opencontainers.image.licenses="GPL-3.0-only"
 

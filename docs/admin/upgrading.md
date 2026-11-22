@@ -31,7 +31,7 @@ and keeps `C:\ProgramData\ChefBot`. For the portable app, replace the `.exe` and
 next to it.
 
 To stay on one version of the image instead of `latest`, use a version tag such as
-`ghcr.io/jamiethenextkevinbaconhamm/chef-bot:1.2` (that minor version's fixes) or `:1.2.3` (exactly that one).
+`ghcr.io/freereins/chef-bot:1.2` (that minor version's fixes) or `:1.2.3` (exactly that one).
 
 Read the [release notes](https://github.com/FreeReins/chef-bot/releases) first. They say when a
 version needs the steps below.
@@ -45,7 +45,7 @@ tables needs a fresh database, with your data brought across in a backup:
 2. **Stop ChefBot and delete only its database,** the `database` folder in the data folder, keeping the keys and
    backups:
    - **Podman:** `systemctl --user stop chefbot`, then
-     `podman run --rm -v chefbot-data:/data --entrypoint rm ghcr.io/jamiethenextkevinbaconhamm/chef-bot -rf /data/database`
+     `podman run --rm -v chefbot-data:/data --entrypoint rm ghcr.io/freereins/chef-bot -rf /data/database`
    - **Docker Compose:** `docker compose down`, then
      `docker compose run --rm --entrypoint rm chefbot -rf /data/database`
    - **Windows:** stop the **ChefBot** service, then delete `C:\ProgramData\ChefBot\database`

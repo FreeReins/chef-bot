@@ -1,10 +1,10 @@
 blank_issues_enabled: false
 contact_links:
   - name: Read the documentation
-    url: https://jamiethenextkevinbaconhamm.github.io/chef-bot/
+    url: https://freereins.github.io/chef-bot/
     about: Install guides, settings, and how to use every part of ChefBot.
   - name: Troubleshooting
-    url: https://jamiethenextkevinbaconhamm.github.io/chef-bot/troubleshooting/
+    url: https://freereins.github.io/chef-bot/troubleshooting/
     about: Common problems and how to fix them. Most questions are answered here.
   - name: Report a security problem privately
     url: https://github.com/FreeReins/chef-bot/security/advisories/new

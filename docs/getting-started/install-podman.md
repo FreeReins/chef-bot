@@ -12,7 +12,7 @@ Nothing else.
 1. Run the install script:
 
    ```sh
-   curl -fsSL https://raw.githubusercontent.com/Jamiethenextkevinbaconhamm/chef-bot/main/deploy/podman/install.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/freereins/chef-bot/main/deploy/podman/install.sh | bash
    ```
 
    From a clone of the repository, `deploy/podman/install.sh` does the same.
@@ -32,7 +32,7 @@ The setup wizard starts. Continue with [First run](first-run.md).
 
 ## What the script does
 
-1. Downloads the ChefBot image from `ghcr.io/jamiethenextkevinbaconhamm/chef-bot`.
+1. Downloads the ChefBot image from `ghcr.io/freereins/chef-bot`.
 2. Copies the settings file to `~/.config/chefbot/chefbot.env`, unless it's already there.
 3. Writes the service into `~/.config/containers/systemd/chefbot/` and starts it.
 4. Turns on `podman-auto-update.timer`, which checks for a new image once a day and restarts ChefBot with it.

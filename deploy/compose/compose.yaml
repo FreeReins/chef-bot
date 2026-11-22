@@ -1,16 +1,16 @@
 # ChefBot with Docker Compose (or podman compose). It's one container: ChefBot runs its own database inside it.
 # Set TZ to your time zone, such as Europe/London, then run `docker compose up -d` and open
 # http://<this machine>:8080.
-# Guide: https://jamiethenextkevinbaconhamm.github.io/chef-bot/getting-started/install-docker-compose/
+# Guide: https://freereins.github.io/chef-bot/getting-started/install-docker-compose/
 services:
   chefbot:
-    image: ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest
+    image: ghcr.io/freereins/chef-bot:latest
     restart: unless-stopped
     # Time for ChefBot to stop its database cleanly.
     stop_grace_period: 30s
     environment:
       TZ: America/Chicago
-      # More settings: https://jamiethenextkevinbaconhamm.github.io/chef-bot/admin/settings/
+      # More settings: https://freereins.github.io/chef-bot/admin/settings/
     ports:
       - "8080:8080"   # HTTP
       - "8443:8443"   # HTTPS. If you change the left-hand number, also set Https__PublicPort to it.

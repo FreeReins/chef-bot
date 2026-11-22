@@ -6,13 +6,13 @@
 #   install.sh --build   build the image from this checkout instead (needs the repository, not just this script)
 #
 # Works straight from the web, without cloning:
-#   curl -fsSL https://raw.githubusercontent.com/Jamiethenextkevinbaconhamm/chef-bot/main/deploy/podman/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/freereins/chef-bot/main/deploy/podman/install.sh | bash
 #
 # Run it again to update the services: settings and data are kept.
 set -euo pipefail
 
-published_image=ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest
-example_url=https://raw.githubusercontent.com/Jamiethenextkevinbaconhamm/chef-bot/main/deploy/podman/chefbot.env.example
+published_image=ghcr.io/freereins/chef-bot:latest
+example_url=https://raw.githubusercontent.com/freereins/chef-bot/main/deploy/podman/chefbot.env.example
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 units="$config_home/containers/systemd/chefbot"
 settings="$config_home/chefbot/chefbot.env"

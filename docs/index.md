@@ -5,7 +5,7 @@ list, tracks your pantry and helps you use food up before it goes off. This is t
 use it, keep it running and fix it when something goes wrong.
 
 These pages are plain Markdown in the [`docs/` folder](https://github.com/FreeReins/chef-bot/tree/main/docs)
-of the repository. Read them on GitHub, on the [documentation site](https://jamiethenextkevinbaconhamm.github.io/chef-bot/),
+of the repository. Read them on GitHub, on the [documentation site](https://freereins.github.io/chef-bot/),
 in any text editor, or inside ChefBot itself: press the **?** button at the top of any screen.
 
 ## I want to…

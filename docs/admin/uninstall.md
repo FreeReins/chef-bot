@@ -8,7 +8,7 @@ deploy/podman/uninstall.sh --delete-data  # also delete its data, settings and i
 ```
 
 Without a clone, download the script and run it the same way:
-`curl -fsSL https://raw.githubusercontent.com/Jamiethenextkevinbaconhamm/chef-bot/main/deploy/podman/uninstall.sh | bash`.
+`curl -fsSL https://raw.githubusercontent.com/freereins/chef-bot/main/deploy/podman/uninstall.sh | bash`.
 
 The first form stops ChefBot and removes its service from `~/.config/containers/systemd/chefbot/`. It keeps the
 `chefbot-data` volume, `chefbot.env` and the image, so `install.sh` brings ChefBot back as it was.

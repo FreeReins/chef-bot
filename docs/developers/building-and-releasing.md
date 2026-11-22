@@ -70,7 +70,7 @@ Pushing a tag such as `v1.2.3` runs
 [`.github/workflows/release.yml`](https://github.com/FreeReins/chef-bot/blob/main/.github/workflows/release.yml):
 
 1. Builds the image natively for `linux/amd64` and `linux/arm64`, each running the tests.
-2. Pushes both to `ghcr.io/jamiethenextkevinbaconhamm/chef-bot` and joins them into one multi-arch image tagged
+2. Pushes both to `ghcr.io/freereins/chef-bot` and joins them into one multi-arch image tagged
    `1.2.3`, `1.2` and `latest`.
 3. Builds the Windows installer and portable app on a Windows runner, after running the tests, and checks both:
    the portable app must answer `/health`, then again after being killed; the MSI must install a service that

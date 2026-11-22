@@ -8,9 +8,9 @@ Weekly meal planning, a smart grocery list and a pantry tracker that helps you w
 Runs on your own server with Docker or Podman. Free and open source.
 
 [![License: GPL v3](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/Jamiethenextkevinbaconhamm/chef-bot?sort=semver)](https://github.com/FreeReins/chef-bot/releases)
+[![Latest release](https://img.shields.io/github/v/release/freereins/chef-bot?sort=semver)](https://github.com/FreeReins/chef-bot/releases)
 [![Container image](https://img.shields.io/badge/image-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/FreeReins/chef-bot/pkgs/container/chef-bot)
-[![Documentation](https://img.shields.io/badge/docs-read-success)](https://jamiethenextkevinbaconhamm.github.io/chef-bot/)
+[![Documentation](https://img.shields.io/badge/docs-read-success)](https://freereins.github.io/chef-bot/)
 [![Buy Me a Coffee](https://img.shields.io/badge/support-Buy%20Me%20a%20Coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/strifer.btw)
 
 [**Get started**](#get-started-in-two-minutes) · [**Features**](#features) · [**Documentation**](docs/index.md) · [**Screenshots**](#screenshots)
@@ -78,13 +78,13 @@ ChefBot is one container (or one Windows program) with its database inside. Noth
 
 ```sh
 docker run -d --name chefbot --restart unless-stopped -p 8080:8080 -p 8443:8443 \
-  -v chefbot-data:/data -e TZ=America/Chicago ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest
+  -v chefbot-data:/data -e TZ=America/Chicago ghcr.io/freereins/chef-bot:latest
 ```
 
 **Podman as a service** (Fedora, Bazzite and other Linux with systemd; starts at boot and updates itself):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Jamiethenextkevinbaconhamm/chef-bot/main/deploy/podman/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/freereins/chef-bot/main/deploy/podman/install.sh | bash
 ```
 
 **Windows:** download `ChefBot-….msi` from the [latest release](https://github.com/FreeReins/chef-bot/releases/latest)
@@ -96,7 +96,7 @@ Then open `http://<your server>:8080` and follow the setup wizard.
 ## Documentation
 
 Everything you need to run ChefBot is in [the documentation](docs/index.md). It's plain Markdown that you can read
-here, on the [documentation site](https://jamiethenextkevinbaconhamm.github.io/chef-bot/), or inside ChefBot itself
+here, on the [documentation site](https://freereins.github.io/chef-bot/), or inside ChefBot itself
 by pressing **?**.
 
 | I want to… | Start here |

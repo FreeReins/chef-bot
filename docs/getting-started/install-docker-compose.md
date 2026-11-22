@@ -4,14 +4,14 @@ This guide runs ChefBot with Docker or Podman. It works anywhere they do: Linux,
 systems. ChefBot is one container, with its own database inside, and keeps everything in one volume.
 
 Each release is published as a container image for 64-bit x86 and ARM at
-`ghcr.io/jamiethenextkevinbaconhamm/chef-bot`.
+`ghcr.io/freereins/chef-bot`.
 
 ## The quickest way
 
 ```sh
 docker run -d --name chefbot --restart unless-stopped \
   -p 8080:8080 -p 8443:8443 -v chefbot-data:/data -e TZ=America/Chicago \
-  ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest
+  ghcr.io/freereins/chef-bot:latest
 ```
 
 Set `TZ` to your [time zone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), such as
@@ -26,7 +26,7 @@ Compose plugin (`docker compose version` prints a version), or Podman with `podm
 1. Make a folder for ChefBot and download the compose file into it:
 
    ```sh
-   curl -O https://raw.githubusercontent.com/Jamiethenextkevinbaconhamm/chef-bot/main/deploy/compose/compose.yaml
+   curl -O https://raw.githubusercontent.com/freereins/chef-bot/main/deploy/compose/compose.yaml
    ```
 
    Or save this as `compose.yaml`:
@@ -34,7 +34,7 @@ Compose plugin (`docker compose version` prints a version), or Podman with `podm
    ```yaml
    services:
      chefbot:
-       image: ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest
+       image: ghcr.io/freereins/chef-bot:latest
        restart: unless-stopped
        stop_grace_period: 30s
        environment:
