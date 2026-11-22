@@ -1,6 +1,6 @@
 // Accessibility tests for the web page: real Chromium, with the API answered from tests/fixtures.js, so no ChefBot
 // or database is needed. Run with ./dev.sh web-test, which uses the Playwright container (see CONTRIBUTING.md).
-// The page is served by Vite's dev server, so nothing is written to ChefBot.Api's wwwroot.
+// The page is served by Vite's dev server, so nothing is written to dist/.
 import { defineConfig, devices } from '@playwright/test';
 
 const port = 4173;

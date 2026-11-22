@@ -8,6 +8,7 @@
   import { shortDate, fullDate, plural, favouriteOf } from '../lib/format.js';
   import { tell, captionText, chapterTitle, monthName, dayOf, timed } from '../lib/history.js';
   import ScrollText from '@lucide/svelte/icons/scroll-text';
+  import { noodle } from '../lib/noodle.js';
 
   let chapters = $state([]);
   let olderBefore = $state(null);
@@ -41,8 +42,15 @@
       <p class="muted">The noodle is still dry. Add a recipe or mark a dinner as cooked, and the story starts here.</p>
     </div>
   {:else if chapters.length > 0}
-    <div class="timeline">
-      <span class="noodle" aria-hidden="true"></span>
+    <div class="timeline" use:noodle>
+      <svg class="noodle" aria-hidden="true">
+        <defs>
+          <radialGradient id="noodle-glow" gradientUnits="userSpaceOnUse" cx="40" cy="-999" r="100">
+            <stop offset="0" /><stop offset="1" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <path class="pasta" /><path class="glow" />
+      </svg>
       {#each chapters as chapter (chapter.month)}
         <section class="chapter" aria-labelledby="chapter-{chapter.month}">
           <header class="sign">
@@ -97,12 +105,15 @@
   .intro h2 { margin-bottom: .25rem; }
   .intro p { margin: 0; }
 
-  /* The noodle: a wavy line drawn as a mask (public/noodle.svg), so it takes the pasta colour in both themes, repeating down
-     the page. The masks are files, not data: URLs, because ChefBot's Content-Security-Policy (img-src 'self') blocks those. */
+  /* The noodle: one SVG path down the page, drawn and nudged by the mouse in lib/noodle.js, in the pasta colour for
+     both themes. Its glow is the same path again, stroked with a gradient that follows the pointer; hidden until then. */
   .timeline { position: relative; padding: .5rem 0 1rem; --noodle-x: 50%; }
-  .noodle { position: absolute; top: 0; bottom: 0; left: var(--noodle-x); width: 26px; translate: -50% 0; z-index: 0;
-    background: var(--noodle);
-    mask: url("/noodle.svg") repeat-y center top / 26px 90px; }
+  .noodle { position: absolute; top: 0; left: var(--noodle-x); width: 80px; height: 100%; translate: -50% 0; z-index: 0;
+    pointer-events: none; --glow: color-mix(in oklab, var(--area-history) 45%, var(--noodle)); }
+  .noodle path { fill: none; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+  .pasta { stroke: var(--noodle); }
+  .glow { stroke: url(#noodle-glow); opacity: 0; }
+  .noodle stop { stop-color: var(--glow); }
 
   .chapter { position: relative; z-index: 1; margin: 0 0 1.5rem; }
   /* Each month's sign hangs on the noodle, in sauce red. */
@@ -151,6 +162,27 @@
     60% { opacity: 1; rotate: 1deg; }
     100% { opacity: 1; translate: 0 0; rotate: 0deg; }
   }
+  /* Mouse reactions: the noodle warms where the pointer is and gives way to it (lib/noodle.js), a hovered moment's
+     strand takes the same tint and its card lifts a little, a click on a plate sprinkles, and a month's sign swings on
+     its hook. Nothing loops. */
+  @media (prefers-reduced-motion: no-preference) {
+    .glow { transition: opacity .4s; }
+    .timeline:global([data-pointer]) .glow { opacity: .7; }
+    .moment::before { transition: background-color .25s; }
+    .moment:is(:hover, :focus-within)::before { background: color-mix(in oklab, var(--area-history) 45%, var(--noodle)); }
+    .moment .card { transition: translate .2s, box-shadow .2s; }
+    .moment:is(:hover, :focus-within) .card { translate: 0 -2px; box-shadow: 0 6px 16px var(--shadow); }
+    .plate { cursor: pointer; }
+    .sign:hover { animation: swing 1.1s ease-out; transform-origin: top center; }
+  }
+  @keyframes swing {
+    0% { transform: rotate(0deg); }
+    20% { transform: rotate(5deg); }
+    45% { transform: rotate(-3.5deg); }
+    70% { transform: rotate(1.5deg); }
+    100% { transform: rotate(0deg); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .moment { animation: none; }
     .plate { transition: none; }

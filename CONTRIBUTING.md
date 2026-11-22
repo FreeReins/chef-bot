@@ -44,7 +44,7 @@ dotnet test --solution ChefBot.slnx               # the same tests through dotne
 |---|---|---|
 | `ChefBot.Core` | Everything below the API, in layers (see below). Only `Managers/Contracts/` and `CoreRegistration` are public | ASP.NET Core, Npgsql EF Core, Wolverine's EF Core and PostgreSQL storage |
 | `ChefBot.Api` | The clients of the core: Wolverine HTTP endpoints (`Endpoints/`), message handlers and the timer that queues the scheduled jobs (`Messaging/`), the MCP server's tools (`Mcp/`, each calling one manager method like an endpoint), sign-in (cookies, and API tokens for `/mcp`), HTTPS (`Https/`, with its own request and response records, since HTTPS belongs to the host rather than the core), startup wiring; serves the web page | `ChefBot.Core`'s public contracts |
-| `ChefBot.Web` | The web page: Svelte 5 components built with Vite into `ChefBot.Api/wwwroot` | The HTTP API |
+| `ChefBot.Web` | The web page: Svelte 5 components built with Vite into `ChefBot.Web/dist`, which `ChefBot.Api` serves | The HTTP API |
 
 `ChefBot.Core` is split by what changes for different reasons. Calls only go down; nothing calls sideways:
 
@@ -224,8 +224,10 @@ has none.
   the save, checks it can be sent, and saves anything waiting when the section closes; `components/SaveStatus.svelte`
   says how it went. Forms that send something once, such as signing in or adding an item, keep their button and
   wrap the work in `pending(event, ...)` from `lib/pending.js`, so a second click doesn't send it again.
-- `./dev.sh web` builds the page once into `src/ChefBot.Api/wwwroot`, which is build output and not in git.
-  Use it before a plain `dotnet run`, and to check that the page still builds.
+- `./dev.sh web` builds the page once into `src/ChefBot.Web/dist`, which is build output and not in git.
+  Use it before a plain `dotnet run`, and to check that the page still builds. Run from the source tree, the API
+  serves the page from that folder; the image copies it into the app's `wwwroot` (`WebPage.cs` in `ChefBot.Api`).
+  The page's files are compressed with Brotli or gzip; API answers aren't.
 
 ### Accessibility tests
 

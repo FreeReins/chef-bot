@@ -1,4 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <!--
+      The web page is built by Vite into src/ChefBot.Web/dist and served from there (WebPage.cs), not from this
+      project's wwwroot. Without this, the SDK lists wwwroot at build time and Development runs fail when it's gone.
+    -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />

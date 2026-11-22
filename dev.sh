@@ -4,7 +4,7 @@
 #
 #   ./dev.sh          start the dev database if needed, then run the app with dotnet watch and the web page
 #                     with live reload (Vite)
-#   ./dev.sh web      build the web page once into src/ChefBot.Api/wwwroot, for a plain `dotnet run`
+#   ./dev.sh web      build the web page once into src/ChefBot.Web/dist, for a plain `dotnet run`
 #   ./dev.sh web-test run the web page's accessibility tests in a Playwright container, then exit; arguments go
 #                     to `playwright test`, for example ./dev.sh web-test --project desktop-dark
 #   ./dev.sh web-shot /history
@@ -29,7 +29,7 @@ db_port=5432
 # Where the dev copy keeps its session keys and backups: next to the built app (Data:SessionKeys, Data:Backups).
 app_output=src/ChefBot.Api/bin/Debug/net10.0
 web=src/ChefBot.Web
-web_output=src/ChefBot.Api/wwwroot
+web_output=src/ChefBot.Web/dist
 web_container=chefbot-dev-web
 web_test_modules=chefbot-web-test-modules
 node_image=docker.io/library/node:24-alpine
@@ -90,12 +90,11 @@ web_npm() {
     if command -v npm >/dev/null 2>&1; then
         (cd "$web" && exec env "${web_env[@]}" npm "$@")
     else
-        mkdir -p "$web_output"
         local env_options=()
         for variable in "${web_env[@]}"; do env_options+=(--env "$variable"); done
         # keep-id: files it writes (node_modules, the build) belong to you. Host network: the dev server reaches the API.
         podman run --rm --init "${web_container_options[@]}" --userns=keep-id --network=host --env HOME=/tmp --env NPM_CONFIG_UPDATE_NOTIFIER=false \
-            "${env_options[@]}" --volume "$PWD/$web:/source/$web:z" --volume "$PWD/$web_output:/source/$web_output:z" \
+            "${env_options[@]}" --volume "$PWD/$web:/source/$web:z" \
             --workdir "/source/$web" "$node_image" npm "$@"
     fi
 }

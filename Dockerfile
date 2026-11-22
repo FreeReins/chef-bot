@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 # Builds, tests and packages ChefBot. Nothing needs to be installed on the host except Podman (or Docker).
 
-# The web page (src/ChefBot.Web, Svelte) is built here into ChefBot.Api's wwwroot. Only this stage needs Node.
+# The web page (src/ChefBot.Web, Svelte) is built here into dist/. Only this stage needs Node, and nothing but the
+# final image uses it, so the page and the .NET build run side by side.
 FROM docker.io/library/node:24-alpine AS web
 WORKDIR /source/src/ChefBot.Web
 COPY src/ChefBot.Web/package.json src/ChefBot.Web/package-lock.json ./
@@ -21,8 +22,6 @@ COPY tests/ChefBot.Core.Tests/ChefBot.Core.Tests.csproj tests/ChefBot.Core.Tests
 RUN dotnet restore ChefBot.slnx -p:Configuration=Debug && dotnet restore ChefBot.slnx -p:Configuration=Release
 
 COPY . .
-# Before the build, so the page is part of the app's static files when it is published.
-COPY --from=web /source/src/ChefBot.Api/wwwroot/ src/ChefBot.Api/wwwroot/
 # Wolverine's code for calling the endpoints and handlers is generated from this source and compiled into the Release
 # build, which never compiles code while running and ships without Roslyn (see CONTRIBUTING.md). This starts a Debug
 # build only far enough to write the code; it doesn't connect to the database.
@@ -45,6 +44,8 @@ LABEL org.opencontainers.image.source="https://github.com/Jamiethenextkevinbacon
       org.opencontainers.image.description="Plans a week of meals around shared ingredients, the season and the pantry."
 WORKDIR /app
 COPY --from=publish /app ./
+# The app serves the page from wwwroot next to it (WebPage.Folder).
+COPY --from=web /source/src/ChefBot.Web/dist/ ./wwwroot/
 # Session keys, the HTTPS certificate and backups live in these folders. They are created with the
 # app's user so mounted volumes are writable. Declared as volumes so they survive even when nobody mounts
 # them; give them named volumes (see the README) so they also survive replacing the container.

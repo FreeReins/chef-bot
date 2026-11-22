@@ -1,6 +1,6 @@
 # AGENTS.md for the web page
 
-Svelte 5 in plain JavaScript (no TypeScript), built by Vite into `src/ChefBot.Api/wwwroot/`. That folder is build
+Svelte 5 in plain JavaScript (no TypeScript), built by Vite into `src/ChefBot.Web/dist/`, which ChefBot.Api serves. That folder is build
 output: never edit it or add it to git. CONTRIBUTING.md's "The web page" has the detail.
 
 ## Check your work

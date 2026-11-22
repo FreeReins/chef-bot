@@ -2,7 +2,7 @@
 # PreToolUse hook for Bash, Edit and Write: stops two mistakes AGENTS.md used to spell out.
 # - Commands that watch for changes and never exit (./dev.sh, ./dev.sh test, ./dev-fresh.sh, dotnet watch), and the
 #   slow container test build.
-# - Edits to src/ChefBot.Api/wwwroot/, which is the web page's build output.
+# - Edits to src/ChefBot.Web/dist/, which is the web page's build output.
 # Exit 2 blocks the call and shows the message to Claude.
 set -euo pipefail
 
@@ -21,7 +21,7 @@ if [[ -n "$command" ]]; then
   fi
 fi
 
-if [[ "$file" == */src/ChefBot.Api/wwwroot/* ]]; then
-  echo "src/ChefBot.Api/wwwroot/ is build output. Edit src/ChefBot.Web instead, then run ./dev.sh web." >&2
+if [[ "$file" == */src/ChefBot.Web/dist/* ]]; then
+  echo "src/ChefBot.Web/dist/ is build output. Edit src/ChefBot.Web/src instead, then run ./dev.sh web." >&2
   exit 2
 fi

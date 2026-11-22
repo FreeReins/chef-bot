@@ -6,7 +6,7 @@ using JasperFx;
 using Wolverine;
 using Wolverine.Http;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, WebRootPath = WebPage.Folder() });
 
 builder.Services.AddChefBot(builder.Configuration);
 builder.Services.AddChefBotSignIn(builder.Configuration);
@@ -18,6 +18,7 @@ builder.WebHost.ConfigureKestrel(certificates.Configure);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ChefBotExceptionHandler>();
 builder.Services.AddOpenApi();
+builder.Services.AddChefBotWebPage();
 // Request and response bodies use JSON made at build time (each enum says it is written as text).
 builder.Services.ConfigureHttpJsonOptions(json =>
 {
@@ -50,15 +51,7 @@ app.UseExceptionHandler();
 app.UseChefBotSecurityHeaders();
 app.UseChefBotProxyHeaders();
 app.UseChefBotHttpsRedirect();
-app.UseDefaultFiles();
-// The web page is built from src/ChefBot.Web. Vite names the files under /assets after their content, so they
-// can be cached for good; index.html is checked on every visit, so an upgrade shows up straight away.
-var webPage = new StaticFileOptions
-{
-    OnPrepareResponse = file => file.Context.Response.Headers.CacheControl =
-        file.Context.Request.Path.StartsWithSegments("/assets") ? "public, max-age=31536000, immutable" : "no-cache",
-};
-app.UseStaticFiles(webPage);
+app.UseChefBotWebPage();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapOpenApi().RequireAuthorization();
@@ -76,10 +69,7 @@ app.MapGet("/health", () => Results.Ok(new HealthResponse("ok"))).ExcludeFromDes
 app.MapWolverineEndpoints(endpoints => endpoints.RequireAuthorizeOnAll());
 app.MapMcp("/mcp").RequireAuthorization(Sessions.McpPolicy);
 
-// Addresses such as /recipes/{id} or /settings/backups belong to the web page, so bookmarks and reloads work: any
-// path that isn't a file gets index.html, which shows the matching view. Unknown /api paths still get a 404.
-app.MapFallbackToFile("index.html", webPage).AllowAnonymous();
-app.MapFallback("/api/{**rest}", () => Results.NotFound()).AllowAnonymous().ExcludeFromDescription();
+app.MapChefBotWebPage();
 
 // `dotnet run -- codegen write` writes the code Wolverine runs in Release builds; see CONTRIBUTING.md. It stops here,
 // before anything touches the database.
