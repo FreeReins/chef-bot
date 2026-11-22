@@ -91,6 +91,23 @@ internal sealed partial class ValidationEngine
             ?? throw new RuleViolationException("That file isn't a photo ChefBot can show. Choose a JPEG, PNG, WebP or GIF image.");
     }
 
+    /// <summary>Checks photos of a recipe to read: one to <see cref="MaxRecipePhotos"/> images ChefBot can show.</summary>
+    /// <returns>The photos with their media types, in order.</returns>
+    public static IReadOnlyList<AiImage> RecipePhotos(IReadOnlyList<byte[]>? photos)
+    {
+        if (photos is not { Count: > 0 })
+        {
+            throw new RuleViolationException("Choose a photo of the recipe first.");
+        }
+
+        if (photos.Count > MaxRecipePhotos)
+        {
+            throw new RuleViolationException($"Choose up to {MaxRecipePhotos} photos: the pages of one recipe.");
+        }
+
+        return photos.Select(photo => new AiImage(photo, Image(photo))).ToList();
+    }
+
     /// <summary>Checks the recipe has room for one more photo.</summary>
     public static void RoomForImage(Recipe recipe)
     {

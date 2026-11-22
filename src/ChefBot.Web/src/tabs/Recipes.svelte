@@ -1,5 +1,5 @@
 <!-- The Recipes tab: the library across the full width, as photo cards or a compact list, found a page at a time by
-     words, and under "Filters" by course, favourites, tags, slow cooker and time. Each recipe has a heart to make it a favourite, and shows its rating and whose favourite it is (RecipeBadges.svelte). Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
+     words, and under "Filters" by course, favourites, tags, slow cooker, time and waiting AI suggestions. Each recipe has a heart to make it a favourite, and shows its rating and whose favourite it is (RecipeBadges.svelte). Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
 <script>
   import { untrack } from 'svelte';
   import { app, run, isAdmin } from '../lib/app.svelte.js';
@@ -37,6 +37,7 @@
   let favourites = $state(''); // '' for all recipes, 'mine', 'any', or another person's id
   let tags = $state([]);       // tags a recipe must all have
   let slowCooker = $state(false);
+  let withSuggestions = $state(false); // only recipes with AI suggestions waiting
   let readyWithin = $state(''); // minutes as text, '' for any time
   let filtersOpen = $state(false); // whether the filters panel shows
   let filterChoices = $state({ tags: [], people: [] }); // RecipeFiltersResponse
@@ -75,6 +76,7 @@
     else if (favourites) params.set('favouredBy', favourites === 'mine' ? app.session?.user?.id : favourites);
     for (const tag of tags) params.append('tag', tag);
     if (slowCooker) params.set('slowCooker', 'true');
+    if (withSuggestions) params.set('withSuggestions', 'true');
     if (readyWithin) params.set('readyWithin', readyWithin);
     const ticket = ++latest;
     loading = true;
@@ -96,7 +98,8 @@
 
   const librarySize = $derived(result?.librarySize ?? app.recipeCount);
   /** How many filters are on, for the Filters button. Each tag counts as one. */
-  const filterCount = $derived((course ? 1 : 0) + (favourites ? 1 : 0) + tags.length + (slowCooker ? 1 : 0) + (readyWithin ? 1 : 0));
+  const filterCount = $derived((course ? 1 : 0) + (favourites ? 1 : 0) + tags.length + (slowCooker ? 1 : 0) + (readyWithin ? 1 : 0)
+    + (withSuggestions ? 1 : 0));
   const filtering = $derived(query !== '' || filterCount > 0);
   const otherPeople = $derived(filterChoices.people.filter((person) => person.userId !== app.session?.user?.id));
 
@@ -106,7 +109,7 @@
   /** Turns every filter off. The search words stay unless `everything` is true. */
   function clearFilters(everything = false) {
     if (everything) { typed = ''; query = ''; }
-    course = ''; favourites = ''; tags = []; slowCooker = false; readyWithin = '';
+    course = ''; favourites = ''; tags = []; slowCooker = false; readyWithin = ''; withSuggestions = false;
     refilter();
   }
 
@@ -121,6 +124,7 @@
     }] : []),
     ...tags.map((tag) => ({ key: `tag:${tag}`, label: `#${tag}`, remove: () => { tags = tags.filter((chosen) => chosen !== tag); refilter(); } })),
     ...(slowCooker ? [{ key: 'slow', label: 'Slow cooker', remove: () => { slowCooker = false; refilter(); } }] : []),
+    ...(withSuggestions ? [{ key: 'suggestions', label: 'Has suggestions', remove: () => { withSuggestions = false; refilter(); } }] : []),
     ...(readyWithin ? [{ key: 'time', label: `Within ${readyWithin} min`, remove: () => { readyWithin = ''; refilter(); } }] : []),
   ]);
 
@@ -219,6 +223,9 @@
               </select>
             </label>
             <label class="slow"><input type="checkbox" bind:checked={slowCooker} onchange={refilter}>Slow cooker only</label>
+            {#if app.aiFeatures.recipeDetails || withSuggestions}
+              <label class="slow"><input type="checkbox" bind:checked={withSuggestions} onchange={refilter}>Has suggestions</label>
+            {/if}
           </div>
           <TagFilter id="recipe-tags" tags={filterChoices.tags} bind:chosen={tags} onchange={refilter} />
           {#if filterCount}

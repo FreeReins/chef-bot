@@ -60,7 +60,9 @@ See [The meal plan in your calendar](../using/calendar.md).
 
 ### AI assistants
 
-The MCP address, and your own tokens for AI assistants. See [AI assistants](ai-assistants.md).
+For admins, the AI models ChefBot uses to read recipe photos and complete recipes, which model does each task, and
+the sweep that asks for suggestions on every sparse recipe. For everyone, the MCP address and your own tokens for AI
+assistants. See [AI assistants](ai-assistants.md).
 
 ### To-do apps (admin)
 

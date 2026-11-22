@@ -1,6 +1,6 @@
 // Each view has its own address, so it can be bookmarked, reloaded or opened in a new tab:
 //   /plan  /shopping  /pantry  /recipes  /recipes/{id}  /recipes/samples  /history  /achievements  /people  /settings/{section}
-// and the Recipes dialogs: /recipes/new/{link|write|files}  /recipes/{id}/{edit|photos|cook|plan}
+// and the Recipes dialogs: /recipes/new/{link|write|photo|files}  /recipes/{id}/{edit|photos|cook|plan|improve}
 // The address is the source of truth: links and buttons call go(path), and showAddress() shows what it names.
 import { api } from './api.js';
 import { app, run, isAdmin, clearErrors } from './state.svelte.js';
@@ -10,8 +10,8 @@ const TAB_KEYS = ['plan', 'shopping', 'pantry', 'recipes', 'history', 'achieveme
 const RENAMED_TABS = { ingredients: 'shopping', meals: 'plan', schedule: 'plan' };
 const ADMIN_TABS = ['people'];
 /** The tabs of the Add a recipe dialog, and the dialogs a recipe's page opens. */
-const ADD_TABS = ['link', 'write', 'files'];
-const RECIPE_DIALOGS = ['edit', 'photos', 'cook', 'plan'];
+const ADD_TABS = ['link', 'write', 'photo', 'files'];
+const RECIPE_DIALOGS = ['edit', 'photos', 'cook', 'plan', 'improve'];
 
 /** Moves to an address inside the page and shows it. */
 export async function go(path, { replace = false } = {}) {

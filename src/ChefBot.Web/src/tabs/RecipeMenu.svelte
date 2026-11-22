@@ -1,8 +1,8 @@
-<!-- The ⋯ menu on a recipe's page: editing it and its photos (dialogs with their own addresses), sharing it as text,
+<!-- The ⋯ menu on a recipe's page: editing it, its photos and AI suggestions (dialogs with their own addresses), sharing it as text,
      printing it, downloading it (RecipeDownloads.svelte) and archiving it. It closes on Escape, on a click elsewhere,
      and once focus leaves it. -->
 <script>
-  import { run, loadRecipes, toast, ask } from '../lib/app.svelte.js';
+  import { app, run, loadRecipes, toast, ask } from '../lib/app.svelte.js';
   import { go } from '../lib/addresses.js';
   import { api } from '../lib/api.js';
   import { canShare, share, recipeText } from '../lib/exporting.js';
@@ -14,6 +14,7 @@
   import Share2 from '@lucide/svelte/icons/share-2';
   import Copy from '@lucide/svelte/icons/copy';
   import Printer from '@lucide/svelte/icons/printer';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
 
   /** recipe: the RecipeResponse. link(dialog): the address of one of its dialogs, such as "edit". */
   let { recipe, link } = $props();
@@ -69,6 +70,9 @@
   <div id="recipe-menu" class="menu-panel" hidden={!open}>
     <a class="with-icon" href={link('edit')} onclick={() => (open = false)}><Pencil size={16} />Edit recipe</a>
     <a class="with-icon" href={link('photos')} onclick={() => (open = false)}><Images size={16} />Photos ({recipe.images.length})</a>
+    {#if app.aiFeatures.recipeDetails || recipe.hasSuggestion}
+      <a class="with-icon" href={link('improve')} onclick={() => (open = false)}><Sparkles size={16} />Improve with AI</a>
+    {/if}
     <hr>
     {#if canShare()}
       <button type="button" class="with-icon" onclick={shareRecipe}><Share2 size={16} />Share recipe</button>

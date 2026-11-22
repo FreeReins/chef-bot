@@ -12,6 +12,8 @@ const weeks = (...plans) => ({
   'GET /api/plans/*': (request) => plans.find((plan) => request.url().endsWith(plan.id)) ?? plans[0],
 });
 const staged = weeks(data.plan('Staged'));
+/** An AI model is set up for every AI feature. */
+const AI = { 'GET /api/ai/features': data.aiFeatures() };
 /** Never answers, so the page stays on its loading placeholder. */
 const holding = () => new Promise(() => {});
 /** The library search, held open except for the one-recipe count the page asks for as it starts. */
@@ -208,7 +210,35 @@ const VIEWS = [
   { name: 'add a recipe from a link', path: '/recipes/new/link' },
   { name: 'add a recipe by typing it in', path: '/recipes/new/write' },
   { name: 'add recipes from files', path: '/recipes/new/files' },
+  { name: 'add a recipe from a photo, no AI model', path: '/recipes/new/photo' },
+  { name: 'add a recipe from a photo', path: '/recipes/new/photo', answers: { 'GET /api/ai/features': data.aiFeatures() },
+    act: (page) => page.getByLabel(/Photos of one recipe/).setInputFiles({ name: 'card.png', mimeType: 'image/png', buffer: data.png })
+      .then(() => page.getByRole('img', { name: 'Page 1' }).waitFor()) },
+  {
+    name: 'add a recipe from a photo, checking what was read', path: '/recipes/new/photo',
+    answers: { 'GET /api/ai/features': data.aiFeatures(), 'POST /api/recipes/import/photo': data.photoDraft() },
+    act: async (page) => {
+      await page.getByLabel(/Photos of one recipe/).setInputFiles({ name: 'card.png', mimeType: 'image/png', buffer: data.png });
+      await page.getByRole('button', { name: 'Read recipe' }).click();
+      await page.getByText('Read with Ollama').waitFor();
+    },
+  },
   { name: 'a recipe', path: `/recipes/${data.ids.tacos}` },
+  {
+    name: 'a recipe with suggestions to review', path: `/recipes/${data.ids.stew}/improve`,
+    answers: { ...AI, ...library(data.recipes().map((recipe) => (recipe.id === data.ids.stew ? { ...recipe, hasSuggestion: true } : recipe))),
+      'GET /api/recipes/*/suggestion': data.suggestion(data.ids.stew) },
+    act: (page) => page.getByRole('button', { name: /Apply 6 changes/ }).waitFor(),
+  },
+  {
+    name: 'a recipe whose suggestions are stale', path: `/recipes/${data.ids.stew}/improve`,
+    answers: { ...AI, 'GET /api/recipes/*/suggestion': data.suggestion(data.ids.stew, true) },
+    act: (page) => page.getByText('no longer fit').waitFor(),
+  },
+  {
+    name: 'a recipe with no suggestions yet', path: `/recipes/${data.ids.stew}/improve`, answers: AI,
+    act: (page) => page.getByRole('button', { name: 'Ask for suggestions' }).waitFor(),
+  },
   { name: 'a recipe, loading', path: `/recipes/${data.ids.tacos}`, answers: { [`GET /api/recipes/${data.ids.tacos}`]: holding },
     act: (page) => page.getByRole('status', { name: 'Loading the recipe' }).waitFor() },
   {
@@ -432,6 +462,19 @@ const VIEWS = [
     act: (page) => page.getByRole('button', { name: 'Make a new address' }).click().then(() => page.getByRole('dialog').waitFor()),
   },
   { name: 'settings: AI assistants with no tokens', path: '/settings/assistants' },
+  {
+    name: 'settings: AI assistants with models set up', path: '/settings/assistants',
+    answers: { ...AI, 'GET /api/ai/settings': data.aiSettings(), 'GET /api/ai/sweeps/recipe-details': data.detailsSweep() },
+    act: (page) => page.getByRole('button', { name: 'Ask for suggestions' }).waitFor(),
+  },
+  {
+    name: 'settings: adding an Ollama model', path: '/settings/assistants',
+    act: async (page) => {
+      await page.getByLabel('Start from').selectOption('ollama');
+      await page.getByRole('button', { name: 'Add a model' }).click();
+      await page.getByText('not saved yet').waitFor();
+    },
+  },
   { name: 'settings: AI assistants with tokens', path: '/settings/assistants', answers: { 'GET /api/tokens': data.apiTokens() } },
   {
     name: 'settings: AI assistants with a new token shown', path: '/settings/assistants',

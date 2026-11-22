@@ -91,6 +91,13 @@ export async function loadSystem() {
   Object.assign(app, { https, security, notifications, backups });
 }
 
+// ---------- AI models ----------
+
+/** Which AI features are ready, so the page offers only those. */
+export async function loadAiFeatures() {
+  app.aiFeatures = await api('GET', '/api/ai/features');
+}
+
 // ---------- people ----------
 
 export async function loadPeople() {

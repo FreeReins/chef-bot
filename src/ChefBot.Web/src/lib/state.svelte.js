@@ -24,7 +24,7 @@ export const app = $state({
   people: { users: [], links: [], newLink: null },
   tab: 'plan',         // the open tab; the address bar says which (see addresses.js)
   recipeId: null,      // the recipe shown on its own page, from /recipes/{id}
-  recipeDialog: null,  // the Recipes dialog open: new-link | new-write | new-files (/recipes/new/...) or edit | photos | cook (/recipes/{id}/...)
+  recipeDialog: null,  // the Recipes dialog open: new-link | new-write | new-photo | new-files (/recipes/new/...) or edit | photos | cook | plan | improve (/recipes/{id}/...)
   settingsSection: 'login', // which Settings sidebar item is open
   plans: [],           // PlanSummaryResponse[]: the weeks with a plan that haven't ended, earliest first
   plan: null,          // PlanResponse for the week being looked at (one of plans), or null when nothing is planned
@@ -33,6 +33,7 @@ export const app = $state({
   pantry: [],          // PantryItemResponse[], loaded by the Pantry tab when there is no plan to read it from
   manualItems: [],     // ManualShoppingItemResponse[]: what was put on the shopping list by hand, plan or not
   shoppingTargets: [], // ShoppingTargetResponse[]: the to-do apps the shopping list can be sent to
+  aiFeatures: { recipeFromPhoto: false, recipeDetails: false }, // AiFeaturesResponse: which AI features have a model set up
   recipeCount: 0,      // how many recipes the library holds; the Recipes tab fetches them a page at a time
   recipesChanged: 0,   // goes up each time the library may have changed, so the open page of recipes reloads
   recipeName: null,    // the name of the recipe open on its own page, once loaded, for the browser tab's title

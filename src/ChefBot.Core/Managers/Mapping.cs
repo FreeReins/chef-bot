@@ -90,7 +90,9 @@ internal static partial class Mapping
     /// <param name="recipe">The recipe.</param>
     /// <param name="favouredBy">Who has it as a favourite.</param>
     /// <param name="rating">The average of its reviews, or null when it has none.</param>
-    public static RecipeResponse ToResponse(this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy, RecipeRating? rating)
+    /// <param name="hasSuggestion">True when AI suggestions for it are waiting.</param>
+    public static RecipeResponse ToResponse(
+        this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy, RecipeRating? rating, bool hasSuggestion = false)
     {
         var ingredients = recipe.Ingredients.OrderBy(ingredient => ingredient.Position).ToList();
         return new(
@@ -121,13 +123,16 @@ internal static partial class Mapping
                 .ToList(),
             CookingSteps.Read(recipe.Instructions, ingredients.Select(ingredient => ingredient.DisplayName).ToList()),
             favouredBy,
-            rating);
+            rating,
+            hasSuggestion);
     }
 
     /// <param name="recipe">The recipe.</param>
     /// <param name="favouredBy">Who has it as a favourite.</param>
     /// <param name="rating">The average of its reviews, or null when it has none.</param>
-    public static RecipeSummaryResponse ToSummary(this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy, RecipeRating? rating) => new(
+    /// <param name="hasSuggestion">True when AI suggestions for it are waiting.</param>
+    public static RecipeSummaryResponse ToSummary(
+        this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy, RecipeRating? rating, bool hasSuggestion = false) => new(
         recipe.Id,
         recipe.Name,
         recipe.Course,
@@ -136,7 +141,8 @@ internal static partial class Mapping
         [.. recipe.Tags],
         recipe.Images.Where(image => image.IsStored).OrderBy(image => image.Position).Select(image => ImageUrl(recipe, image)).FirstOrDefault(),
         favouredBy,
-        rating);
+        rating,
+        hasSuggestion);
 
     /// <summary>A recipe's reviews as a rating: their average, to one decimal place.</summary>
     public static RecipeRating ToRating(this ReviewTally tally) =>
@@ -161,6 +167,23 @@ internal static partial class Mapping
         draft.YieldText,
         draft.Notes,
         draft.Tags);
+
+    public static RecipeDraft ToDraft(this RecipeText text) => new(
+        text.Name,
+        text.Course,
+        text.Ingredients,
+        text.IsSlowCooker,
+        text.Servings,
+        text.Description,
+        text.Instructions,
+        text.PrepMinutes,
+        text.CookMinutes,
+        text.TotalMinutes,
+        text.SourceUrl,
+        text.Author,
+        text.YieldText,
+        text.Notes,
+        text.Tags);
 
     public static UserResponse ToResponse(this UserAccount user) =>
         new(user.Id, user.Username, user.DisplayName, user.IsAdmin, user.CreatedAt, user.LockedUntil);

@@ -58,4 +58,10 @@ internal interface ISettingsAccess
 
     /// <summary>Makes the saved plan styles exactly these, matched by id: others are removed.</summary>
     Task SavePlanStylesAsync(IReadOnlyList<PlanStyle> styles, CancellationToken cancellationToken);
+
+    /// <summary>The AI models in their saved order and the tasks sent to a model other than the default. Empty when none are set up.</summary>
+    Task<AiSettings> GetAiAsync(CancellationToken cancellationToken);
+
+    /// <summary>Makes the saved AI models and routes exactly these, models matched by id: others are removed.</summary>
+    Task SaveAiAsync(AiSettings ai, CancellationToken cancellationToken);
 }

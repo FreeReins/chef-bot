@@ -21,6 +21,20 @@ goes away later. Most recipe sites work, because they describe their recipes for
 Choose **Type one in**. Write each ingredient on its own line, such as `2 cups kale` or `1 onion, diced`. ChefBot
 works out the amount, unit and food from each line, so it can add up the shopping list.
 
+### From a photo
+
+Read a recipe from a cookbook page, a recipe card or a screenshot. This needs an AI model, which an admin sets up
+under [Settings → AI assistants](../admin/ai-assistants.md#ai-models-chefbot-uses). Without one, the tab says so.
+
+1. Choose **From a photo**.
+2. Under **Photos of one recipe**, take or choose up to four photos: the pages of one recipe, in order.
+3. Press **Read recipe**. It can take up to a minute.
+4. The recipe form opens with what was read. Check it against the photo and fix anything misread.
+5. Leave **Keep the first photo with the recipe** ticked to keep the photo, and press **Save recipe**.
+
+Nothing is saved until you press **Save recipe**. The photos are made smaller on your device before they're sent. If
+a photo won't read, see [Recipe import problems](../troubleshooting/recipe-imports.md#a-photo-wont-read).
+
 ### Import files from another app
 
 Choose **Import files** and pick one or more files:
@@ -51,7 +65,7 @@ recipe itself at any time. An admin can change the words used for sorting under
 ## Find a recipe
 
 Search by name, ingredient or tag. Filter by course, tags, **My favourites**, **Anyone's favourites**, **Slow cooker
-only**, or how long a recipe takes. Show them as **Cards** or a **List**.
+only**, how long a recipe takes, or **Has suggestions** (when an AI model is set up). Show them as **Cards** or a **List**.
 
 ## On a recipe
 
@@ -60,11 +74,35 @@ only**, or how long a recipe takes. Show them as **Cards** or a **List**.
 - **Add to plan:** put it on a day of this week or a later one. See [Add a recipe to your plan](#add-a-recipe-to-your-plan).
 - **Favourite** (the heart): plan styles can prefer favourites. See [Plan styles](plan-styles.md#favourites).
 - **Reviews:** give it 1 to 5 stars and a note each time it's cooked. The average shows next to its name.
-- The **⋯** menu has **Edit recipe**, **Photos**, **Share recipe** (or **Copy as text**), **Print recipe**, the
+- The **⋯** menu has **Edit recipe**, **Photos**, **Improve with AI** (when an AI model is set up), **Share recipe** (or **Copy as text**), **Print recipe**, the
   downloads, and **Archive recipe**.
 - **Photos:** JPEG, PNG, WebP or GIF, up to 5 MB, at most 10 per recipe. The first photo is the one shown in the
   recipe list. A recipe without a photo shows **Add a photo** where the photo goes.
 - **Archive recipe:** takes it out of the library and future plans. Its history is kept.
+
+## Make a recipe more complete
+
+An AI model can suggest what a recipe is missing. An admin sets one up under
+[Settings → AI assistants](../admin/ai-assistants.md#ai-models-chefbot-uses).
+
+1. On the recipe, open the **⋯** menu and choose **Improve with AI**.
+2. Press **Ask for suggestions**. It can take up to a minute.
+3. Each suggestion shows what the recipe has **Now** next to what is **Suggested**. Untick any you don't want.
+4. Press **Apply**, or **Keep the recipe as it is** to set them all aside.
+
+The model only fills gaps. It never replaces something the recipe already has, with one exception: steps that are
+short or missing can be replaced with clearer ones, if you tick that. It can suggest:
+
+- a description, prep, cook and total times, what the recipe makes, and tags, when the recipe has none
+- clearer steps, when they are short or missing
+- an amount for an ingredient line that has none, such as `salt` becoming `1 tsp salt`
+- ingredients the steps use that the list leaves out
+- tips, added to the end of the notes
+
+When suggestions are waiting, **Suggestions are ready to review** shows under the recipe's name. An admin can ask for
+suggestions on every recipe at once: see
+[Complete sparse recipes](../admin/ai-assistants.md#complete-sparse-recipes). If the recipe is edited before the
+suggestions are applied, they no longer fit; ask again.
 
 ## Make it for more or fewer people
 

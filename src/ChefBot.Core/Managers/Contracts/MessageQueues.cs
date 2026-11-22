@@ -26,6 +26,12 @@ public static class MessageQueues
     public const string Maintenance = "maintenance";
 
     /// <summary>
+    /// Questions for AI models, such as the library sweep's suggestions: one at a time, to stay within the provider's
+    /// rate limits and keep a home server's model from being swamped.
+    /// </summary>
+    public const string Ai = "ai";
+
+    /// <summary>
     /// Tells open pages what changed. Kept in memory only: a page that misses a nudge loads everything again when it
     /// reconnects, so these messages are not worth storing.
     /// </summary>

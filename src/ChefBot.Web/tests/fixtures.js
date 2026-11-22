@@ -11,8 +11,8 @@ export const reply = (status, body = null, contentType = 'application/json') => 
 const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
 
 /** RecipeSummaryResponse, from a RecipeResponse. */
-const summary = ({ id, name, course, isSlowCooker, ingredients, tags, images, favouredBy, rating }) =>
-  ({ id, name, course, isSlowCooker, ingredients, tags, coverUrl: images[0]?.url ?? null, favouredBy, rating });
+const summary = ({ id, name, course, isSlowCooker, ingredients, tags, images, favouredBy, rating, hasSuggestion = false }) =>
+  ({ id, name, course, isSlowCooker, ingredients, tags, coverUrl: images[0]?.url ?? null, favouredBy, rating, hasSuggestion });
 
 /**
  * Answers for a recipe library, as the server gives them: the whole list, one recipe by id (404 when it isn't there),
@@ -51,6 +51,7 @@ export const library = (recipes) => ({
       .filter((recipe) => params.get('favourites') !== 'true' || recipe.favouredBy.length > 0)
       .filter((recipe) => !params.get('favouredBy') || recipe.favouredBy.some((fan) => fan.userId === params.get('favouredBy')))
       .filter((recipe) => params.get('slowCooker') !== 'true' || recipe.isSlowCooker)
+      .filter((recipe) => params.get('withSuggestions') !== 'true' || recipe.hasSuggestion)
       .filter((recipe) => !params.get('readyWithin') || (recipe.totalMinutes ?? Infinity) <= Number(params.get('readyWithin')))
       .sort((a, b) => COURSES.indexOf(a.course) - COURSES.indexOf(b.course) || a.name.localeCompare(b.name));
     return {
@@ -141,6 +142,11 @@ function defaults() {
     'GET /api/account/link': (request) =>
       data.linkDetails(new URL(request.url()).searchParams.get('token') === 'reset-token' ? 'PasswordReset' : 'Invite'),
     'GET /api/test-images/*': reply(200, data.png, 'image/png'),
+    // No AI model is set up unless a test says so.
+    'GET /api/ai/features': data.aiFeatures(false),
+    'GET /api/ai/settings': data.aiSettings(false),
+    'GET /api/ai/sweeps/recipe-details': { sparse: 0, waiting: 0, modelName: null },
+    'GET /api/recipes/*/suggestion': reply(404, { detail: 'This recipe has no suggestions.' }),
   };
 }
 

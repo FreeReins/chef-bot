@@ -14,10 +14,12 @@ internal sealed partial class RecipeManager(
     IRecipeAccess recipes,
     IImageSourceAccess images,
     IWebPageAccess web,
+    IAiAccess ai,
     ISampleRecipeAccess samples,
     IHistoryAccess history,
     IFavouriteAccess favourites,
     IReviewAccess reviews,
+    IRecipeSuggestionAccess suggestions,
     IAchievementAccess unlocks,
     IAccountAccess accounts,
     IPlanAccess plans,
@@ -39,7 +41,8 @@ internal sealed partial class RecipeManager(
         var library = await recipes.ListActiveAsync(cancellationToken);
         var favoured = await FavouredByAsync(library, cancellationToken);
         var rated = await RatedAsync(library, cancellationToken);
-        return library.Select(recipe => recipe.ToResponse(favoured(recipe), rated(recipe))).ToList();
+        var suggested = await SuggestedAsync(library, cancellationToken);
+        return library.Select(recipe => recipe.ToResponse(favoured(recipe), rated(recipe), suggested(recipe))).ToList();
     }
 
     public async Task<RecipePageResponse> SearchAsync(RecipeSearchRequest request, CancellationToken cancellationToken)
@@ -56,14 +59,20 @@ internal sealed partial class RecipeManager(
             request.Favourites,
             request.FavouredBy,
             request.SlowCooker,
-            request.ReadyWithin is > 0 ? request.ReadyWithin : null);
+            request.ReadyWithin is > 0 ? request.ReadyWithin : null,
+            request.WithSuggestions);
 
         var found = await recipes.SearchActiveAsync(query, cancellationToken);
         var librarySize = await recipes.CountActiveAsync(cancellationToken);
         var favoured = await FavouredByAsync(found.Recipes, cancellationToken);
         var rated = await RatedAsync(found.Recipes, cancellationToken);
+        var suggested = await SuggestedAsync(found.Recipes, cancellationToken);
         return new RecipePageResponse(
-            found.Recipes.Select(recipe => recipe.ToSummary(favoured(recipe), rated(recipe))).ToList(), found.Total, page, pageSize, librarySize);
+            found.Recipes.Select(recipe => recipe.ToSummary(favoured(recipe), rated(recipe), suggested(recipe))).ToList(),
+            found.Total,
+            page,
+            pageSize,
+            librarySize);
     }
 
     public async Task<RecipeFiltersResponse> GetFiltersAsync(CancellationToken cancellationToken)
@@ -130,6 +139,7 @@ internal sealed partial class RecipeManager(
 
         recipe.IsArchived = true;
         await recipes.SaveAsync(recipe, cancellationToken);
+        await suggestions.RemoveAsync(recipe.Id, cancellationToken);
         await messages.CommitAsync(cancellationToken);
     }
 
@@ -353,8 +363,10 @@ internal sealed partial class RecipeManager(
     private RecipesAdded Added(IReadOnlyList<Guid> recipeIds) => new(recipeIds, clock.Today(), clock.GetUtcNow());
 
     /// <summary>A recipe in full, with who has it as a favourite and how it is rated.</summary>
-    private async Task<RecipeResponse> ResponseAsync(Recipe recipe, CancellationToken cancellationToken) =>
-        recipe.ToResponse((await FavouredByAsync([recipe], cancellationToken))(recipe), (await RatedAsync([recipe], cancellationToken))(recipe));
+    private async Task<RecipeResponse> ResponseAsync(Recipe recipe, CancellationToken cancellationToken) => recipe.ToResponse(
+        (await FavouredByAsync([recipe], cancellationToken))(recipe),
+        (await RatedAsync([recipe], cancellationToken))(recipe),
+        (await SuggestedAsync([recipe], cancellationToken))(recipe));
 
     /// <summary>A recipe that can be planned.</summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>

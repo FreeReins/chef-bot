@@ -7,12 +7,12 @@ is made, and how backups relate to it.
 
 | Area | Tables (entities in `ResourceAccess/Persistence/`) |
 |---|---|
-| Recipes | `Recipe`, `RecipeIngredient`, `RecipeImage`, `RecipeImageData`, `RecipeFavourite`, `RecipeReview` |
+| Recipes | `Recipe`, `RecipeIngredient`, `RecipeImage`, `RecipeImageData`, `RecipeFavourite`, `RecipeReview`, `RecipeSuggestion` (an AI model's suggestions, one per recipe, with its changes as `jsonb`) |
 | Plans | `MealPlan`, `PlannedMeal`, `PlannedMealIngredient`, `ShoppingItem`, `PlanStyle` |
 | Shopping and pantry | `PantryItem`, `ManualShoppingItem`, `GroceryStore`, `ShoppingTarget` |
 | People | `User`, `AccessLink` (invites and resets), `ApiToken` |
 | History and fun | `FoodMoment`, `AchievementUnlock` |
-| Settings | `PlannerSettings`, `CalendarSettings`, `AdvancedSettings`, `NotificationSettings`, `BackupSettings`, `SecuritySettings`, `CalendarFeed`, `ScheduleState` |
+| Settings | `PlannerSettings`, `CalendarSettings`, `AdvancedSettings`, `NotificationSettings`, `BackupSettings`, `SecuritySettings`, `CalendarFeed`, `ScheduleState`, `AiModel` and `AiRoute` (the AI models and which does each task) |
 | Messages | Wolverine's own tables, in the `wolverine` schema |
 
 Settings rows start empty. Until one is saved, the defaults in its contract are used (`IsSaved` is false).

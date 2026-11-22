@@ -261,6 +261,51 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
         }
     }
 
+    public async Task<AiSettings> GetAiAsync(CancellationToken cancellationToken) => new()
+    {
+        Models = (await db.AiModels.ToListAsync(cancellationToken))
+            .OrderBy(model => model.Position)
+            .Select(model => model.ToContract())
+            .ToList(),
+        Routes = (await db.AiRoutes.ToListAsync(cancellationToken)).Select(route => route.ToContract()).ToList(),
+    };
+
+    public async Task SaveAiAsync(AiSettings ai, CancellationToken cancellationToken)
+    {
+        var tracked = await db.AiModels.ToDictionaryAsync(model => model.Id, cancellationToken);
+        var wanted = ai.Models.Select(model => model.ToEntity()).ToList();
+        var wantedIds = wanted.Select(model => model.Id).ToHashSet();
+
+        db.AiModels.RemoveRange(tracked.Values.Where(model => !wantedIds.Contains(model.Id)));
+        foreach (var fresh in wanted)
+        {
+            if (tracked.TryGetValue(fresh.Id, out var row))
+            {
+                db.CopyInto(row, fresh);
+            }
+            else
+            {
+                db.AiModels.Add(fresh);
+            }
+        }
+
+        var trackedRoutes = await db.AiRoutes.ToDictionaryAsync(route => route.Task, cancellationToken);
+        var wantedRoutes = ai.Routes.Select(route => route.ToEntity()).ToList();
+        var wantedTasks = wantedRoutes.Select(route => route.Task).ToHashSet();
+        db.AiRoutes.RemoveRange(trackedRoutes.Values.Where(route => !wantedTasks.Contains(route.Task)));
+        foreach (var fresh in wantedRoutes)
+        {
+            if (trackedRoutes.TryGetValue(fresh.Task, out var row))
+            {
+                row.ModelId = fresh.ModelId;
+            }
+            else
+            {
+                db.AiRoutes.Add(fresh);
+            }
+        }
+    }
+
     /// <summary>The single row of a settings table, if one has been saved (or added earlier in this request).</summary>
     /// <remarks>Every settings row has Id 1; looking it up by key also finds a row added but not yet saved.</remarks>
     private async Task<TRow?> RowAsync<TRow>(CancellationToken cancellationToken)

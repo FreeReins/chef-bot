@@ -36,6 +36,12 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     public DbSet<AchievementUnlockEntity> AchievementUnlocks => Set<AchievementUnlockEntity>();
 
+    public DbSet<AiModelEntity> AiModels => Set<AiModelEntity>();
+
+    public DbSet<AiRouteEntity> AiRoutes => Set<AiRouteEntity>();
+
+    public DbSet<RecipeSuggestionEntity> RecipeSuggestions => Set<RecipeSuggestionEntity>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<decimal>().HavePrecision(12, 3);
@@ -138,6 +144,18 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         {
             unlock.ToTable("AchievementUnlocks");
             unlock.HasIndex(u => new { u.Key, u.Tier }).IsUnique();
+        });
+        modelBuilder.Entity<AiModelEntity>().ToTable("AiModels");
+        modelBuilder.Entity<AiRouteEntity>(route =>
+        {
+            route.ToTable("AiRoutes");
+            route.HasKey(r => r.Task);
+        });
+        modelBuilder.Entity<RecipeSuggestionEntity>(suggestion =>
+        {
+            suggestion.ToTable("RecipeSuggestions");
+            suggestion.HasIndex(s => s.RecipeId).IsUnique();
+            suggestion.Property(s => s.Changes).HasColumnType("jsonb");
         });
 
         StoreEnumsByName(modelBuilder);

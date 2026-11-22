@@ -21,6 +21,7 @@ internal sealed class TestCore
         Plans = new FakePlans(Recipes);
         Favourites = new FakeFavourites(Accounts);
         Recipes.Favourites = () => Favourites.Rows;
+        Recipes.Suggestions = () => Suggestions.Rows;
         Options = options ?? TestData.Options;
         services = new(Register);
     }
@@ -56,6 +57,10 @@ internal sealed class TestCore
     public FakeWebPages Web { get; } = new();
 
     public FakeToDoLists ToDoLists { get; } = new();
+
+    public FakeAi Ai { get; } = new();
+
+    public FakeRecipeSuggestions Suggestions { get; } = new();
 
     public FakeMessages Messages { get; } = new();
 
@@ -122,6 +127,8 @@ internal sealed class TestCore
         services.AddSingleton<IImageSourceAccess>(Images);
         services.AddSingleton<IWebPageAccess>(Web);
         services.AddSingleton<IToDoListAccess>(ToDoLists);
+        services.AddSingleton<IAiAccess>(Ai);
+        services.AddSingleton<IRecipeSuggestionAccess>(Suggestions);
         services.AddSingleton<IMessageAccess>(Messages);
         services.AddSingleton<IKnownStoreAccess>(KnownStores);
         services.AddSingleton<IKnownPlanStyleAccess>(KnownStyles);

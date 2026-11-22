@@ -15,6 +15,7 @@ internal sealed class ChefBotExceptionHandler(IProblemDetailsService problemDeta
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
             RuleViolationException => (StatusCodes.Status400BadRequest, "Invalid request"),
             RecipeSourceException => (StatusCodes.Status502BadGateway, "Recipe source unavailable"),
+            AiUnavailableException => (StatusCodes.Status502BadGateway, "AI model unavailable"),
             NotSignedInException => (StatusCodes.Status401Unauthorized, "Not signed in"),
             NotAllowedException => (StatusCodes.Status403Forbidden, "Not allowed"),
             _ => (0, string.Empty),

@@ -10,11 +10,12 @@ using ChefBot.Core.Utilities;
 namespace ChefBot.Core.Managers;
 
 /// <inheritdoc cref="IMaintenanceManager"/>
-internal sealed class MaintenanceManager(
+internal sealed partial class MaintenanceManager(
     ISettingsAccess settings,
     IPlanAccess plans,
     IPantryAccess pantry,
     INotificationAccess webhook,
+    IAiAccess ai,
     IBackupAccess backups,
     IMessageAccess messages,
     NotificationEngine notifications,

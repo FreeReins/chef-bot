@@ -58,6 +58,8 @@ tables needs a fresh database, with your data brought across in a backup:
   [settings reference](settings.md#settings-in-the-environment).
 - **Scaling recipes and adding them to the plan:** added a column to the planned meals, for meals made for a chosen
   number of servings. Backups from before it restore as they are.
+- **AI models, recipes from photos and recipe suggestions:** added the `AiModels`, `AiRoutes` and
+  `RecipeSuggestions` tables. Backups from before it restore as they are, with no AI models set up.
 
 ## Go back to an older version
 

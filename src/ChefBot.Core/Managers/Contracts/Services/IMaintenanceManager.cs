@@ -70,4 +70,18 @@ public interface IMaintenanceManager
 
     /// <summary>Replaces all of ChefBot's data with a backup. Everything saved since that backup is lost.</summary>
     Task RestoreBackupAsync(string name, CancellationToken cancellationToken);
+
+    /// <summary>The AI models ChefBot may use, without their API keys, and which does each task.</summary>
+    Task<AiSettingsResponse> GetAiSettingsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Makes the AI models exactly these, chooses the default and which model does each task.</summary>
+    /// <exception cref="RuleViolationException">A model is missing something, or a task names a model that isn't there.</exception>
+    Task<AiSettingsResponse> SaveAiSettingsAsync(AiSettingsRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Which AI features are ready to use, because a model is set up for them.</summary>
+    Task<AiFeaturesResponse> GetAiFeaturesAsync(CancellationToken cancellationToken);
+
+    /// <summary>Asks a saved model a short question, to check it can be reached and answers. Problems are returned, not thrown.</summary>
+    /// <exception cref="NotFoundException">There is no saved model with that id.</exception>
+    Task<AiModelTestResult> TestAiModelAsync(Guid id, CancellationToken cancellationToken);
 }

@@ -14,7 +14,7 @@ namespace ChefBot.Core.Engines.Transformation;
 /// as PDF, Markdown or plain text to read.
 /// Reads and saves nothing.
 /// </summary>
-internal sealed class TransformationEngine(
+internal sealed partial class TransformationEngine(
     IngredientCatalog catalog,
     IEnumerable<IRecipeFileFormat> formats,
     IEnumerable<IRecipePageReader> pageReaders)

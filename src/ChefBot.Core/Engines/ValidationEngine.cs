@@ -39,6 +39,9 @@ internal sealed partial class ValidationEngine(
     /// <summary>The largest photo ChefBot keeps, in bytes.</summary>
     public const int MaxImageBytes = 5 * 1024 * 1024;
 
+    /// <summary>The most photos one recipe can be read from: its pages.</summary>
+    public const int MaxRecipePhotos = 4;
+
     /// <summary>The most photos one recipe can have.</summary>
     public const int MaxImagesPerRecipe = 10;
 

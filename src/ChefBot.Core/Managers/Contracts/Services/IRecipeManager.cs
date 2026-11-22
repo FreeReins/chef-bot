@@ -87,6 +87,58 @@ public interface IRecipeManager
     /// <exception cref="RecipeSourceException">The page couldn't be downloaded.</exception>
     Task<WebImportResponse> ImportFromWebAsync(WebRecipeRequest request, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Reads a recipe from photos of it with the AI model chosen for reading photos, ready to check in the recipe
+    /// form. Nothing is saved.
+    /// </summary>
+    /// <exception cref="RuleViolationException">
+    /// The photos aren't images, are too many or too large, no AI model is set up, or no recipe could be read from them.
+    /// </exception>
+    /// <exception cref="AiUnavailableException">The model couldn't be reached, refused, or gave no usable answer.</exception>
+    Task<RecipePhotoResponse> ReadRecipePhotoAsync(RecipePhotoRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Asks the AI model chosen for completing recipes what one recipe is missing, now, and keeps its suggestions to
+    /// look at, replacing any earlier ones. Nothing in the recipe changes until they are applied.
+    /// </summary>
+    /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
+    /// <exception cref="RuleViolationException">No AI model is set up.</exception>
+    /// <exception cref="AiUnavailableException">The model couldn't be reached, refused, or gave no usable answer.</exception>
+    Task<RecipeSuggestionResponse> SuggestDetailsAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>A recipe's suggestions, marked stale when the recipe changed after they were made.</summary>
+    /// <exception cref="NotFoundException">There is no such recipe, it has been archived, or it has no suggestions.</exception>
+    Task<RecipeSuggestionResponse> GetSuggestionAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Makes the chosen suggested changes to a recipe, as an edit would, and marks the suggestions applied.</summary>
+    /// <exception cref="NotFoundException">There is no such recipe or suggestion, or it was already applied or dismissed.</exception>
+    /// <exception cref="ConflictException">The recipe changed after the suggestions were made.</exception>
+    /// <exception cref="RuleViolationException">No change was chosen, or the result isn't a valid recipe.</exception>
+    Task<RecipeResponse> ApplySuggestionAsync(Guid id, ApplySuggestionRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Keeps a recipe as it is and sets its suggestions aside, so the library sweep doesn't ask again until it changes.</summary>
+    /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
+    Task DismissSuggestionAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>How many recipes are missing details and how many have suggestions waiting, for offering the library sweep.</summary>
+    Task<DetailsSweepStatusResponse> GetDetailsSweepAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Queues every recipe that is missing details, and has no suggestions for how it is now, for the AI model to look
+    /// at in the background (<see cref="SuggestRecipeDetails"/>). Suggestions appear on each recipe as they are ready.
+    /// </summary>
+    /// <exception cref="RuleViolationException">No AI model is set up.</exception>
+    Task<DetailsSweepResponse> StartDetailsSweepAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Makes suggestions for one recipe queued by the library sweep. Does nothing when the recipe is gone, has
+    /// everything, or already has suggestions for how it is now, so it is safe to run twice.
+    /// </summary>
+    /// <returns>True when the model was asked.</returns>
+    /// <exception cref="RuleViolationException">No AI model is set up any more.</exception>
+    /// <exception cref="AiUnavailableException">The model couldn't be reached, refused, or gave no usable answer.</exception>
+    Task<bool> SuggestDetailsForSweepAsync(SuggestRecipeDetails command, CancellationToken cancellationToken);
+
     /// <summary>Marks a recipe as one of a person's favourites. Marking it again changes nothing.</summary>
     /// <returns>The recipe, with everyone who now has it as a favourite.</returns>
     /// <exception cref="NotFoundException">There is no such recipe or person, or the recipe has been archived.</exception>

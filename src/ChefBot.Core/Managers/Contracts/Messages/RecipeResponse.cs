@@ -22,6 +22,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="StepDetails">The same steps as <paramref name="Instructions"/>, as ChefBot read them for cooking mode.</param>
 /// <param name="FavouredBy">The people who have it as a favourite, oldest favourite first.</param>
 /// <param name="Rating">The average of its reviews, or null when it has none.</param>
+/// <param name="HasSuggestion">True when AI suggestions for the recipe are waiting to be looked at.</param>
 public sealed record RecipeResponse(
     Guid Id,
     string Name,
@@ -43,4 +44,5 @@ public sealed record RecipeResponse(
     IReadOnlyList<RecipeIngredientResponse> IngredientDetails,
     IReadOnlyList<RecipeStepResponse> StepDetails,
     IReadOnlyList<FavouriteResponse> FavouredBy,
-    RecipeRating? Rating);
+    RecipeRating? Rating,
+    bool HasSuggestion = false);

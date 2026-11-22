@@ -22,7 +22,8 @@ public static class RecipeEndpoints
     /// One page of the library, such as <c>/api/recipes/search?query=chicken&amp;course=Main&amp;page=2&amp;pageSize=25</c>.
     /// Every parameter is optional: no query matches every recipe, and the page size defaults to 25 (100 at most).
     /// <c>tag</c> may be given several times, and a recipe needs every one; <c>favourites=true</c> keeps anyone's
-    /// favourites and <c>favouredBy</c> one person's; <c>slowCooker=true</c> and <c>readyWithin</c> (minutes) narrow further.
+    /// favourites and <c>favouredBy</c> one person's; <c>slowCooker=true</c> and <c>readyWithin</c> (minutes) narrow further,
+    /// and <c>withSuggestions=true</c> keeps recipes with AI suggestions waiting.
     /// </summary>
     [WolverineGet("/api/recipes/search")]
     public static Task<RecipePageResponse> Search(
@@ -34,6 +35,7 @@ public static class RecipeEndpoints
         Guid? favouredBy,
         bool? slowCooker,
         int? readyWithin,
+        bool? withSuggestions,
         HttpContext http,
         [FromServices] IRecipeManager recipes,
         CancellationToken cancellationToken) =>
@@ -47,7 +49,8 @@ public static class RecipeEndpoints
                 favourites ?? false,
                 favouredBy,
                 slowCooker ?? false,
-                readyWithin),
+                readyWithin,
+                withSuggestions ?? false),
             cancellationToken);
 
     /// <summary>What the library can be filtered by: every tag, and the people who have favourites.</summary>
@@ -180,6 +183,17 @@ public static class RecipeEndpoints
     public static Task<WebImportResponse> ImportFromWeb(
         WebRecipeRequest request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.ImportFromWebAsync(request, cancellationToken);
+
+    /// <summary>
+    /// Reads a recipe from photos with the AI model chosen for reading photos: <c>{"photos": ["base64…"]}</c>, up to
+    /// four pages of one recipe. Nothing is saved; the answer is a draft to check in the recipe form. Answers 400 when
+    /// the photos can't be used, no AI model is set up or no recipe could be read, and 502 when the model can't be
+    /// reached or refuses.
+    /// </summary>
+    [WolverinePost("/api/recipes/import/photo")]
+    public static Task<RecipePhotoResponse> ReadPhoto(
+        RecipePhotoRequest request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.ReadRecipePhotoAsync(request, cancellationToken);
 
     /// <summary>Setup wizard: the sample recipes, with their ingredients, marked when already in the library. Admins only.</summary>
     [Authorize(Policy = Sessions.AdminPolicy)]

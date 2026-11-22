@@ -33,6 +33,9 @@ What ChefBot doesn't do, or does differently than you might expect.
   engines. Sites without it, behind a sign-in, or that turn away programs get a message saying so. Type those recipes
   in, or [add a reader for the site](../developers/adding-a-recipe-site.md).
 - **Only the public internet.** ChefBot never downloads pages or photos from addresses on your own network.
+- **Reading photos and suggestions need an AI model** that an admin sets up: Claude, OpenAI, or one that answers
+  OpenAI's API, such as Ollama. Up to four photos, the pages of one recipe, are read at a time. What a model reads or
+  suggests can be wrong, so it is always shown for checking before it's saved.
 - **PDF downloads** use US Letter pages, have no photos, and print letters outside western European alphabets as `?`.
 
 ## Running it

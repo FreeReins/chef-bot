@@ -7,6 +7,8 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <!-- Reads recipe web pages: their JSON-LD, microdata, and the HTML that site readers pick apart. -->
     <PackageReference Include="AngleSharp" />
+    <!-- Talks to Claude for the AI features, when an admin sets up an Anthropic model. -->
+    <PackageReference Include="Anthropic" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="WolverineFx.EntityFrameworkCore" />
     <PackageReference Include="WolverineFx.Postgresql" />

@@ -2,7 +2,8 @@
      things to do with it, then its ingredients (RecipeIngredients.svelte, scaled to the servings chosen there; ?serves=6
      keeps the choice in the address), steps, notes and reviews (RecipeReviews.svelte). Cooking mode (/recipes/{id}/cook,
      RecipeCook.svelte) opens over the whole screen, and adding it to the plan (/recipes/{id}/plan, RecipeAddToPlan.svelte),
-     editing it (/edit) and its photos (/photos, RecipePhotos.svelte) in dialogs. The ⋯ menu (RecipeMenu.svelte) has the rest. -->
+     editing it (/edit), its photos (/photos, RecipePhotos.svelte) and AI suggestions (/improve, RecipeSuggestions.svelte)
+     in dialogs. The ⋯ menu (RecipeMenu.svelte) has the rest. -->
 <script>
   import { onMount, tick } from 'svelte';
   import { app, run, loadRecipes, toast, loadRecipePage, watchRecipe } from '../lib/app.svelte.js';
@@ -21,6 +22,8 @@
   import RecipeMenu from './RecipeMenu.svelte';
   import RecipePhotos from './RecipePhotos.svelte';
   import RecipeAddToPlan from './RecipeAddToPlan.svelte';
+  import RecipeSuggestions from './RecipeSuggestions.svelte';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
   import CookingPot from '@lucide/svelte/icons/cooking-pot';
   import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
@@ -187,6 +190,10 @@
           <RecipeMenu {recipe} {link} />
         </div>
 
+        {#if recipe.hasSuggestion}
+          <p class="suggested"><a class="with-icon" href={link('improve')}><Sparkles size={16} />Suggestions are ready to review</a></p>
+        {/if}
+
         {#if recipe.tags.length}
           <ul class="chips tags" aria-label="Tags">{#each recipe.tags as tag (tag)}<li class="chip">#{tag}</li>{/each}</ul>
         {/if}
@@ -242,11 +249,15 @@
     </Modal>
   {:else if app.recipeDialog === 'photos'}
     <RecipePhotos {recipe} onclose={close} onsaved={(saved, photoId) => { show(saved); shownId = photoId; }} />
+  {:else if app.recipeDialog === 'improve'}
+    <RecipeSuggestions {recipe} onclose={close} onsaved={show} />
   {/if}
 {/if}
 
 <style>
   .back-row { margin: 1rem 0 0; }
+  .suggested { margin: .75rem 0 0; }
+  .suggested a { display: inline-flex; align-items: center; gap: .4rem; font-weight: 600; }
 
   /* The photo beside the name and what to do with it; stacked on narrow screens. Without a photo, a small tile stands in. */
   .masthead { display: grid; gap: 1.25rem 1.75rem; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; margin-top: .75rem; }

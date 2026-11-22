@@ -494,3 +494,49 @@ export const freshAchievements = () => ({
   starter: [...STEP_KINDS.map((kind) => step(kind, false)), step('FirstGuest', false, true)],
   badges: Object.entries(FIRST_GOALS).map(([kind, goal]) => achievement(kind, 0, 0, goal)),
 });
+
+/** AiFeaturesResponse: which AI features have a model. */
+export const aiFeatures = (ready = true) => ({ recipeFromPhoto: ready, recipeDetails: ready });
+
+const AI_TASKS = [
+  { task: 'RecipeFromPhoto', label: 'Reading recipe photos', description: 'Reads a recipe from photos of a cookbook page, a card or a screenshot. Needs a model that can see images.' },
+  { task: 'RecipeDetails', label: 'Completing recipes', description: 'Suggests what a recipe is missing: details, clearer steps, ingredient amounts and tips.' },
+];
+
+/** AiSettingsResponse: with models, Claude as the default and a local model reading photos; empty without. */
+export const aiSettings = (withModels = true) => (withModels ? {
+  models: [
+    { id: '00000000-0000-4000-8000-000000000b01', name: 'Claude', provider: 'Anthropic', model: 'claude-opus-5-5', endpoint: '', hasApiKey: true },
+    { id: '00000000-0000-4000-8000-000000000b02', name: 'Ollama', provider: 'OpenAiCompatible', model: 'qwen2.5vl', endpoint: 'http://ollama.local:11434/v1', hasApiKey: false },
+  ],
+  defaultModel: 'Claude',
+  tasks: AI_TASKS.map((task) => ({ ...task, model: task.task === 'RecipeFromPhoto' ? 'Ollama' : null })),
+} : { models: [], defaultModel: null, tasks: AI_TASKS.map((task) => ({ ...task, model: null })) });
+
+/** DetailsSweepStatusResponse. */
+export const detailsSweep = (sparse = 12, waiting = 3) => ({ sparse, waiting, modelName: 'Claude' });
+
+/** RecipePhotoResponse: a recipe card read from a photo. */
+export const photoDraft = () => ({
+  readWith: 'Ollama',
+  draft: {
+    name: "Grandma's Oat Cookies", course: 'Sweet', isSlowCooker: false, servings: null,
+    ingredients: ['2 cups rolled oats', '1 cup butter, softened', '1 cup brown sugar'],
+    description: null, instructions: ['Cream the butter and sugar.', 'Stir in the oats.', 'Bake 12 minutes at 350°F.'],
+    prepMinutes: 15, cookMinutes: 12, totalMinutes: null, sourceUrl: null, author: 'Grandma June', yieldText: '24 cookies',
+    notes: null, tags: ['cookies'],
+  },
+});
+
+/** RecipeSuggestionResponse for a recipe: one change of each kind the dialog shows. */
+export const suggestion = (recipeId, stale = false) => ({
+  recipeId, modelName: 'Claude', createdAt: '2026-11-22T18:00:00Z', status: 'Waiting', stale,
+  changes: [
+    { id: 1, field: 'TotalMinutes', current: [], suggested: ['40'], line: null },
+    { id: 2, field: 'Tags', current: [], suggested: ['stew', 'slow cooker', 'beef'], line: null },
+    { id: 3, field: 'IngredientAmount', current: ['beef chuck'], suggested: ['2 lb beef chuck, cubed'], line: 0 },
+    { id: 4, field: 'Instructions', current: [], suggested: ['Brown the beef in batches.', 'Add the barley and carrots, cover with stock.', 'Cook on low for 8 hours.'], line: null },
+    { id: 5, field: 'NewIngredient', current: [], suggested: ['4 cups beef stock'], line: null },
+    { id: 6, field: 'Notes', current: [], suggested: ['Keeps four days in the fridge and freezes well.'], line: null },
+  ],
+});

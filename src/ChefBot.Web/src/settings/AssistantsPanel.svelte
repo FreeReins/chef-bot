@@ -1,11 +1,13 @@
-<!-- Settings, AI assistants: the MCP address assistants connect to, and the API tokens they sign in with. Each person
-     makes and revokes their own tokens; a token acts as the person who made it. -->
+<!-- Settings, AI assistants: for admins, the AI models ChefBot itself uses (AiModelsSection); for everyone, the MCP
+     address assistants connect to, and the API tokens they sign in with. Each person makes and revokes their own
+     tokens; a token acts as the person who made it. -->
 <script>
-  import { run, toast, ask } from '../lib/app.svelte.js';
+  import { run, toast, ask, isAdmin } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { pending } from '../lib/pending.js';
   import { copyText } from '../lib/exporting.js';
   import Copy from '@lucide/svelte/icons/copy';
+  import AiModelsSection from './AiModelsSection.svelte';
 
   const address = `${location.origin}/mcp`;
 
@@ -48,6 +50,12 @@
 </script>
 
 <h2>AI assistants</h2>
+
+{#if isAdmin()}
+  <AiModelsSection />
+  <h3>Connecting an assistant to ChefBot</h3>
+{/if}
+
 <p class="muted">
   Assistants that support MCP, such as Claude, can read your recipes, plans, pantry and shopping list, and change
   them for you: plan a week, swap or move meals, mark meals cooked, and add to the pantry or shopping list. Give

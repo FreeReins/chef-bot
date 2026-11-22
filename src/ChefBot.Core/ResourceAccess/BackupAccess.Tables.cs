@@ -71,6 +71,14 @@ internal sealed partial class BackupAccess
 
         // The achievement tiers and chef ranks already announced. Empty in backups made before they were kept.
         new BackupTable<AchievementUnlockEntity>("achievementUnlocks", BackupJson.Default.ListAchievementUnlockEntity),
+
+        // The AI models, with their API keys, and the tasks sent to a model other than the default. Empty in backups
+        // made before ChefBot could use AI models.
+        new BackupTable<AiModelEntity>("aiModels", BackupJson.Default.ListAiModelEntity),
+        new BackupTable<AiRouteEntity>("aiRoutes", BackupJson.Default.ListAiRouteEntity),
+
+        // What AI models suggested recipes are missing. Empty in backups made before ChefBot could suggest them.
+        new BackupTable<RecipeSuggestionEntity>("recipeSuggestions", BackupJson.Default.ListRecipeSuggestionEntity),
     ];
 
     /// <summary>A planned meal points at its recipe by id; the recipe itself is written once, under recipes.

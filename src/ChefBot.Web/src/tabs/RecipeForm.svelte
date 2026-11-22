@@ -1,19 +1,22 @@
-<!-- The fields of a recipe, for adding one in the Add a recipe dialog and editing one from its own page. -->
+<!-- The fields of a recipe, for adding one in the Add a recipe dialog (blank, or started from a draft such as one read
+     from a photo) and editing one from its own page. -->
 <script>
   import { pending } from '../lib/pending.js';
 
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
 
-  /** recipe: the one being edited, or null for a new one. save(draft) receives a RecipeDraft. plain: no card around
-      it, for inside a dialog. */
-  let { recipe = null, button, save, cancel = null, plain = false } = $props();
+  /** recipe: the one being edited, or null for a new one. draft: a RecipeDraft to start a new one from, such as one
+      read from a photo. save(draft) receives a RecipeDraft. plain: no card around it, for inside a dialog. */
+  let { recipe = null, draft = null, button, save, cancel = null, plain = false } = $props();
 
   const prefix = $derived(recipe ? `edit-${recipe.id}` : 'recipe');
+  // What the fields start with: the recipe being edited, or the draft for a new one.
+  const start = $derived(recipe ?? draft);
 
   // Opened when the recipe already has any of the extra details, so editing shows them.
-  const hasDetails = $derived(Boolean(recipe && (recipe.description || recipe.instructions?.length || recipe.prepMinutes
-    || recipe.cookMinutes || recipe.totalMinutes || recipe.sourceUrl || recipe.author || recipe.yieldText
-    || recipe.notes || recipe.tags?.length)));
+  const hasDetails = $derived(Boolean(start && (start.description || start.instructions?.length || start.prepMinutes
+    || start.cookMinutes || start.totalMinutes || start.sourceUrl || start.author || start.yieldText
+    || start.notes || start.tags?.length)));
 
   const text = (data, name) => String(data.get(name) ?? '').trim() || null;
   const minutes = (data, name) => (data.get(name) ? Number(data.get(name)) : null);
@@ -45,54 +48,54 @@
 </script>
 
 <form class="stack" class:card={!plain} {onsubmit}>
-  <label>Name <input id="{prefix}-name" name="name" required value={recipe?.name ?? ''}></label>
+  <label>Name <input id="{prefix}-name" name="name" required value={start?.name ?? ''}></label>
   <label>Course
-    <select id="{prefix}-course" name="course" value={recipe?.course ?? 'Main'}>
+    <select id="{prefix}-course" name="course" value={start?.course ?? 'Main'}>
       {#each COURSES as course (course)}<option>{course}</option>{/each}
     </select>
   </label>
   <label>Servings
-    <input id="{prefix}-servings" name="servings" type="number" min="1" step="any" placeholder="4" value={recipe?.servings ?? ''}>
+    <input id="{prefix}-servings" name="servings" type="number" min="1" step="any" placeholder="4" value={start?.servings ?? ''}>
   </label>
   <label style="display:flex;gap:.4rem;align-items:center">
-    <input id="{prefix}-slow" name="isSlowCooker" type="checkbox" checked={recipe?.isSlowCooker ?? false}> Slow cooker
+    <input id="{prefix}-slow" name="isSlowCooker" type="checkbox" checked={start?.isSlowCooker ?? false}> Slow cooker
   </label>
   <label>Ingredients, one per line
     <textarea id="{prefix}-ingredients" name="ingredients" required
-              placeholder={'1 lb chicken thighs\n0.5 head cabbage\n2 cups brown rice'}>{recipe?.ingredients.join('\n') ?? ''}</textarea>
+              placeholder={'1 lb chicken thighs\n0.5 head cabbage\n2 cups brown rice'}>{start?.ingredients.join('\n') ?? ''}</textarea>
   </label>
   <label>Steps, one per line
     <textarea id="{prefix}-instructions" name="instructions"
-              placeholder={'Brown the chicken.\nAdd the cabbage and cook until soft.'}>{recipe?.instructions?.join('\n') ?? ''}</textarea>
+              placeholder={'Brown the chicken.\nAdd the cabbage and cook until soft.'}>{start?.instructions?.join('\n') ?? ''}</textarea>
   </label>
 
   <details open={hasDetails}>
     <summary>More details</summary>
     <div class="stack">
       <label>Description
-        <textarea id="{prefix}-description" name="description" class="short">{recipe?.description ?? ''}</textarea>
+        <textarea id="{prefix}-description" name="description" class="short">{start?.description ?? ''}</textarea>
       </label>
       <div class="times">
         <label>Prep (min)
-          <input id="{prefix}-prep" name="prepMinutes" type="number" min="0" max="10080" step="1" value={recipe?.prepMinutes ?? ''}>
+          <input id="{prefix}-prep" name="prepMinutes" type="number" min="0" max="10080" step="1" value={start?.prepMinutes ?? ''}>
         </label>
         <label>Cook (min)
-          <input id="{prefix}-cook" name="cookMinutes" type="number" min="0" max="10080" step="1" value={recipe?.cookMinutes ?? ''}>
+          <input id="{prefix}-cook" name="cookMinutes" type="number" min="0" max="10080" step="1" value={start?.cookMinutes ?? ''}>
         </label>
         <label>Total (min)
-          <input id="{prefix}-total" name="totalMinutes" type="number" min="0" max="10080" step="1" value={recipe?.totalMinutes ?? ''}>
+          <input id="{prefix}-total" name="totalMinutes" type="number" min="0" max="10080" step="1" value={start?.totalMinutes ?? ''}>
         </label>
       </div>
-      <label>Makes <input id="{prefix}-yield" name="yieldText" placeholder="one 9-inch pie" value={recipe?.yieldText ?? ''}></label>
+      <label>Makes <input id="{prefix}-yield" name="yieldText" placeholder="one 9-inch pie" value={start?.yieldText ?? ''}></label>
       <label>Tags, separated by commas
-        <input id="{prefix}-tags" name="tags" placeholder="quick, vegetarian" value={recipe?.tags?.join(', ') ?? ''}>
+        <input id="{prefix}-tags" name="tags" placeholder="quick, vegetarian" value={start?.tags?.join(', ') ?? ''}>
       </label>
       <label>Source link
-        <input id="{prefix}-source" name="sourceUrl" type="url" placeholder="https://" value={recipe?.sourceUrl ?? ''}>
+        <input id="{prefix}-source" name="sourceUrl" type="url" placeholder="https://" value={start?.sourceUrl ?? ''}>
       </label>
-      <label>Author <input id="{prefix}-author" name="author" value={recipe?.author ?? ''}></label>
+      <label>Author <input id="{prefix}-author" name="author" value={start?.author ?? ''}></label>
       <label>Notes
-        <textarea id="{prefix}-notes" name="notes" class="short">{recipe?.notes ?? ''}</textarea>
+        <textarea id="{prefix}-notes" name="notes" class="short">{start?.notes ?? ''}</textarea>
       </label>
     </div>
   </details>

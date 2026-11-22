@@ -39,6 +39,8 @@ public static class LiveTopicsHandler
 
     public static void Handle(RecipeChanged message, LiveUpdates live) => live.Broadcast(LiveTopics.Recipes);
 
+    public static void Handle(RecipeSuggestionsChanged message, LiveUpdates live) => live.Broadcast(LiveTopics.Recipes);
+
     public static void Handle(RecipeArchived message, LiveUpdates live) => live.Broadcast(LiveTopics.Recipes);
 
     public static void Handle(RecipeFavourited message, LiveUpdates live) => live.Broadcast(LiveTopics.Recipes);

@@ -6,23 +6,13 @@
   import Modal from '../components/Modal.svelte';
   import Plus from '@lucide/svelte/icons/plus';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import { MAX_PHOTO_MB, base64 } from '../lib/photos.js';
 
   /** recipe: the RecipeResponse. onsaved(recipe, shownId): it came back changed. onclose(): asked to close. */
   let { recipe, onsaved, onclose } = $props();
 
-  const MAX_PHOTO_MB = 5;
   let uploading = $state(false);
   const images = $derived(recipe.images ?? []);
-
-  /** The file's bytes as base64, the way the API takes them. */
-  function base64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result).split(',', 2)[1] ?? '');
-      reader.onerror = () => reject(new Error(`${file.name} couldn't be read. Choose the file again.`));
-      reader.readAsDataURL(file);
-    });
-  }
 
   async function addPhoto(event) {
     const input = event.currentTarget;

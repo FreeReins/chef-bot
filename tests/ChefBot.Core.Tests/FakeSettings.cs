@@ -27,6 +27,8 @@ internal sealed class FakeSettings : ISettingsAccess
 
     public CalendarSettings CalendarTimes { get; set; } = new();
 
+    public AiSettings Ai { get; set; } = new();
+
     public Task<SecuritySettings> GetSecurityAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Security));
 
     public Task SaveSecurityAsync(SecuritySettings settings, CancellationToken cancellationToken) =>
@@ -96,6 +98,10 @@ internal sealed class FakeSettings : ISettingsAccess
 
     public Task SavePlanStylesAsync(IReadOnlyList<PlanStyle> styles, CancellationToken cancellationToken) =>
         Set(() => Styles = styles.Select(Copies.Of).ToList());
+
+    public Task<AiSettings> GetAiAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Ai));
+
+    public Task SaveAiAsync(AiSettings ai, CancellationToken cancellationToken) => Set(() => Ai = Copies.Of(ai));
 
     private static Task Set(Action save)
     {

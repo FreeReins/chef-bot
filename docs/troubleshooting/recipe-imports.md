@@ -19,6 +19,34 @@ A site that doesn't work but should? A reader can be added for it: see
 [Adding a recipe site](../developers/adding-a-recipe-site.md), or
 [open an issue](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/issues/new/choose) with the link.
 
+## A photo won't read
+
+Reading photos uses the AI model set up under
+[Settings → AI assistants](../admin/ai-assistants.md#ai-models-chefbot-uses). What its message means:
+
+| Message | What to do |
+|---|---|
+| "This needs an AI model" | An admin sets one up under **Settings → AI assistants** |
+| "ChefBot couldn't find a recipe in that photo" | Take a sharper photo with the whole recipe in view and good light, or type it in |
+| "Choose up to 4 photos" | Read one recipe at a time, at most four pages |
+| "That file isn't a photo ChefBot can show" | Use a JPEG, PNG, WebP or GIF image. Your browser may not be able to shrink some formats, such as HEIC, first |
+| "… didn't accept the API key" | An admin enters a new key under **Settings → AI assistants**, then presses **Test** |
+| "… doesn't know the model …" | Check the model's name, and for an OpenAI-compatible service that its address ends in `/v1` |
+| "ChefBot couldn't reach …" | The service is down or the address is wrong. For Ollama, check it's running and listening on your network, not only on its own machine |
+| "… is busy or out of credit" | Try again later, or check the account with the provider |
+| "… refused the question" | The model may not accept images or JSON answers. Choose a vision model for **Reading recipe photos** |
+| "… didn't answer in a form ChefBot can read" | Try again, or choose a more capable model |
+
+Whatever was read, check it before saving: models can misread handwriting and amounts.
+
+## No suggestions came back
+
+- **"… had nothing to add":** the model found nothing missing. The recipe is kept as it is.
+- **The suggestions no longer fit:** the recipe was edited after they were made. Press **Ask for suggestions** again.
+- **The library sweep skipped some recipes:** it only asks about recipes missing a description, times, tags,
+  ingredient amounts or clear steps, and not again until a recipe changes. A model that refuses or isn't set up is
+  noted in **Settings → Logs**; one that is busy or unreachable is tried again later by itself.
+
 ## Photos are missing after importing from a link
 
 Photos download in the background, after the recipe is added. Give it a minute and reload. If they still don't

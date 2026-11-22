@@ -10,6 +10,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="FavouredBy">Only this person's favourites; null for anyone's (with <paramref name="Favourites"/>) or no limit.</param>
 /// <param name="SlowCooker">True for only slow cooker recipes.</param>
 /// <param name="ReadyWithin">Only recipes that say they are ready within this many minutes; null for any time.</param>
+/// <param name="WithSuggestions">True for only recipes with AI suggestions waiting to be looked at.</param>
 public sealed record RecipeSearchRequest(
     string? Query,
     RecipeCourse? Course,
@@ -19,4 +20,5 @@ public sealed record RecipeSearchRequest(
     bool Favourites = false,
     Guid? FavouredBy = null,
     bool SlowCooker = false,
-    int? ReadyWithin = null);
+    int? ReadyWithin = null,
+    bool WithSuggestions = false);

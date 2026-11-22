@@ -67,6 +67,7 @@ public static class CoreRegistration
         services.AddScoped<IAchievementAccess, AchievementAccess>();
         services.AddScoped<IFavouriteAccess, FavouriteAccess>();
         services.AddScoped<IReviewAccess, ReviewAccess>();
+        services.AddScoped<IRecipeSuggestionAccess, RecipeSuggestionAccess>();
         var backupFolder = DataPath(configuration, "Data:Backups", "backups");
         services.AddScoped<IBackupAccess>(provider => new BackupAccess(provider.GetRequiredService<ChefBotDbContext>(), backupFolder));
         services.AddSingleton<ISampleRecipeAccess>(new SampleRecipeAccess(DataPath(configuration, "Data:SampleRecipes", "config/sample-recipes.json")));
@@ -75,6 +76,9 @@ public static class CoreRegistration
         services.AddHttpClient<INotificationAccess, NotificationAccess>(client => client.Timeout = TimeSpan.FromSeconds(10));
         // To-do apps are set up by an admin and are often on the home network (Home Assistant), so private addresses are allowed.
         services.AddHttpClient<IToDoListAccess, ToDoListAccess>(client => client.Timeout = TimeSpan.FromSeconds(10));
+        // AI models are set up by an admin and may run on the home network (Ollama, LM Studio), so private addresses
+        // are allowed. Reading a photo or a long recipe can take a minute or more.
+        services.AddHttpClient<IAiAccess, AiAccess>(client => client.Timeout = TimeSpan.FromSeconds(180));
         // Photos and recipe pages come from addresses people or web pages choose, so they only reach the public internet.
         services.AddHttpClient<IImageSourceAccess, ImageSourceAccess>(client => client.Timeout = TimeSpan.FromSeconds(20))
             .ConfigurePrimaryHttpMessageHandler(PublicWeb.Handler);
@@ -144,6 +148,7 @@ public static class CoreRegistration
         wolverine.LocalQueue(MessageQueues.History).UseDurableInbox().Sequential();
         wolverine.LocalQueue(MessageQueues.Achievements).UseDurableInbox().Sequential();
         wolverine.LocalQueue(MessageQueues.Maintenance).UseDurableInbox().Sequential();
+        wolverine.LocalQueue(MessageQueues.Ai).UseDurableInbox().Sequential();
         wolverine.LocalQueue(MessageQueues.Images).UseDurableInbox().MaximumParallelMessages(2);
         wolverine.LocalQueue(MessageQueues.Notifications).UseDurableInbox().MaximumParallelMessages(2);
         wolverine.LocalQueue(MessageQueues.Live).BufferedInMemory();
@@ -166,6 +171,7 @@ public static class CoreRegistration
         wolverine.Policies.OnException<HttpRequestException>()
             .Or<TaskCanceledException>()
             .Or<TransientDeliveryException>()
+            .Or<AiUnavailableException>(exception => exception.IsTransient)
             .ScheduleRetry(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30))
             .Then.MoveToErrorQueue();
 

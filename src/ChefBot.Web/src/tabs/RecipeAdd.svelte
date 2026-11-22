@@ -1,5 +1,5 @@
-<!-- The Add a recipe dialog over the Recipes tab, with a tab for each way in: from a link, typed in, or from files.
-     Each tab has its own address, /recipes/new/{link|write|files}; switching tabs replaces it, so closing the dialog
+<!-- The Add a recipe dialog over the Recipes tab, with a tab for each way in: from a link, typed in, from a photo, or
+     from files. Each tab has its own address, /recipes/new/{link|write|photo|files}; switching tabs replaces it, so closing the dialog
      and pressing Back returns to wherever it was opened from. -->
 <script>
   import { tick } from 'svelte';
@@ -9,14 +9,17 @@
   import Modal from '../components/Modal.svelte';
   import RecipeForm from './RecipeForm.svelte';
   import FileImport from '../components/FileImport.svelte';
+  import RecipeFromPhoto from './RecipeFromPhoto.svelte';
   import Link from '@lucide/svelte/icons/link';
   import PencilLine from '@lucide/svelte/icons/pencil-line';
   import FileUp from '@lucide/svelte/icons/file-up';
+  import Camera from '@lucide/svelte/icons/camera';
   import Plus from '@lucide/svelte/icons/plus';
 
   const TABS = [
     { key: 'link', label: 'From a link', icon: Link },
     { key: 'write', label: 'Type it in', icon: PencilLine },
+    { key: 'photo', label: 'From a photo', icon: Camera },
     { key: 'files', label: 'Import files', icon: FileUp },
   ];
 
@@ -86,6 +89,8 @@
       </form>
     {:else if current === 'write'}
       <RecipeForm button="Save recipe" save={add} cancel={close} plain />
+    {:else if current === 'photo'}
+      <RecipeFromPhoto {close} />
     {:else}
       <div class="import">
         <FileImport />

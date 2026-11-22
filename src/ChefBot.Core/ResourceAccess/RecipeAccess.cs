@@ -45,6 +45,12 @@ internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
             matching = matching.Where(recipe => db.RecipeFavourites.Any(favourite => favourite.RecipeId == recipe.Id && (by == null || favourite.UserId == by)));
         }
 
+        if (query.WithSuggestions)
+        {
+            matching = matching.Where(recipe => db.RecipeSuggestions.Any(suggestion =>
+                suggestion.RecipeId == recipe.Id && suggestion.Status == RecipeSuggestionStatus.Waiting));
+        }
+
         if (query.SlowCooker)
         {
             matching = matching.Where(recipe => recipe.IsSlowCooker);
