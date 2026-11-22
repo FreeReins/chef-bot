@@ -22,8 +22,8 @@
   import Hourglass from '@lucide/svelte/icons/hourglass';
   import Check from '@lucide/svelte/icons/check';
 
-  /** recipe: the RecipeResponse to cook. onclose(): asked to leave cooking mode. */
-  let { recipe, onclose } = $props();
+  /** recipe: the RecipeResponse to cook. serves, lines: its servings and ingredient lines, scaled. onclose(): asked to leave. */
+  let { recipe, serves = recipe.servings, lines = recipe.ingredients, onclose } = $props();
 
   /** How long this browser remembers where cooking got to. */
   const REMEMBER_MS = 12 * 60 * 60 * 1000;
@@ -327,12 +327,12 @@
         {#if page.key === 'gather'}
           <h3 class="page-title">Gather your ingredients</h3>
           <p class="muted lead">
-            Serves {recipe.servings}{recipe.totalMinutes ? ` · about ${recipe.totalMinutes} min in all` : ''}.
+            Serves {serves}{recipe.totalMinutes ? ` · about ${recipe.totalMinutes} min in all` : ''}.
             Tick each one off as you set it out.
           </p>
-          {#if recipe.ingredients.length}
+          {#if lines.length}
             <ul class="gather">
-              {#each recipe.ingredients as line, index (index)}
+              {#each lines as line, index (index)}
                 <li>
                   <label class:ticked={ticked.includes(index)}>
                     <input type="checkbox" checked={ticked.includes(index)} onchange={() => (ticked = toggle(ticked, index))}>
@@ -341,7 +341,7 @@
                 </li>
               {/each}
             </ul>
-            <p class="muted count" aria-live="polite">{ticked.length} of {recipe.ingredients.length} set out</p>
+            <p class="muted count" aria-live="polite">{ticked.length} of {lines.length} set out</p>
           {:else}
             <p class="muted">This recipe lists no ingredients.</p>
           {/if}
@@ -384,7 +384,7 @@
             <aside class="uses" aria-label="Ingredients for this step">
               <h4>For this step</h4>
               <ul class="plain">
-                {#each step.ingredients as index (index)}<li>{recipe.ingredients[index]}</li>{/each}
+                {#each step.ingredients as index (index)}<li>{lines[index]}</li>{/each}
               </ul>
             </aside>
           {/if}

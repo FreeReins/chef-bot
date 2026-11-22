@@ -8,7 +8,7 @@
   import RecipeDetail from './RecipeDetail.svelte';
   import RecipeAdd from './RecipeAdd.svelte';
   import { deal } from '../lib/motion.js';
-  import ChefHat from '@lucide/svelte/icons/chef-hat';
+  import BookOpenText from '@lucide/svelte/icons/book-open-text';
   import Plus from '@lucide/svelte/icons/plus';
   import LayoutGrid from '@lucide/svelte/icons/layout-grid';
   import List from '@lucide/svelte/icons/list';
@@ -269,7 +269,7 @@
       </div>
     {:else if librarySize === 0}
       <div class="card empty">
-        <ChefHat size={36} aria-hidden="true" />
+        <BookOpenText size={36} aria-hidden="true" />
         <h3>No recipes yet</h3>
         <p class="muted">Add one from a recipe site, type one in, or import files from another app.</p>
         <div class="row-actions start">
@@ -293,7 +293,7 @@
                 {#if recipe.coverUrl}
                   <img class="cover" src={recipe.coverUrl} alt="" loading="lazy">
                 {:else}
-                  <span class="cover placeholder" aria-hidden="true"><ChefHat size={32} /></span>
+                  <span class="cover placeholder" aria-hidden="true"><BookOpenText size={32} /></span>
                 {/if}
                 <span class="text">
                   <strong>{recipe.name}</strong>
@@ -318,7 +318,7 @@
               {#if recipe.coverUrl}
                 <img class="thumb" src={recipe.coverUrl} alt="" loading="lazy">
               {:else}
-                <span class="thumb placeholder" aria-hidden="true"><ChefHat size={18} /></span>
+                <span class="thumb placeholder" aria-hidden="true"><BookOpenText size={18} /></span>
               {/if}
               <div class="text">
                 <a href="/recipes/{recipe.id}"><strong>{recipe.name}</strong></a>

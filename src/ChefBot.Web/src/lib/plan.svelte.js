@@ -147,6 +147,19 @@ export function replaceMeal(mealId, body) {
 }
 
 /**
+ * Adds a recipe to a week's plan from its page: { recipeId, weekStart, date, slot, servings, replaces }. The plan
+ * comes back at once with the meal on it; its shopping list catches up in the background, and the live stream reloads
+ * the plan when it has. Without the live stream, the plan is brought in line here instead. `added(plan)` runs once
+ * it is saved.
+ */
+export const addToPlan = (body, added) => run(async () => {
+  let plan = await api('POST', '/api/plans/meals', body);
+  if (!live.connected) plan = await api('POST', `/api/plans/${plan.id}/refresh`);
+  await applyPlan(plan, { quiet: true });
+  added(plan);
+});
+
+/**
  * After the pantry changed: ChefBot brings the open plans' shopping lists in line in the background and says so on
  * the live stream, which reloads the plan. Here only what the pantry itself shows is loaded. Without the live stream,
  * the plan is brought in line and loaded straight away instead.

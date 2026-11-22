@@ -26,6 +26,15 @@ public static class PlanEndpoints
     public static Task Clear(Guid planId, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
         plans.ClearAsync(planId, cancellationToken);
 
+    /// <summary>
+    /// Adds a recipe to a week's plan, or swaps it in for one of its meals, for a chosen number of servings. A week
+    /// with no plan yet gets a staged one. Leftover lunches and the shopping list catch up moments later, in the
+    /// background; the page hears about it on <c>/api/live</c>.
+    /// </summary>
+    [WolverinePost("/api/plans/meals")]
+    public static Task<PlanResponse> AddMeal(AddMealRequest request, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.AddMealAsync(request, cancellationToken);
+
     /// <summary>The plan for this week, or else the next upcoming one.</summary>
     [WolverineGet("/api/plans/current")]
     public static Task<PlanResponse> Current([FromServices] IPlanManager plans, CancellationToken cancellationToken) =>

@@ -23,6 +23,9 @@ internal sealed class PlannedMeal
     /// <summary>Portions to cook. Zero means "make the recipe once, as written".</summary>
     public int Portions { get; set; }
 
+    /// <summary>True when someone chose how many to cook for, so resizing the plan and leftover lunches leave <see cref="Portions"/> alone.</summary>
+    public bool PortionsChosen { get; set; }
+
     /// <summary>Optional meals are planned but their groceries are marked as skippable.</summary>
     public bool IsOptional { get; set; }
 

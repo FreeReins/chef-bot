@@ -71,6 +71,18 @@ public sealed class PlanTools(IPlanManager plans)
             new ReplaceMealRequest(recipeId, customTitle is null ? null : new CustomMealRequest(customTitle, customIngredients ?? [])),
             cancellationToken));
 
+    [McpServerTool(Name = "add_meal")]
+    [Description("Adds a library recipe to a week's plan, or swaps it in for one of its meals, optionally for a chosen number of servings. A week with no plan yet gets a staged one. The shopping list catches up a moment later.")]
+    public Task<PlanResponse> AddMeal(
+        [Description("The library recipe to add.")] Guid recipeId,
+        [Description("The Sunday the week starts on (yyyy-MM-dd).")] DateOnly weekStart,
+        [Description("Which meal it is: Breakfast, Lunch, Dinner, Snack, Sweet or Drink.")] MealSlot slot,
+        [Description("The day (yyyy-MM-dd) within the week. Leave out for a snack, sweet or drink made on any day.")] DateOnly? date = null,
+        [Description("How many servings to cook, from 1 to 50. Leave out to cook for the plan's number of people.")] int? servings = null,
+        [Description("The id of a meal on the plan to swap for this recipe. Leave out to add it alongside.")] Guid? replaces = null,
+        CancellationToken cancellationToken = default) =>
+        McpErrors.Explain(() => plans.AddMealAsync(new AddMealRequest(recipeId, weekStart, date, slot, servings, replaces), cancellationToken));
+
     [McpServerTool(Name = "move_meal")]
     [Description("Moves a dinner or breakfast to another day of its week. A meal of the same kind already on that day swaps places with it.")]
     public Task<PlanResponse> MoveMeal(

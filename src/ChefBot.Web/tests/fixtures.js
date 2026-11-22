@@ -101,6 +101,9 @@ function defaults() {
       return plan;
     },
     'GET /api/plans/*/ingredients': data.ingredients(),
+    // Adding a recipe from its page answers with the plan it went on; its shopping list follows later.
+    'POST /api/plans/meals': () => data.plan(),
+    'POST /api/plans/*/refresh': () => data.plan(),
     'GET /api/history': data.history(),
     'GET /api/achievements': data.achievements(),
     'POST /api/achievements/seen': reply(204),

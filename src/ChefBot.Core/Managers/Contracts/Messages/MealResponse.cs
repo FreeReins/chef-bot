@@ -13,6 +13,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="IsSlowCooker">True when the meal is made in a slow cooker.</param>
 /// <param name="Portions">Portions to cook. Zero means "make the recipe once, as written".</param>
 /// <param name="Ingredients">The names of the ingredients the meal uses.</param>
+/// <param name="PortionsChosen">True when someone chose how many the meal is for, so it doesn't follow the plan's number of people.</param>
 public sealed record MealResponse(
     Guid Id,
     DateOnly? Date,
@@ -25,4 +26,5 @@ public sealed record MealResponse(
     bool IsLeftover,
     bool IsSlowCooker,
     int Portions,
-    IReadOnlyList<string> Ingredients);
+    IReadOnlyList<string> Ingredients,
+    bool PortionsChosen = false);

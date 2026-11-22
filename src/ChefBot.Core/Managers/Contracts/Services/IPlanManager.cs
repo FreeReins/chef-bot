@@ -51,6 +51,19 @@ public interface IPlanManager
     Task<PlanResponse> ReplaceMealAsync(Guid planId, Guid mealId, ReplaceMealRequest request, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Adds a recipe to a week's plan, or swaps it in for one of its meals, for a chosen number of servings. A week
+    /// with no plan yet gets a staged one. The leftovers and shopping list are left to <see cref="CatchUpAsync"/>,
+    /// run when <see cref="MealAdded"/> is handled, so the returned plan's shopping list may be a step behind.
+    /// </summary>
+    Task<PlanResponse> AddMealAsync(AddMealRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Brings a plan's leftover lunches and shopping list in line with its meals and the pantry, after a change that
+    /// left that for later (<see cref="MealAdded"/>). Returns false when the plan has been removed since.
+    /// </summary>
+    Task<bool> CatchUpAsync(Guid planId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Moves a dinner or breakfast to another day of its week, swapping it with a meal of the same kind already there.
     /// Leftover lunches and the shopping list follow.
     /// </summary>

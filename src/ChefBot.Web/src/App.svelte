@@ -31,6 +31,7 @@
   import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
   import Refrigerator from '@lucide/svelte/icons/refrigerator';
   import ChefHat from '@lucide/svelte/icons/chef-hat';
+  import BookOpenText from '@lucide/svelte/icons/book-open-text';
   import ScrollText from '@lucide/svelte/icons/scroll-text';
   import Users from '@lucide/svelte/icons/users';
   import SettingsIcon from '@lucide/svelte/icons/settings';
@@ -42,7 +43,7 @@
     { key: 'plan', label: 'Plan', icon: CalendarDays },
     { key: 'shopping', label: 'Shopping', icon: ShoppingCart },
     { key: 'pantry', label: 'Pantry', icon: Refrigerator },
-    { key: 'recipes', label: 'Recipes', icon: ChefHat },
+    { key: 'recipes', label: 'Recipes', icon: BookOpenText },
     { key: 'history', label: 'History', icon: ScrollText },
     { key: 'people', label: 'People', icon: Users, adminOnly: true },
     { key: 'settings', label: 'Settings', icon: SettingsIcon },

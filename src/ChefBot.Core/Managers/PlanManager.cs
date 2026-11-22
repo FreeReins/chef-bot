@@ -13,7 +13,7 @@ namespace ChefBot.Core.Managers;
 /// <inheritdoc cref="IPlanManager"/>
 /// <remarks>
 /// Every change ends in <see cref="ReconcileAsync"/>, so leftover lunches and the shopping list always follow the
-/// meals and the pantry. Changes run one at a time (<see cref="PlanWriteLock"/>).
+/// meals and the pantry. Adding a recipe leaves that to <see cref="CatchUpAsync"/>, run in the background. Changes run one at a time (<see cref="PlanWriteLock"/>).
 /// </remarks>
 internal sealed partial class PlanManager(
     IPlanAccess plans,

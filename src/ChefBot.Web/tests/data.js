@@ -71,6 +71,20 @@ export const nextPlan = () => ({
   notes: [],
 });
 
+/** The Sunday next week starts on (yyyy-mm-dd), as the page works it out in the tests' time zone, UTC. */
+export function nextSunday() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - now.getUTCDay() + 7)).toISOString().slice(0, 10);
+}
+
+/** plan(), moved to the week starting `weekStart`, for screens that only offer days still to come. */
+export function planOn(weekStart, status = 'Staged') {
+  const moved = plan(status);
+  const days = Math.round((Date.parse(weekStart) - Date.parse(moved.weekStart)) / 86400000);
+  const shift = (iso) => (iso ? new Date(Date.parse(iso) + days * 86400000).toISOString().slice(0, 10) : iso);
+  return { ...moved, weekStart: shift(moved.weekStart), weekEnd: shift(moved.weekEnd), meals: moved.meals.map((meal) => ({ ...meal, date: shift(meal.date) })) };
+}
+
 /** PlanSummaryResponse for a plan. */
 export const summary = ({ id, weekStart, weekEnd, status, styleName }) => ({ id, weekStart, weekEnd, status, styleName });
 
@@ -185,7 +199,12 @@ export const recipes = () => [
       { id: '00000000-0000-4000-8000-000000000401', url: '/api/test-images/1.png' },
       { id: '00000000-0000-4000-8000-000000000402', url: '/api/test-images/2.png' },
     ],
-    ingredientDetails: [{ text: '600 g fish fillets', quantity: 600, unit: 'g', name: 'fish fillets', note: null }],
+    ingredientDetails: [
+      { text: '600 g fish fillets', quantity: 600, unit: 'g', name: 'fish fillets', note: null },
+      { text: '1/2 head cabbage', quantity: 0.5, unit: 'head', name: 'cabbage', note: null },
+      { text: '3 limes', quantity: 3, unit: '', name: 'lime', note: null },
+      { text: '8 tortillas', quantity: 8, unit: '', name: 'tortilla', note: null },
+    ],
     stepDetails: [
       { text: 'Preheat the oven to 200°C. Shred the cabbage and dress it with lime and salt.', timers: [],
         headStart: { kind: 'Preheat', text: 'Preheat the oven to 200°C' }, ingredients: [1, 2] },

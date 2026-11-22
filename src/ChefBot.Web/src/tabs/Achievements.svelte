@@ -8,7 +8,7 @@
   import { app, loadAchievements } from '../lib/app.svelte.js';
   import KitchenQuest from '../components/KitchenQuest.svelte';
   import { BADGES, MEDALS, RANKS, badgeName, badgeCount, badgeQuip, badgeNext, points } from '../lib/achievements.js';
-  import { popIn } from '../lib/motion.js';
+  import { deal, popIn, rise } from '../lib/motion.js';
   import ChefHat from '@lucide/svelte/icons/chef-hat';
   import Award from '@lucide/svelte/icons/award';
 
@@ -42,7 +42,7 @@
       <p class="muted">Polishing the trophies…</p>
     </div>
   {:else}
-    <div class="card rank">
+    <div class="card rank" in:rise|global={{ duration: 260 }}>
       <span class="hat" aria-hidden="true"><ChefHat size={26} /></span>
       <div class="rank-text">
         <h3>{rank.name}</h3>
@@ -63,9 +63,9 @@
 
     <h3 class="badges-heading">Badges</h3>
     <ul class="badges">
-      {#each progress.badges as badge (badge.kind)}
+      {#each progress.badges as badge, index (badge.kind)}
         {@const next = badgeNext(badge)}
-        <li class="badge {badge.tier > 0 ? MEDALS[badge.tier - 1] : 'unstarted'}">
+        <li class="badge {badge.tier > 0 ? MEDALS[badge.tier - 1] : 'unstarted'}" style:--index={index} in:deal|global={{ index }}>
           {#key badge.tier}
             <span class="medal" aria-hidden="true" in:popIn>{BADGES[badge.kind].emoji}</span>
           {/key}
@@ -115,9 +115,35 @@
   .bar span { background: var(--medal); }
   .badge.unstarted .bar span { background: var(--muted); }
   .badge.gold .medal { background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--gold) 45%, var(--panel)), color-mix(in srgb, var(--gold) 18%, var(--panel))); }
+  /* Hovering a badge picks it out in its medal's colour; an unstarted one shows a hint of the colour it could have. */
+  .badge { transition: border-color .2s, box-shadow .2s, background-color .2s; }
+  .badge:hover { border-color: color-mix(in srgb, var(--medal) 70%, var(--line));
+    box-shadow: 0 .4rem 1.1rem -.5rem var(--shadow), 0 0 0 1px color-mix(in srgb, var(--medal) 30%, transparent); }
+  .badge.gold:hover { box-shadow: 0 .4rem 1.1rem -.5rem var(--shadow), 0 0 1.1rem -.2rem color-mix(in srgb, var(--gold) 55%, transparent); }
+  .badge.unstarted:hover { background: var(--panel); }
+  .badge.unstarted:hover .medal { filter: grayscale(.4); opacity: .85; }
+  .medal { position: relative; overflow: hidden; }
+  .meter span { position: relative; overflow: hidden; }
   @media (prefers-reduced-motion: no-preference) {
-    .meter span, .bar span { transition: width .6s cubic-bezier(.3, .9, .3, 1); }
+    .meter span, .bar span { transform-origin: left; transition: width .6s cubic-bezier(.3, .9, .3, 1);
+      animation: fill .9s cubic-bezier(.3, .9, .3, 1) both; }
+    .meter span { animation-delay: .15s; }
+    .bar span { animation-delay: calc(.25s + min(var(--index, 0), 12) * 35ms); }
+    /* A glint runs along the rank bar now and then, and across the gold medals. */
+    .meter span::after, .badge.gold .medal::after { content: ""; position: absolute; inset: 0; translate: -100% 0;
+      background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / .5), transparent 70%); animation: glint 5s ease-in-out 1.2s infinite; }
     .badge.gold .medal { animation: shine 4s ease-in-out infinite; }
+    .badge { transition: border-color .2s, box-shadow .2s, background-color .2s, translate .25s cubic-bezier(.3, 1.5, .5, 1); }
+    .badge:hover { translate: 0 -3px; }
+    .medal { transition: scale .3s cubic-bezier(.3, 1.6, .5, 1), rotate .3s cubic-bezier(.3, 1.6, .5, 1), filter .2s, opacity .2s; }
+    .badge:hover .medal { scale: 1.12; rotate: -10deg; }
+    .badge:not(.unstarted):hover .bar span { filter: brightness(1.15) saturate(1.2); }
+    .hat { transition: scale .3s cubic-bezier(.3, 1.6, .5, 1), rotate .3s cubic-bezier(.3, 1.6, .5, 1); }
+    .rank:hover .hat { scale: 1.1; rotate: -12deg; }
+    .empty-icon { animation: polish 1.8s ease-in-out infinite; }
   }
   @keyframes shine { 0%, 85%, 100% { transform: none; } 90% { transform: rotate(-8deg) scale(1.08); } 95% { transform: rotate(6deg) scale(1.08); } }
+  @keyframes fill { from { scale: 0 1; } }
+  @keyframes glint { 0%, 70% { translate: -100% 0; } 100% { translate: 100% 0; } }
+  @keyframes polish { 0%, 100% { rotate: 0deg; scale: 1; } 30% { rotate: -10deg; scale: 1.06; } 60% { rotate: 8deg; } }
 </style>

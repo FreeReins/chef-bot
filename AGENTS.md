@@ -37,7 +37,8 @@ For a new stored table, a new manager operation or endpoint, a new web screen, o
   the error policies in `CoreRegistration`. Every message gets a `[MessageIdentity("chefbot.<name>.v1")]`, is
   listed in `ContractJsonContext`, and only gains fields; a breaking change is a new `.v2`.
 - Ingredient needs come only from `MealRequirements`. Anything that changes a plan goes through `PlanManager`,
-  which ends with `ReconcileAsync` so leftovers and the shopping list stay in step.
+  which ends with `ReconcileAsync` so leftovers and the shopping list stay in step, or publishes an event whose
+  `plans`-queue handler calls `CatchUpAsync` (`MealAdded`).
 - Admin-only endpoints use `[Authorize(Policy = Sessions.AdminPolicy)]`; managers don't check roles.
 - The schema comes from `EnsureCreated` and is never upgraded: after changing an entity, tell the user to run
   `./dev.sh reset`. Don't add migrations unless asked. A new stored entity also goes in `BackupAccess.Tables`.

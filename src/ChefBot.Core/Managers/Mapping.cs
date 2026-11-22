@@ -42,7 +42,8 @@ internal static partial class Mapping
         meal.IsLeftover,
         meal.Recipe?.IsSlowCooker ?? false,
         meal.Portions,
-        meal.Ingredients.Select(ingredient => ingredient.DisplayName).Distinct().ToList());
+        meal.Ingredients.Select(ingredient => ingredient.DisplayName).Distinct().ToList(),
+        meal.PortionsChosen);
 
     public static AlternativesResponse ToResponse(this Suggestions suggestions, PlannedMeal meal) => new(
         meal.ToResponse(),

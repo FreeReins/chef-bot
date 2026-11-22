@@ -43,6 +43,8 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(ManualShoppingItemResponse))]
 [JsonSerializable(typeof(IReadOnlyList<ManualShoppingItemResponse>))]
 [JsonSerializable(typeof(MoveMealRequest))]
+[JsonSerializable(typeof(AddMealRequest))]
+[JsonSerializable(typeof(MealAdded))]
 [JsonSerializable(typeof(PlanSummaryResponse))]
 [JsonSerializable(typeof(IReadOnlyList<PlanSummaryResponse>))]
 [JsonSerializable(typeof(PlanStylesResponse))]

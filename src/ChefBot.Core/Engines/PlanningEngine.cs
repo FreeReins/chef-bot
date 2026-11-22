@@ -91,15 +91,11 @@ internal sealed partial class PlanningEngine(IngredientCatalog catalog, PlannerO
                 Recipe = kept.Recipe,
                 RecipeId = kept.RecipeId,
                 Title = kept.Title,
-                Portions = PortionsFor(kept.Slot, run.Request.People),
+                Portions = kept.PortionsChosen ? kept.Portions : PortionsFor(kept.Slot, run.Request.People),
+                PortionsChosen = kept.PortionsChosen,
                 IsOptional = kept.IsOptional,
                 CustomIngredients = kept.CustomIngredients
-                    .Select(ingredient => new PlannedMealIngredient
-                    {
-                        Key = ingredient.Key,
-                        CatalogName = ingredient.CatalogName,
-                        DisplayName = ingredient.DisplayName,
-                    })
+                    .Select(ingredient => new PlannedMealIngredient { Key = ingredient.Key, CatalogName = ingredient.CatalogName, DisplayName = ingredient.DisplayName })
                     .ToList(),
             });
 

@@ -77,7 +77,8 @@ internal sealed class TestCore
 
     /// <summary>
     /// Does what the background handlers do in the app with the events published since the last call: writes the
-    /// food history, and brings the open plans in line after a pantry, store or settings change.
+    /// food history, brings the open plans in line after a pantry, store or settings change, and a plan's shopping list
+    /// in line after a recipe is added to it.
     /// </summary>
     public async Task HandleEventsAsync()
     {
@@ -90,6 +91,9 @@ internal sealed class TestCore
                     break;
                 case PantryChanged or GroceryStoresChanged or PlanningSettingsChanged:
                     await PlanManager().RefreshOpenPlansAsync(default);
+                    break;
+                case MealAdded added:
+                    await PlanManager().CatchUpAsync(added.PlanId, default);
                     break;
             }
         }

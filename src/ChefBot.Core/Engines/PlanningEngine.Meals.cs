@@ -21,7 +21,7 @@ internal sealed partial class PlanningEngine
         if (plan.LeftoverLunches)
         {
             var dinners = plan.Meals
-                .Where(meal => meal is { Slot: MealSlot.Dinner, Date: not null } && meal.Status != MealStatus.Skipped)
+                .Where(meal => meal is { Slot: MealSlot.Dinner, Date: not null, PortionsChosen: false } && meal.Status != MealStatus.Skipped)
                 .OrderByDescending(meal => meal.Date)
                 .ToList();
 
@@ -42,7 +42,7 @@ internal sealed partial class PlanningEngine
             }
         }
 
-        foreach (var dinner in plan.Meals.Where(meal => meal is { Slot: MealSlot.Dinner, Status: MealStatus.Planned }))
+        foreach (var dinner in plan.Meals.Where(meal => meal is { Slot: MealSlot.Dinner, Status: MealStatus.Planned, PortionsChosen: false }))
         {
             var lunches = plan.Meals.Count(meal => meal.LeftoverOfMealId == dinner.Id);
             dinner.Portions = plan.People * (1 + lunches);
@@ -77,7 +77,7 @@ internal sealed partial class PlanningEngine
     public static void Resize(MealPlan plan, int people)
     {
         plan.People = people;
-        foreach (var meal in plan.Meals.Where(meal => meal is { IsLeftover: false, Status: MealStatus.Planned }))
+        foreach (var meal in plan.Meals.Where(meal => meal is { IsLeftover: false, Status: MealStatus.Planned, PortionsChosen: false }))
         {
             meal.Portions = PortionsFor(meal.Slot, people);
         }
@@ -90,9 +90,45 @@ internal sealed partial class PlanningEngine
     public static int PortionsFor(MealSlot slot, int people) =>
         slot is MealSlot.Breakfast or MealSlot.Lunch or MealSlot.Dinner ? people : 0;
 
+    /// <summary>
+    /// Adds <paramref name="recipe"/> to the plan as a fresh meal on <paramref name="date"/> (none for any day). With
+    /// <paramref name="servings"/> it is made for that many and keeps that size; without, it is sized for the plan's people.
+    /// </summary>
+    public static PlannedMeal AddRecipe(MealPlan plan, Recipe recipe, DateOnly? date, MealSlot slot, int? servings)
+    {
+        var meal = ForRecipe(recipe, slot, date, PortionsFor(slot, plan.People));
+        ChoosePortions(meal, servings);
+        plan.Meals.Add(meal);
+        return meal;
+    }
+
+    /// <summary>Fixes the meal at <paramref name="servings"/> portions. Null leaves it sized for the plan's people.</summary>
+    public static void ChoosePortions(PlannedMeal meal, int? servings)
+    {
+        if (servings is int chosen)
+        {
+            meal.Portions = chosen;
+            meal.PortionsChosen = true;
+        }
+    }
+
+    /// <summary>
+    /// A staged plan for the week with no meals yet, in <paramref name="style"/>, for when a recipe is added before the
+    /// week is planned.
+    /// </summary>
+    public static MealPlan EmptyPlan(DateOnly weekStart, PlanStyle style, int people, DateTimeOffset createdAt) => new()
+    {
+        WeekStart = weekStart,
+        CreatedAt = createdAt,
+        StyleName = style.Name,
+        LeftoverLunches = style.LeftoverLunches,
+        People = people,
+    };
+
     private static void ResetAsFreshMeal(PlannedMeal meal, int people)
     {
         meal.Portions = PortionsFor(meal.Slot, people);
+        meal.PortionsChosen = false;
         meal.LeftoverOfMealId = null;
         meal.Status = MealStatus.Planned;
     }

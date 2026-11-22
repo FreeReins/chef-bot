@@ -218,6 +218,23 @@ const VIEWS = [
   },
   { name: 'a recipe, printed', path: `/recipes/${data.ids.tacos}`, act: (page) => page.emulateMedia({ media: 'print' }) },
   { name: 'a recipe without photos', path: `/recipes/${data.ids.stew}` },
+  { name: 'a recipe, scaled to 8', path: `/recipes/${data.ids.tacos}?serves=8` },
+  {
+    name: 'adding a recipe to the plan', path: `/recipes/${data.ids.tacos}/plan`, answers: weeks(data.planOn(data.nextSunday())),
+    act: (page) => page.getByRole('button', { name: /^Next week/ }).click(),
+  },
+  {
+    name: 'adding a recipe to a taken slot', path: `/recipes/${data.ids.tacos}/plan`, answers: weeks(data.planOn(data.nextSunday())),
+    act: async (page) => {
+      await page.getByRole('button', { name: /^Next week/ }).click();
+      await page.getByRole('button', { name: /Beef and Barley Stew planned$/ }).click();
+      await page.getByRole('radio', { name: 'Replace it' }).waitFor();
+    },
+  },
+  {
+    name: 'adding a recipe with no plan that week', path: `/recipes/${data.ids.tacos}/plan`, answers: noPlan,
+    act: (page) => page.getByText('No plan for this week yet.', { exact: false }).waitFor(),
+  },
   {
     name: 'a recipe, changing your review', path: `/recipes/${data.ids.tacos}`,
     act: (page) => page.getByRole('button', { name: /^Change your review/ }).click(),

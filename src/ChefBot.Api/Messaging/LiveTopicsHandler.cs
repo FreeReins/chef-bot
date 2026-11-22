@@ -14,6 +14,8 @@ public static class LiveTopicsHandler
 {
     public static void Handle(PlanChanged message, LiveUpdates live) => live.Broadcast(LiveTopics.Plan);
 
+    public static void Handle(MealAdded message, LiveUpdates live) => live.Broadcast(LiveTopics.Plan);
+
     public static void Handle(PlanStaged message, LiveUpdates live) => live.Broadcast(LiveTopics.Plan);
 
     public static void Handle(PlanConfirmed message, LiveUpdates live) => live.Broadcast(LiveTopics.Plan);

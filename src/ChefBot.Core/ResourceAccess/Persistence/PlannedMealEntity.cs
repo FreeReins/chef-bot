@@ -21,6 +21,8 @@ internal sealed class PlannedMealEntity
 
     public int Portions { get; set; }
 
+    public bool PortionsChosen { get; set; }
+
     public bool IsOptional { get; set; }
 
     public Guid? LeftoverOfMealId { get; set; }

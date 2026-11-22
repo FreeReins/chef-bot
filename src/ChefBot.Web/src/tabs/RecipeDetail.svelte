@@ -1,36 +1,36 @@
-<!-- One recipe on its own page, /recipes/{id}, so it can be bookmarked: its photos, ingredients, steps and reviews
-     (RecipeReviews.svelte, with their average beside its name). Editing it (/recipes/{id}/edit) and managing its photos (/recipes/{id}/photos) open in dialogs over the page,
-     and cooking mode (/recipes/{id}/cook, RecipeCook.svelte) over the whole screen; sharing it as text, printing it, downloading it
-     (as a PDF, Markdown, text or a schema.org file, RecipeDownloads.svelte) and archiving it are in the ⋯ menu. -->
+<!-- One recipe on its own page, /recipes/{id}, so it can be bookmarked: a masthead with its photos, name, times and the
+     things to do with it, then its ingredients (RecipeIngredients.svelte, scaled to the servings chosen there; ?serves=6
+     keeps the choice in the address), steps, notes and reviews (RecipeReviews.svelte). Cooking mode (/recipes/{id}/cook,
+     RecipeCook.svelte) opens over the whole screen, and adding it to the plan (/recipes/{id}/plan, RecipeAddToPlan.svelte),
+     editing it (/edit) and its photos (/photos, RecipePhotos.svelte) in dialogs. The ⋯ menu (RecipeMenu.svelte) has the rest. -->
 <script>
   import { onMount, tick } from 'svelte';
-  import { app, run, loadRecipes, toast, ask, loadRecipePage, watchRecipe } from '../lib/app.svelte.js';
-  import { go, closeDialog } from '../lib/addresses.js';
+  import { app, run, loadRecipes, toast, loadRecipePage, watchRecipe } from '../lib/app.svelte.js';
+  import { closeDialog } from '../lib/addresses.js';
   import { api } from '../lib/api.js';
   import { duration } from '../lib/format.js';
-  import { canShare, share, recipeText } from '../lib/exporting.js';
-  import Chip from '../components/Chip.svelte';
+  import { rise } from '../lib/motion.js';
+  import { scaledLines, servesFrom } from '../lib/scaling.js';
   import Modal from '../components/Modal.svelte';
-  import RecipeForm from './RecipeForm.svelte';
-  import RecipeCook from './RecipeCook.svelte';
-  import RecipeDownloads from '../components/RecipeDownloads.svelte';
   import FavouriteButton from '../components/FavouriteButton.svelte';
   import RecipeBadges from '../components/RecipeBadges.svelte';
+  import RecipeForm from './RecipeForm.svelte';
+  import RecipeCook from './RecipeCook.svelte';
   import RecipeReviews from './RecipeReviews.svelte';
+  import RecipeIngredients from './RecipeIngredients.svelte';
+  import RecipeMenu from './RecipeMenu.svelte';
+  import RecipePhotos from './RecipePhotos.svelte';
+  import RecipeAddToPlan from './RecipeAddToPlan.svelte';
   import CookingPot from '@lucide/svelte/icons/cooking-pot';
+  import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ExternalLink from '@lucide/svelte/icons/external-link';
-  import Images from '@lucide/svelte/icons/images';
-  import Pencil from '@lucide/svelte/icons/pencil';
-  import Ellipsis from '@lucide/svelte/icons/ellipsis';
-  import Archive from '@lucide/svelte/icons/archive';
-  import Share2 from '@lucide/svelte/icons/share-2';
-  import Copy from '@lucide/svelte/icons/copy';
-  import Printer from '@lucide/svelte/icons/printer';
-  import Trash2 from '@lucide/svelte/icons/trash-2';
-  import Plus from '@lucide/svelte/icons/plus';
-
-  const MAX_PHOTO_MB = 5;
+  import BookOpenText from '@lucide/svelte/icons/book-open-text';
+  import ImagePlus from '@lucide/svelte/icons/image-plus';
+  import Timer from '@lucide/svelte/icons/timer';
+  import Flame from '@lucide/svelte/icons/flame';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Users from '@lucide/svelte/icons/users';
 
   /**
    * "Back to recipes" is a link, so it can open in a new tab. When this page was opened from the list, a plain click
@@ -48,16 +48,20 @@
   let recipe = $state(null);
   let loaded = $state(false);
   let shownId = $state(null); // the photo shown large; the cover when none was picked
-  let uploading = $state(false);
-  let menuOpen = $state(false);
-  let menu = $state();
+  let chosen = $state(servesFrom(location.search, null)); // servings picked on this page; null for the recipe's own
 
   const base = $derived(`/recipes/${id}`);
+  const query = $derived(chosen == null ? '' : `?serves=${chosen}`);
+  const link = (dialog) => `${base}/${dialog}${query}`;
+  const serves = $derived(chosen ?? recipe?.servings ?? 1);
   const images = $derived(recipe?.images ?? []);
   const shown = $derived(images.find((image) => image.id === shownId) ?? images[0]);
-  const times = $derived(recipe ? [
-    ['Prep', recipe.prepMinutes], ['Cook', recipe.cookMinutes], ['Total', recipe.totalMinutes],
-  ].filter(([, minutes]) => minutes) : []);
+  const facts = $derived(recipe ? [
+    ['Prep', recipe.prepMinutes && duration(recipe.prepMinutes), Timer],
+    ['Cook', recipe.cookMinutes && duration(recipe.cookMinutes), Flame],
+    ['Total', recipe.totalMinutes && duration(recipe.totalMinutes), Clock],
+    ['Serves', `${serves}`, Users],
+  ].filter(([, value]) => value) : []);
   const sourceHost = $derived.by(() => {
     try { return recipe?.sourceUrl ? new URL(recipe.sourceUrl).host : null; } catch { return recipe.sourceUrl; }
   });
@@ -80,7 +84,13 @@
   run(() => loadRecipePage(id, show).finally(() => (loaded = true)));
   onMount(() => watchRecipe(id, () => base, show));
 
-  const close = () => closeDialog(base);
+  const close = () => closeDialog(base + query);
+
+  /** Shows the recipe for `count` servings, and keeps the choice in the address so a reload or a shared link keeps it. */
+  function choose(count) {
+    chosen = count === recipe.servings ? null : count;
+    history.replaceState(history.state, '', `${location.pathname}${query}`);
+  }
 
   // In-page links: the address stays the same, the section scrolls into view and takes focus.
   async function jump(event, key) {
@@ -90,21 +100,6 @@
     await tick();
     target?.focus({ preventScroll: true });
   }
-
-  // The ⋯ menu closes on Escape, on a click elsewhere, and once focus leaves it.
-  $effect(() => {
-    if (!menuOpen) return;
-    const away = (event) => { if (!menu?.contains(event.target)) menuOpen = false; };
-    const escape = (event) => { if (event.key === 'Escape') { menuOpen = false; menu?.querySelector('button')?.focus(); } };
-    document.addEventListener('pointerdown', away);
-    document.addEventListener('focusin', away);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', away);
-      document.removeEventListener('focusin', away);
-      document.removeEventListener('keydown', escape);
-    };
-  });
 
   async function save(draft) {
     let saved = false;
@@ -117,153 +112,86 @@
     });
     return saved;
   }
-
-  // Sharing hands the recipe as text to the phone's share sheet; without one it is copied to paste anywhere.
-  function shareRecipe() {
-    menuOpen = false;
-    run(async () => {
-      const done = await share(recipe.name, recipeText(recipe));
-      if (done === 'copied') toast(`${recipe.name} was copied as text. Paste it wherever you need it.`);
-    });
-  }
-
-  function print() {
-    menuOpen = false;
-    window.print();
-  }
-
-  async function archive() {
-    menuOpen = false;
-    if (!(await ask({ title: `Archive ${recipe.name}?`, message: "It won't be planned again, and past plans keep showing it.",
-      confirmLabel: 'Archive', danger: true }))) return;
-    const name = recipe.name;
-    run(async () => {
-      await api('DELETE', `/api/recipes/${recipe.id}`);
-      await loadRecipes();
-      await go('/recipes');
-      toast(`${name} was archived and won't be planned again.`);
-    });
-  }
-
-  /** The file's bytes as base64, the way the API takes them. */
-  function base64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result).split(',', 2)[1] ?? '');
-      reader.onerror = () => reject(new Error(`${file.name} couldn't be read. Choose the file again.`));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function addPhoto(event) {
-    const input = event.currentTarget;
-    const file = input.files?.[0];
-    input.value = ''; // so the same file can be chosen again
-    if (!file) return;
-    if (file.size > MAX_PHOTO_MB * 1024 * 1024) {
-      toast(`${file.name} is larger than ${MAX_PHOTO_MB} MB. Choose a smaller photo.`);
-      return;
-    }
-    uploading = true;
-    await run(async () => {
-      const saved = await api('POST', `/api/recipes/${recipe.id}/images`, { data: await base64(file) });
-      show(saved);
-      shownId = saved.images.at(-1)?.id ?? null;
-      toast('Photo added.');
-    });
-    uploading = false;
-  }
-
-  async function removePhoto(image) {
-    if (!(await ask({ title: 'Remove this photo?', message: `It is deleted from ${recipe.name} for good.`,
-      confirmLabel: 'Remove', danger: true }))) return;
-    run(async () => {
-      show(await api('DELETE', `/api/recipes/${recipe.id}/images/${image.id}`));
-      shownId = null;
-      toast('Photo removed.');
-    });
-  }
 </script>
 
 <p class="back-row"><a class="button back" href="/recipes" onclick={backToList}><ArrowLeft size={16} />Back to recipes</a></p>
 
 {#if !loaded}
-  <!-- Until the recipe arrives, its outline stands in: the photo, the name, and the ingredients beside the steps. -->
+  <!-- Until the recipe arrives, its outline stands in: the photo beside the name, and the ingredients beside the steps. -->
   <div role="status" aria-label="Loading the recipe">
-    <div aria-hidden="true">
+    <div class="masthead" aria-hidden="true">
       <span class="skeleton hero-ghost"></span>
-      <span class="skeleton line title-ghost"></span>
-      <span class="skeleton line" style:width="60%"></span>
-      <div class="cook">
-        <div class="card">
-          {#each [80, 65, 72, 55, 70, 60] as width, index (index)}<span class="skeleton line" style:width="{width}%"></span>{/each}
-        </div>
-        <div class="card">
-          {#each [95, 88, 92, 70, 90, 84, 60] as width, index (index)}<span class="skeleton line" style:width="{width}%"></span>{/each}
-        </div>
+      <div>
+        <span class="skeleton line" style:width="30%"></span>
+        <span class="skeleton line title-ghost"></span>
+        <span class="skeleton line" style:width="85%"></span>
+        <span class="skeleton line" style:width="60%"></span>
+      </div>
+    </div>
+    <div class="cook" aria-hidden="true">
+      <div class="card">
+        {#each [80, 65, 72, 55, 70, 60] as width, index (index)}<span class="skeleton line" style:width="{width}%"></span>{/each}
+      </div>
+      <div class="card">
+        {#each [95, 88, 92, 70, 90, 84, 60] as width, index (index)}<span class="skeleton line" style:width="{width}%"></span>{/each}
       </div>
     </div>
   </div>
 {:else if !recipe}
   <div class="card empty">
+    <span class="empty-icon" style="--area: var(--area-recipes)" aria-hidden="true"><BookOpenText size={28} /></span>
     <h2>That recipe isn't in your library</h2>
     <p class="muted">It may have been archived, or the link is from another ChefBot. Pick one from your recipes instead.</p>
   </div>
 {:else}
-  <article class="recipe">
-    {#if shown}
-      <div class="hero">
-        <img class="cover" src={shown.url} alt={recipe.name}>
-        {#if images.length > 1}
-          <div class="strip">
-            {#each images as image, index (image.id)}
-              <button class="thumb" class:current={image.id === shown.id} onclick={() => (shownId = image.id)}
-                      aria-label="Show photo {index + 1}" aria-pressed={image.id === shown.id}>
-                <img src={image.url} alt="" loading="lazy">
-              </button>
-            {/each}
-          </div>
+  <article class="recipe" in:rise>
+    <header class="masthead" class:bare={!shown}>
+      <div class="photo">
+        {#if shown}
+          <img class="cover" src={shown.url} alt={recipe.name}>
+          {#if images.length > 1}
+            <div class="strip">
+              {#each images as image, index (image.id)}
+                <button class="thumb" class:current={image.id === shown.id} onclick={() => (shownId = image.id)}
+                        aria-label="Show photo {index + 1}" aria-pressed={image.id === shown.id}>
+                  <img src={image.url} alt="" loading="lazy">
+                </button>
+              {/each}
+            </div>
+          {/if}
+        {:else}
+          <a class="placeholder" href={link('photos')}>
+            <BookOpenText size={34} aria-hidden="true" /><span><ImagePlus size={14} aria-hidden="true" /> Add a photo</span>
+          </a>
         {/if}
       </div>
-    {/if}
 
-    <header class="title-row">
-      <h2>{recipe.name}</h2>
-      <div class="row-actions">
-        <a class="button primary with-icon" href="{base}/cook"><CookingPot size={16} />Start cooking</a>
-        <FavouriteButton {recipe} size={16} label="Favourite" onchange={(list) => (recipe.favouredBy = list)} />
-        <a class="button with-icon" href="{base}/edit"><Pencil size={16} />Edit</a>
-        <a class="button with-icon" href="{base}/photos"><Images size={16} />Photos ({images.length})</a>
-        <div class="menu" bind:this={menu}>
-          <button type="button" class="with-icon" aria-label="More actions for {recipe.name}" aria-expanded={menuOpen}
-                  aria-controls="recipe-menu" onclick={() => (menuOpen = !menuOpen)}><Ellipsis size={18} /></button>
-          <div id="recipe-menu" class="menu-panel" hidden={!menuOpen}>
-            {#if canShare()}
-              <button type="button" class="with-icon" onclick={shareRecipe}><Share2 size={16} />Share recipe</button>
-            {:else}
-              <button type="button" class="with-icon" onclick={shareRecipe}><Copy size={16} />Copy as text</button>
-            {/if}
-            <button type="button" class="with-icon" onclick={print}><Printer size={16} />Print recipe</button>
-            <RecipeDownloads href="/api/recipes/{recipe.id}/export" onpick={() => (menuOpen = false)} />
-            <button type="button" class="with-icon bad-text" onclick={archive}><Archive size={16} />Archive recipe</button>
-          </div>
+      <div class="intro">
+        <p class="eyebrow">{recipe.course}{recipe.isSlowCooker ? ' · Slow cooker' : ''}</p>
+        <h2>{recipe.name}</h2>
+        <RecipeBadges {recipe} large />
+        {#if recipe.description}<p class="description">{recipe.description}</p>{/if}
+
+        <ul class="facts" aria-label="At a glance">
+          {#each facts as [label, value, Icon] (label)}
+            <li class:scaled={label === 'Serves' && chosen != null}>
+              <Icon size={18} aria-hidden="true" /><span class="label">{label}</span><span class="value">{value}</span>
+            </li>
+          {/each}
+        </ul>
+
+        <div class="row-actions">
+          <a class="button primary with-icon grow" href={link('cook')}><CookingPot size={16} />Start cooking</a>
+          <a class="button with-icon grow" href={link('plan')}><CalendarPlus size={16} />Add to plan</a>
+          <FavouriteButton {recipe} size={16} label="Favourite" onchange={(list) => (recipe.favouredBy = list)} />
+          <RecipeMenu {recipe} {link} />
         </div>
+
+        {#if recipe.tags.length}
+          <ul class="chips tags" aria-label="Tags">{#each recipe.tags as tag (tag)}<li class="chip">#{tag}</li>{/each}</ul>
+        {/if}
       </div>
     </header>
-
-    <div class="chips">
-      <Chip>{recipe.course}</Chip>
-      <Chip>Serves {recipe.servings}</Chip>
-      {#each times as [label, minutes] (label)}<Chip>{label} {duration(minutes)}</Chip>{/each}
-      {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
-      {#each recipe.tags as tag (tag)}<Chip>#{tag}</Chip>{/each}
-    </div>
-    <RecipeBadges {recipe} large />
-
-    {#if recipe.description}<p class="description">{recipe.description}</p>{/if}
-    {#if !shown}
-      <p class="muted"><a href="{base}/photos">Add a photo</a> so this recipe is easy to spot in the list.</p>
-    {/if}
 
     <nav class="sections" aria-label="Parts of this recipe">
       {#each sections as section (section.key)}
@@ -272,12 +200,7 @@
     </nav>
 
     <div class="cook">
-      <section class="card ingredients" id="recipe-ingredients" tabindex="-1" aria-labelledby="recipe-ingredients-title">
-        <h3 id="recipe-ingredients-title">Ingredients ({recipe.ingredients.length})</h3>
-        <ul class="plain">
-          {#each recipe.ingredients as line, index (index)}<li>{line}</li>{/each}
-        </ul>
-      </section>
+      <RecipeIngredients {recipe} {serves} onserves={choose} />
       <section class="card" id="recipe-steps" tabindex="-1" aria-labelledby="recipe-steps-title">
         <h3 id="recipe-steps-title">Steps</h3>
         {#if recipe.instructions.length}
@@ -285,7 +208,7 @@
             {#each recipe.instructions as step, index (index)}<li>{step}</li>{/each}
           </ol>
         {:else}
-          <p class="muted">No steps yet. <a href="{base}/edit">Edit the recipe</a> to add them.</p>
+          <p class="muted">No steps yet. <a href={link('edit')}>Edit the recipe</a> to add them.</p>
         {/if}
       </section>
     </div>
@@ -310,71 +233,67 @@
   </article>
 
   {#if app.recipeDialog === 'cook'}
-    <RecipeCook {recipe} onclose={close} />
+    <RecipeCook {recipe} {serves} lines={scaledLines(recipe, serves).map((line) => line.text)} onclose={close} />
+  {:else if app.recipeDialog === 'plan'}
+    <RecipeAddToPlan {recipe} {serves} onclose={close} />
   {:else if app.recipeDialog === 'edit'}
     <Modal wide title="Edit {recipe.name}" onclose={close}>
       <RecipeForm {recipe} button="Save changes" {save} cancel={close} plain />
     </Modal>
   {:else if app.recipeDialog === 'photos'}
-    <Modal title="Photos of {recipe.name}" onclose={close}>
-      {#if images.length}
-        <p class="muted">The first photo is the one shown in the recipe list.</p>
-        <ul class="photo-grid">
-          {#each images as image, index (image.id)}
-            <li>
-              <img src={image.url} alt="Photo {index + 1}" loading="lazy">
-              <button type="button" class="small remove-photo" onclick={() => removePhoto(image)}
-                      aria-label="Remove photo {index + 1}"><Trash2 size={16} /></button>
-            </li>
-          {/each}
-        </ul>
-      {:else}
-        <p class="muted">No photos yet.</p>
-      {/if}
-      <div class="photo-actions">
-        <label class="add-photo" class:busy={uploading}>
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onchange={addPhoto} disabled={uploading}>
-          <Plus size={16} />{uploading ? 'Adding…' : 'Add photo'}
-        </label>
-        <span class="muted">JPEG, PNG, WebP or GIF, up to {MAX_PHOTO_MB} MB.</span>
-        <button type="button" class="done" onclick={close}>Done</button>
-      </div>
-    </Modal>
+    <RecipePhotos {recipe} onclose={close} onsaved={(saved, photoId) => { show(saved); shownId = photoId; }} />
   {/if}
 {/if}
 
 <style>
   .back-row { margin: 1rem 0 0; }
 
-  .hero { margin-top: .75rem; }
-  .hero-ghost { margin-top: .75rem; height: min(26rem, 56vw); border-radius: .6rem; }
-  .title-ghost { width: min(22rem, 70%); height: 1.6rem; margin-top: 1rem; }
-  .cover { display: block; width: 100%; max-height: 26rem; object-fit: cover; border-radius: .6rem; background: var(--chip); }
+  /* The photo beside the name and what to do with it; stacked on narrow screens. Without a photo, a small tile stands in. */
+  .masthead { display: grid; gap: 1.25rem 1.75rem; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; margin-top: .75rem; }
+  .masthead.bare { grid-template-columns: 9rem minmax(0, 1fr); }
+  .hero-ghost { aspect-ratio: 4 / 3; border-radius: .9rem; }
+  .title-ghost { width: min(22rem, 80%); height: 1.8rem; }
+  .cover { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: .9rem; background: var(--chip);
+    box-shadow: 0 8px 28px var(--shadow); }
   .strip { display: flex; gap: .4rem; margin-top: .5rem; overflow-x: auto; }
-  .thumb { padding: 0; border: 2px solid transparent; border-radius: .35rem; background: none; flex: 0 0 auto; }
+  .thumb { padding: 0; border: 2px solid transparent; border-radius: .45rem; background: none; flex: 0 0 auto; }
   .thumb.current { border-color: var(--accent); }
-  .thumb img { display: block; width: 4.5rem; height: 3.5rem; object-fit: cover; border-radius: .25rem; }
+  .thumb img { display: block; width: 4.5rem; height: 3.5rem; object-fit: cover; border-radius: .3rem; }
+  .placeholder { display: grid; place-items: center; align-content: center; gap: .5rem; aspect-ratio: 1; border-radius: .9rem;
+    border: 2px dashed color-mix(in srgb, var(--area-recipes) 45%, var(--line)); color: var(--area-recipes); text-decoration: none;
+    background: color-mix(in srgb, var(--area-recipes) 8%, var(--panel)); }
+  .placeholder span { display: inline-flex; align-items: center; gap: .25rem; font-size: .8rem; color: var(--ink); }
+  .placeholder:hover { border-style: solid; }
 
-  .title-row { display: flex; flex-wrap: wrap; gap: .5rem 1rem; justify-content: space-between; align-items: center; margin-top: 1rem; }
-  .title-row h2 { margin: 0; min-width: 0; flex: 1 1 14rem; }
-  .menu { position: relative; }
-  .menu > button { height: 100%; }
-  .menu-panel { position: absolute; right: 0; top: calc(100% + .3rem); z-index: 5; min-width: 12rem; padding: .3rem;
-    background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; box-shadow: 0 6px 24px rgb(0 0 0 / .18); }
-  .menu-panel button { width: 100%; border: 0; justify-content: flex-start; font-size: .95rem; }
-  .menu-panel button:hover { background: var(--chip); }
-  .description { margin: .75rem 0 .25rem; }
+  .intro { display: grid; gap: .6rem; min-width: 0; }
+  .eyebrow { margin: 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .intro h2 { margin: 0; font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.1rem); line-height: 1.15; overflow-wrap: anywhere; }
+  .description { margin: 0; color: var(--ink); font-size: 1.02rem; }
+  .facts { list-style: none; margin: .1rem 0; padding: 0; display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); }
+  .facts li { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: .45rem; align-items: center;
+    padding: .5rem .65rem; border-radius: .6rem; background: var(--panel); border: 1px solid var(--line); }
+  .facts li :global(svg) { grid-row: span 2; color: var(--area-recipes); }
+  .facts .label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .facts .value { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .facts li.scaled { border-color: var(--area-recipes); background: color-mix(in srgb, var(--area-recipes) 9%, var(--panel)); }
+  .row-actions { align-items: stretch; }
+  .tags { list-style: none; margin: 0; padding: 0; }
 
   /* The jump links only help on narrow screens, where the parts stack; they stay at the top while scrolling. */
   .sections { display: none; }
-  .cook { display: grid; gap: 1.25rem; grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr); align-items: start; margin-top: 1rem; }
-  .ingredients { position: sticky; top: 1rem; }
-  .cook .card, section.card { margin: 0; }
-  section[tabindex]:focus { outline: none; }
-  section[tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cook { display: grid; gap: 1.25rem; grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr); align-items: start; margin-top: 1.5rem; }
+  .cook :global(.ingredients) { position: sticky; top: 1rem; }
+  .cook :global(.card), section.card { margin: 0; }
+  .cook :global(section[tabindex]:focus), section[tabindex]:focus { outline: none; }
+  section[tabindex]:focus-visible, .cook :global(section[tabindex]:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #recipe-steps h3 { font-size: 1.1rem; }
   #recipe-more { margin-top: 1.25rem; }
-  .steps { margin: 0; padding-left: 1.4rem; }
-  .steps li { padding: .35rem 0; }
+  /* Numbered steps, each number in a round badge in the Recipes colour. */
+  .steps { list-style: none; margin: .5rem 0 0; padding: 0; counter-reset: step; }
+  .steps li { counter-increment: step; display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .75rem; padding: .55rem 0;
+    line-height: 1.6; }
+  .steps li::before { content: counter(step); display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%;
+    font-weight: 700; font-size: .9rem; color: var(--ink); background: color-mix(in srgb, var(--area-recipes) 18%, var(--panel)); }
   .notes { white-space: pre-line; margin: 0 0 .5rem; }
   .meta { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0; }
   .meta dt { color: var(--muted); }
@@ -382,36 +301,30 @@
   .meta a { display: inline-flex; align-items: center; gap: .25rem; }
 
   @media (max-width: 48rem) {
+    .masthead { grid-template-columns: minmax(0, 1fr); }
+    .masthead.bare { grid-template-columns: 6rem minmax(0, 1fr); }
     .cook { grid-template-columns: minmax(0, 1fr); }
-    .ingredients { position: static; }
+    .cook :global(.ingredients) { position: static; }
     .sections { display: flex; gap: .35rem; position: sticky; top: 0; z-index: 4; margin: .75rem -1rem 0; padding: .5rem 1rem;
       background: var(--bg); border-bottom: 1px solid var(--line); overflow-x: auto; }
     .sections a { border: 1px solid var(--line); border-radius: 999px; padding: .25rem .75rem; font-size: .9rem; white-space: nowrap;
       text-decoration: none; }
-    section[tabindex] { scroll-margin-top: 3.5rem; }
+    section[tabindex], .cook :global(section[tabindex]) { scroll-margin-top: 3.5rem; }
+  }
+  /* Phones: the two main actions share the row, and the photo runs edge to edge. */
+  @media (max-width: 40rem) {
+    .row-actions .grow { flex: 1 1 9rem; justify-content: center; }
+    .masthead:not(.bare) .cover { border-radius: 0; margin: 0 -1rem; width: calc(100% + 2rem); max-width: none; }
+    .masthead.bare .intro { grid-column: 1 / -1; }
   }
 
   /* On paper: one small photo, ingredients beside the steps, and nothing to click. */
   @media print {
-    .back-row, .row-actions, .sections, .strip { display: none; }
-    .cover { max-height: 7cm; }
+    .back-row, .row-actions, .sections, .strip, .placeholder { display: none; }
+    .masthead, .masthead.bare { grid-template-columns: 6cm minmax(0, 1fr); }
+    .cover { box-shadow: none; }
     .cook { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
-    .ingredients { position: static; }
-    .steps li, .ingredients li { break-inside: avoid; }
+    .cook :global(.ingredients) { position: static; }
+    .steps li { break-inside: avoid; }
   }
-
-  .photo-grid { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .6rem;
-    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); }
-  .photo-grid li { position: relative; }
-  .photo-grid img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: .4rem; background: var(--chip); }
-  .photo-grid li:first-child img { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .remove-photo { position: absolute; top: .35rem; right: .35rem; display: inline-flex; align-items: center; }
-  .photo-actions { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: center; margin-top: 1rem; }
-  .photo-actions .done { margin-left: auto; }
-  .add-photo { position: relative; display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; color: var(--ink);
-    font-size: 1rem; border: 1px solid var(--line); border-radius: .4rem; background: var(--panel); padding: .4rem .8rem; }
-  .add-photo:hover { border-color: var(--accent); }
-  .add-photo input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-  .add-photo:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .add-photo.busy { cursor: progress; }
 </style>

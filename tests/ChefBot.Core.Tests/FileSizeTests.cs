@@ -15,7 +15,7 @@ public class FileSizeTests
     private static readonly Dictionary<string, int> Allowed = new()
     {
         // One algorithm: choosing the week's meals reads best in one place.
-        ["src/ChefBot.Core/Engines/PlanningEngine.cs"] = 429,
+        ["src/ChefBot.Core/Engines/PlanningEngine.cs"] = 425,
 
         // Page layout for one document; not yet split.
         ["src/ChefBot.Core/Engines/Transformation/RecipePdfWriter.cs"] = 426,
@@ -23,7 +23,6 @@ public class FileSizeTests
         // Screens with their markup and styles; their logic could move to src/lib/.
         ["src/ChefBot.Web/src/tabs/RecipeCook.svelte"] = 499,
         ["src/ChefBot.Web/src/tabs/Recipes.svelte"] = 422,
-        ["src/ChefBot.Web/src/tabs/RecipeDetail.svelte"] = 425,
     };
 
     private static readonly string Root = FindRoot();
