@@ -139,7 +139,7 @@ public class ReviewTests
 
         await Assert.That(moment.Title).IsEqualTo(TestData.Stew.Name);
         await Assert.That(moment.RecipeId).IsEqualTo(TestData.Stew.Id);
-        await Assert.That(moment.Date).IsEqualTo(new DateOnly(2026, 11, 14));
+        await Assert.That(DateOnly.FromDateTime(moment.At.DateTime)).IsEqualTo(new DateOnly(2026, 11, 14));
         await Assert.That(moment.Review).IsEqualTo(new HistoryReview(4, "Lovely.", "Jamie"));
 
         await recipes.ArchiveAsync(TestData.Stew.Id, default);

@@ -90,7 +90,7 @@ function hash(text) {
 /** How a moment is told: { emoji, parts }. */
 export function tell(moment) {
   const choices = CAPTIONS[moment.kind] ?? [() => ['Something delicious happened.']];
-  const pick = choices[hash(`${moment.kind}|${moment.date}|${moment.title ?? ''}|${moment.count ?? ''}`) % choices.length];
+  const pick = choices[hash(`${moment.kind}|${dayOf(moment)}|${moment.title ?? ''}|${moment.count ?? ''}`) % choices.length];
   return { emoji: EMOJI[moment.kind] ?? '🥄', parts: pick(moment) };
 }
 
@@ -117,3 +117,9 @@ export function monthName(iso) {
   const [year, month] = iso.split('-').map(Number);
   return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
+
+/** The household's day a moment is on, as yyyy-mm-dd: the date part of its `at`, which is in the household's time zone. */
+export const dayOf = (moment) => moment.at.slice(0, 10);
+
+/** Whether a moment's exact time is known. When only the day is, `at` is that day's midnight. */
+export const timed = (moment) => moment.at.slice(11, 19) !== '00:00:00';

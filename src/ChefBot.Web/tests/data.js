@@ -354,7 +354,7 @@ export const issuedApiToken = (name = 'Kitchen tablet') => ({
 
 /** HistoryMoment */
 const moment = (date, kind, extra = {}) => ({
-  date, kind, title: null, recipeId: null, count: null, dishes: [], at: null, favouredBy: [], review: null, ...extra,
+  at: `${date}T00:00:00+00:00`, kind, title: null, recipeId: null, count: null, dishes: [], favouredBy: [], review: null, ...extra,
 });
 
 /** HistoryResponse: two months of a household's food story, with older months still to load. */

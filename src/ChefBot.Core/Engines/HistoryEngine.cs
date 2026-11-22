@@ -32,27 +32,29 @@ internal sealed class HistoryEngine
     /// <param name="reviews">Every review of a recipe, in any order.</param>
     /// <param name="recipes">Every recipe, archived ones included, for links and tags.</param>
     /// <param name="request">Which months to tell.</param>
+    /// <param name="zone">The household's time zone, which the stored days are in.</param>
     public HistoryResponse Tell(
-        IReadOnlyList<FoodMoment> moments, IReadOnlyList<RecipeReview> reviews, IReadOnlyList<Recipe> recipes, HistoryRequest request)
+        IReadOnlyList<FoodMoment> moments, IReadOnlyList<RecipeReview> reviews, IReadOnlyList<Recipe> recipes, HistoryRequest request,
+        TimeZoneInfo zone)
     {
         var library = recipes.ToDictionary(recipe => recipe.Id);
         var ordered = moments.OrderBy(moment => moment.OccurredOn).ThenBy(moment => moment.Id).ToList();
         var cooks = ordered.Where(moment => moment.Kind == FoodMomentKind.Cooked).ToList();
 
         var told = new List<HistoryMoment>();
-        var totalDinners = TellCooking(cooks, library, told);
-        TellArrivals(ordered.Where(moment => moment.Kind == FoodMomentKind.RecipeAdded), library, told);
-        TellReviews(reviews, library, told);
+        var totalDinners = TellCooking(cooks, library, zone, told);
+        TellArrivals(ordered.Where(moment => moment.Kind == FoodMomentKind.RecipeAdded), library, zone, told);
+        TellReviews(reviews, library, zone, told);
         foreach (var moment in ordered)
         {
-            if (Plain(moment) is { } plain)
+            if (Plain(moment, zone) is { } plain)
             {
                 told.Add(plain);
             }
         }
 
         var chapters = told
-            .GroupBy(moment => MonthOf(moment.Date))
+            .GroupBy(moment => MonthOf(DayOf(moment)))
             .OrderByDescending(month => month.Key)
             .Select(month => Chapter(month.Key, month.ToList(), cooks, library))
             .ToList();
@@ -72,7 +74,8 @@ internal sealed class HistoryEngine
     /// Adds the cooking to <paramref name="told"/>: special cooks on their own, the rest one moment per week.
     /// Returns how many dinners were cooked in all.
     /// </summary>
-    private static int TellCooking(List<FoodMoment> cooks, Dictionary<Guid, Recipe> library, List<HistoryMoment> told)
+    private static int TellCooking(
+        List<FoodMoment> cooks, Dictionary<Guid, Recipe> library, TimeZoneInfo zone, List<HistoryMoment> told)
     {
         var cooked = new Dictionary<string, (int Times, DateOnly Last)>();
         var everyday = new List<FoodMoment>();
@@ -88,20 +91,20 @@ internal sealed class HistoryEngine
             HistoryMoment? special = null;
             if (!seen && cook.RecipeId is not null)
             {
-                special = Cook(cook, HistoryMomentKind.Debut, link, null);
+                special = Cook(cook, HistoryMomentKind.Debut, link, null, zone);
             }
             else if (FanFavouriteCooks.Contains(times))
             {
-                special = Cook(cook, HistoryMomentKind.FanFavourite, link, times);
+                special = Cook(cook, HistoryMomentKind.FanFavourite, link, times, zone);
             }
             else if (seen && cook.OccurredOn.DayNumber - before.Last.DayNumber >= ComebackDays)
             {
                 var days = cook.OccurredOn.DayNumber - before.Last.DayNumber;
-                special = Cook(cook, HistoryMomentKind.Comeback, link, days);
+                special = Cook(cook, HistoryMomentKind.Comeback, link, days, zone);
             }
             else if (cook.FavouredBy.Count > 0)
             {
-                special = Cook(cook, HistoryMomentKind.FavouriteCooked, link, null);
+                special = Cook(cook, HistoryMomentKind.FavouriteCooked, link, null, zone);
             }
 
             if (special is null)
@@ -115,7 +118,7 @@ internal sealed class HistoryEngine
 
             if (cook.Slot == MealSlot.Dinner && DinnerMilestones.Contains(++dinners))
             {
-                told.Add(Cook(cook, HistoryMomentKind.DinnerMilestone, link, dinners));
+                told.Add(Cook(cook, HistoryMomentKind.DinnerMilestone, link, dinners, zone));
             }
         }
 
@@ -124,18 +127,19 @@ internal sealed class HistoryEngine
         {
             var dishes = week.Select(cook => new HistoryDish(cook.Title, Linked(cook.RecipeId, library), cook.OccurredOn)).ToList();
             told.Add(new HistoryMoment(
-                dishes[^1].Date, HistoryMomentKind.WeekOfPlates, null, null, dishes.Count, dishes, week.Last().OccurredAt, []));
+                At(week.Last(), zone), HistoryMomentKind.WeekOfPlates, null, null, dishes.Count, dishes, []));
         }
 
         return dinners;
     }
 
     /// <summary>A moment about one cook, naming whose favourite it was.</summary>
-    private static HistoryMoment Cook(FoodMoment cook, HistoryMomentKind kind, Guid? link, int? count) =>
-        new(cook.OccurredOn, kind, cook.Title, link, count, [], cook.OccurredAt, [.. cook.FavouredBy]);
+    private static HistoryMoment Cook(FoodMoment cook, HistoryMomentKind kind, Guid? link, int? count, TimeZoneInfo zone) =>
+        new(At(cook, zone), kind, cook.Title, link, count, [], [.. cook.FavouredBy]);
 
     /// <summary>Adds the recipes that joined: one moment each, or a stampede for a day of many.</summary>
-    private static void TellArrivals(IEnumerable<FoodMoment> added, Dictionary<Guid, Recipe> library, List<HistoryMoment> told)
+    private static void TellArrivals(
+        IEnumerable<FoodMoment> added, Dictionary<Guid, Recipe> library, TimeZoneInfo zone, List<HistoryMoment> told)
     {
         foreach (var day in added.GroupBy(moment => moment.OccurredOn))
         {
@@ -146,36 +150,37 @@ internal sealed class HistoryEngine
                     .Select(moment => new HistoryDish(moment.Title, Linked(moment.RecipeId, library), moment.OccurredOn))
                     .ToList();
                 told.Add(new HistoryMoment(
-                    day.Key, HistoryMomentKind.RecipeStampede, null, null, arrivals.Count, named, arrivals[^1].OccurredAt, []));
+                    At(arrivals[^1], zone), HistoryMomentKind.RecipeStampede, null, null, arrivals.Count, named, []));
                 continue;
             }
 
             told.AddRange(arrivals.Select(moment => new HistoryMoment(
-                moment.OccurredOn, HistoryMomentKind.RecipeAdded, moment.Title, Linked(moment.RecipeId, library), null, [], moment.OccurredAt, [])));
+                At(moment, zone), HistoryMomentKind.RecipeAdded, moment.Title, Linked(moment.RecipeId, library), null, [], [])));
         }
     }
 
     /// <summary>Adds a moment for each review, under the recipe's name. A recipe gone from the database keeps no name, so its reviews are left out.</summary>
-    private static void TellReviews(IReadOnlyList<RecipeReview> reviews, Dictionary<Guid, Recipe> library, List<HistoryMoment> told)
+    private static void TellReviews(
+        IReadOnlyList<RecipeReview> reviews, Dictionary<Guid, Recipe> library, TimeZoneInfo zone, List<HistoryMoment> told)
     {
         foreach (var review in reviews.OrderBy(review => review.CreatedAt).ThenBy(review => review.Id))
         {
             if (library.TryGetValue(review.RecipeId, out var recipe))
             {
                 told.Add(new HistoryMoment(
-                    review.ReviewedOn, HistoryMomentKind.Reviewed, recipe.Name, Linked(recipe.Id, library), null, [], review.CreatedAt, [],
+                    At(review.ReviewedOn, review.CreatedAt, zone), HistoryMomentKind.Reviewed, recipe.Name, Linked(recipe.Id, library), null, [], [],
                     new HistoryReview(review.Stars, review.Notes, review.ReviewerName)));
             }
         }
     }
 
     /// <summary>The moments told as they were stored. Null for cooking and arrivals, which are told above.</summary>
-    private static HistoryMoment? Plain(FoodMoment moment) => moment.Kind switch
+    private static HistoryMoment? Plain(FoodMoment moment, TimeZoneInfo zone) => moment.Kind switch
     {
-        FoodMomentKind.RecipeRetired => new(moment.OccurredOn, HistoryMomentKind.RecipeRetired, moment.Title, null, null, [], moment.OccurredAt, []),
-        FoodMomentKind.Haul => new(moment.OccurredOn, HistoryMomentKind.Haul, null, null, moment.Count, [], moment.OccurredAt, []),
-        FoodMomentKind.KitchenOpened => new(moment.OccurredOn, HistoryMomentKind.KitchenOpened, moment.Title, null, null, [], moment.OccurredAt, []),
-        FoodMomentKind.PersonJoined => new(moment.OccurredOn, HistoryMomentKind.PersonJoined, moment.Title, null, null, [], moment.OccurredAt, []),
+        FoodMomentKind.RecipeRetired => new(At(moment, zone), HistoryMomentKind.RecipeRetired, moment.Title, null, null, [], []),
+        FoodMomentKind.Haul => new(At(moment, zone), HistoryMomentKind.Haul, null, null, moment.Count, [], []),
+        FoodMomentKind.KitchenOpened => new(At(moment, zone), HistoryMomentKind.KitchenOpened, moment.Title, null, null, [], []),
+        FoodMomentKind.PersonJoined => new(At(moment, zone), HistoryMomentKind.PersonJoined, moment.Title, null, null, [], []),
         _ => null,
     };
 
@@ -198,10 +203,11 @@ internal sealed class HistoryEngine
             .Select(tag => tag.Key)
             .FirstOrDefault();
 
-        // Newest first. Moments of the same day keep the order they were told in, reversed.
+        // Newest first, so a moment with only a day, at its midnight, goes after the rest of that day. Ties keep
+        // the order they were told in, reversed.
         var newestFirst = moments
             .Select((moment, index) => (moment, index))
-            .OrderByDescending(pair => pair.moment.Date)
+            .OrderByDescending(pair => pair.moment.At)
             .ThenByDescending(pair => pair.index)
             .Select(pair => pair.moment)
             .ToList();
@@ -215,6 +221,27 @@ internal sealed class HistoryEngine
     /// <summary>The recipe to link to, when it is still in the library.</summary>
     private static Guid? Linked(Guid? id, Dictionary<Guid, Recipe> library) =>
         id is Guid recipeId && library.TryGetValue(recipeId, out var recipe) && !recipe.IsArchived ? recipeId : null;
+
+    /// <summary>When a stored moment happened, in the household's time.</summary>
+    private static DateTimeOffset At(FoodMoment moment, TimeZoneInfo zone) => At(moment.OccurredOn, moment.OccurredAt, zone);
+
+    /// <summary>
+    /// The exact time, in <paramref name="zone"/>, when it falls on <paramref name="day"/>; otherwise the day's
+    /// midnight, as when something was recorded later than it happened.
+    /// </summary>
+    private static DateTimeOffset At(DateOnly day, DateTimeOffset? exact, TimeZoneInfo zone)
+    {
+        if (exact is { } time && TimeZoneInfo.ConvertTime(time, zone) is var local && DateOnly.FromDateTime(local.DateTime) == day)
+        {
+            return local;
+        }
+
+        var midnight = day.ToDateTime(TimeOnly.MinValue);
+        return new DateTimeOffset(midnight, zone.GetUtcOffset(midnight));
+    }
+
+    /// <summary>The household's day a told moment is on.</summary>
+    private static DateOnly DayOf(HistoryMoment moment) => DateOnly.FromDateTime(moment.At.DateTime);
 
     private static DateOnly MonthOf(DateOnly date) => new(date.Year, date.Month, 1);
 

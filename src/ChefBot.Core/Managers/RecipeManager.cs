@@ -271,7 +271,8 @@ internal sealed partial class RecipeManager(
             await history.ListAsync(cancellationToken),
             await reviews.ListAllAsync(cancellationToken),
             await recipes.ListAllAsync(cancellationToken),
-            request);
+            request,
+            clock.LocalTimeZone);
 
     /// <summary>Adds the recipes whose names aren't in the library yet.</summary>
     /// <returns>How many were added.</returns>

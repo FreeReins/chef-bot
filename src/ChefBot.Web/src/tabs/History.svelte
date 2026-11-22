@@ -6,7 +6,7 @@
   import { run } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { shortDate, fullDate, plural, favouriteOf } from '../lib/format.js';
-  import { tell, captionText, chapterTitle, monthName } from '../lib/history.js';
+  import { tell, captionText, chapterTitle, monthName, dayOf, timed } from '../lib/history.js';
   import ScrollText from '@lucide/svelte/icons/scroll-text';
 
   let chapters = $state([]);
@@ -50,7 +50,7 @@
             <p>{monthName(chapter.month)}{#if chapter.dinners > 0}{` · ${plural(chapter.dinners, 'dinner')}`}{/if}</p>
           </header>
           <ol class="moments">
-            {#each chapter.moments as moment, index (`${moment.kind}-${moment.date}-${index}`)}
+            {#each chapter.moments as moment, index (`${moment.kind}-${moment.at}-${index}`)}
               {@const told = tell(moment)}
               <li class="moment" class:right={index % 2 === 1} style="--delay: {Math.min(index, 8) * 60}ms">
                 <span class="plate" aria-hidden="true">{told.emoji}</span>
@@ -74,7 +74,7 @@
                       {/if}
                     </ul>
                   {/if}
-                  <p class="when muted"><time datetime={moment.at ?? moment.date} title={fullDate(moment.date, moment.at)}>{shortDate(moment.date)}</time></p>
+                  <p class="when muted"><time datetime={moment.at} title={fullDate(dayOf(moment), timed(moment) ? moment.at : null)}>{shortDate(dayOf(moment))}</time></p>
                 </article>
               </li>
             {/each}

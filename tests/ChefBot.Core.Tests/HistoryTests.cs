@@ -17,7 +17,7 @@ public class HistoryTests
         new() { Kind = FoodMomentKind.RecipeAdded, RecipeId = Guid.NewGuid(), Title = name, OccurredOn = on };
 
     private static HistoryResponse Tell(IEnumerable<FoodMoment> moments, int months = HistoryEngine.MaxMonths, DateOnly? before = null) =>
-        Storyteller.Tell(moments.ToList(), [], TestData.Library, new HistoryRequest(before, months));
+        Storyteller.Tell(moments.ToList(), [], TestData.Library, new HistoryRequest(before, months), TimeZoneInfo.Utc);
 
     private static List<HistoryMoment> All(HistoryResponse history) => history.Chapters.SelectMany(chapter => chapter.Moments).ToList();
 
@@ -97,7 +97,8 @@ public class HistoryTests
             [Cooked(TestData.Stew, March.AddMonths(-1)), Cooked(tagged, March), Cooked(soupy, March.AddDays(1)), Cooked(tagged, March.AddDays(9))],
             [],
             recipes,
-            new HistoryRequest(null, 0));
+            new HistoryRequest(null, 0),
+            TimeZoneInfo.Utc);
 
         await Assert.That(Months(history)).IsEqualTo("2026-03, 2026-02");
         var chapter = history.Chapters[0];
@@ -105,7 +106,7 @@ public class HistoryTests
         await Assert.That(chapter.TopDish).IsEqualTo("Lentil Soup");
         await Assert.That(chapter.TopDishCooks).IsEqualTo(2);
         await Assert.That(chapter.TopTag).IsEqualTo("Soup");
-        await Assert.That(chapter.Moments[0].Date >= chapter.Moments[^1].Date).IsTrue();
+        await Assert.That(chapter.Moments[0].At >= chapter.Moments[^1].At).IsTrue();
     }
 
     [Test]
@@ -129,7 +130,7 @@ public class HistoryTests
         var retired = TestData.NewRecipe("Beige Casserole", RecipeCourse.Main, false, "1 can soup");
         retired.IsArchived = true;
 
-        var history = Storyteller.Tell([Cooked(retired, March)], [], [retired], new HistoryRequest(null, 0));
+        var history = Storyteller.Tell([Cooked(retired, March)], [], [retired], new HistoryRequest(null, 0), TimeZoneInfo.Utc);
 
         var debut = All(history).Single();
         await Assert.That(debut.Title).IsEqualTo("Beige Casserole");
@@ -263,6 +264,22 @@ public class HistoryTests
         await Assert.That(core.History.Rows.Select(row => row.Kind)).IsEquivalentTo([FoodMomentKind.RecipeAdded, FoodMomentKind.RecipeRetired]);
         var history = await recipes.GetHistoryAsync(new HistoryRequest(null, 0), default);
         await Assert.That(string.Join(", ", All(history).Select(moment => moment.Kind))).IsEqualTo("RecipeRetired, RecipeAdded");
+    }
+
+    [Test]
+    public async Task Moments_of_one_day_go_latest_first_whatever_their_kind()
+    {
+        var morning = new DateTimeOffset(2026, 3, 1, 8, 0, 0, TimeSpan.Zero);
+        var added = Added("Pancakes", March);
+        added.OccurredAt = morning;
+        var cooked = Cooked(TestData.Stew, March);
+        cooked.OccurredAt = morning.AddHours(4);
+        var retired = new FoodMoment { Kind = FoodMomentKind.RecipeRetired, Title = "Old pie", OccurredOn = March, OccurredAt = morning.AddHours(10) };
+        var undated = new FoodMoment { Kind = FoodMomentKind.Haul, Count = 3, OccurredOn = March };
+
+        var history = Tell([undated, retired, added, cooked]);
+
+        await Assert.That(string.Join(", ", All(history).Select(moment => moment.Kind))).IsEqualTo("RecipeRetired, Debut, RecipeAdded, Haul");
     }
 
     [Test]
