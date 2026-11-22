@@ -83,6 +83,11 @@ internal sealed class PlanAccess(ChefBotDbContext db) : IPlanAccess
         }
     }
 
-    private Task<MealPlanEntity?> TrackedAsync(Guid id, CancellationToken cancellationToken) =>
-        Complete.FirstOrDefaultAsync(plan => plan.Id == id, cancellationToken);
+    /// <summary>
+    /// The plan with its meals and shopping list, tracked. One already loaded in this request is used as it is (its
+    /// children came with it through <see cref="Complete"/>), so saving a plan just read costs no second query.
+    /// </summary>
+    private async Task<MealPlanEntity?> TrackedAsync(Guid id, CancellationToken cancellationToken) =>
+        db.MealPlans.Local.FirstOrDefault(plan => plan.Id == id)
+        ?? await Complete.FirstOrDefaultAsync(plan => plan.Id == id, cancellationToken);
 }

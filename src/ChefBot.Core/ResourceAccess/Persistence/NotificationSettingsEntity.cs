@@ -17,6 +17,10 @@ internal sealed class NotificationSettingsEntity
 
     public bool Shopping { get; set; }
 
+    public bool Achievements { get; set; } = true;
+
+    public DateTimeOffset? RemindersDueAt { get; set; }
+
     public string DailyTime { get; set; } = string.Empty;
 
     public DateOnly? LastDailyRunOn { get; set; }

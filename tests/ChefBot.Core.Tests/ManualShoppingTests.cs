@@ -108,6 +108,7 @@ public class ManualShoppingTests
         var added = await plans.AddManualItemAsync(new NewShoppingItem(needed.Name), default);
 
         await plans.PurchaseManualItemAsync(added.Single().Id, new PurchaseDetails(), default);
+        await core.HandleEventsAsync();
         var plan = await plans.GetAsync(staged.Id, default);
 
         await Assert.That(plan.Shopping.Any(item => item.Name == needed.Name)).IsFalse();

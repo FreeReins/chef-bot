@@ -37,6 +37,8 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
                 MealsToday = row.MealsToday,
                 ExpiringFood = row.ExpiringFood,
                 Shopping = row.Shopping,
+                Achievements = row.Achievements,
+                RemindersDueAt = row.RemindersDueAt,
                 DailyTime = row.DailyTime,
                 LastDailyRunOn = row.LastDailyRunOn,
             }
@@ -51,6 +53,8 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
             MealsToday = settings.MealsToday,
             ExpiringFood = settings.ExpiringFood,
             Shopping = settings.Shopping,
+            Achievements = settings.Achievements,
+            RemindersDueAt = settings.RemindersDueAt,
             DailyTime = settings.DailyTime,
             LastDailyRunOn = settings.LastDailyRunOn,
         }, cancellationToken);
@@ -65,6 +69,7 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
                 KeepDays = row.KeepDays,
                 LastRunOn = row.LastRunOn,
                 LastResult = row.LastResult,
+                DueAt = row.DueAt,
             }
             : new BackupSettings();
 
@@ -77,15 +82,16 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
             KeepDays = settings.KeepDays,
             LastRunOn = settings.LastRunOn,
             LastResult = settings.LastResult,
+            DueAt = settings.DueAt,
         }, cancellationToken);
 
     public async Task<ScheduleState> GetScheduleAsync(CancellationToken cancellationToken) =>
         await RowAsync<ScheduleStateEntity>(cancellationToken) is { } row
-            ? new ScheduleState { LastStagedWeek = row.LastStagedWeek }
+            ? new ScheduleState { LastStagedWeek = row.LastStagedWeek, WeeklyDueAt = row.WeeklyDueAt }
             : new ScheduleState();
 
     public Task SaveScheduleAsync(ScheduleState state, CancellationToken cancellationToken) =>
-        SaveRowAsync(new ScheduleStateEntity { LastStagedWeek = state.LastStagedWeek }, cancellationToken);
+        SaveRowAsync(new ScheduleStateEntity { LastStagedWeek = state.LastStagedWeek, WeeklyDueAt = state.WeeklyDueAt }, cancellationToken);
 
     public async Task<CalendarFeed> GetCalendarFeedAsync(CancellationToken cancellationToken) =>
         await RowAsync<CalendarFeedEntity>(cancellationToken) is { } row

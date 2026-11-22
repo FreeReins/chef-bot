@@ -17,18 +17,18 @@ internal sealed partial class RecipeManager
         var (stars, notes) = ValidationEngine.Review(request);
         var recipe = await ActiveAsync(id, cancellationToken);
         var user = await validation.UserAsync(userId, cancellationToken);
-        await reviews.AddAsync(
-            new RecipeReview
-            {
-                RecipeId = recipe.Id,
-                UserId = user.Id,
-                ReviewerName = user.DisplayName,
-                Stars = stars,
-                Notes = notes,
-                ReviewedOn = clock.Today(),
-                CreatedAt = clock.GetUtcNow(),
-            },
-            cancellationToken);
+        var review = new RecipeReview
+        {
+            RecipeId = recipe.Id,
+            UserId = user.Id,
+            ReviewerName = user.DisplayName,
+            Stars = stars,
+            Notes = notes,
+            ReviewedOn = clock.Today(),
+            CreatedAt = clock.GetUtcNow(),
+        };
+        await reviews.AddAsync(review, cancellationToken);
+        await messages.PublishAsync(new RecipeReviewed(recipe.Id, user.Id, review.Id));
         await messages.CommitAsync(cancellationToken);
         return await ReviewsAsync(recipe.Id, cancellationToken);
     }
@@ -45,6 +45,7 @@ internal sealed partial class RecipeManager
         review.Notes = notes;
         review.UpdatedAt = clock.GetUtcNow();
         await reviews.UpdateAsync(review, cancellationToken);
+        await messages.PublishAsync(new RecipeReviewed(recipe.Id, review.UserId, review.Id));
         await messages.CommitAsync(cancellationToken);
         return await ReviewsAsync(recipe.Id, cancellationToken);
     }
@@ -57,6 +58,7 @@ internal sealed partial class RecipeManager
         ValidationEngine.MayChange(review, userId, mayRemoveAnyone);
 
         await reviews.RemoveAsync(review.Id, cancellationToken);
+        await messages.PublishAsync(new RecipeReviewRemoved(recipe.Id, review.Id));
         await messages.CommitAsync(cancellationToken);
         return await ReviewsAsync(recipe.Id, cancellationToken);
     }

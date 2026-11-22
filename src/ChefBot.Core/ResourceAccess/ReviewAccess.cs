@@ -25,6 +25,8 @@ internal sealed class ReviewAccess(ChefBotDbContext db) : IReviewAccess
             .Select(review => review.ToContract())
             .ToList();
 
+    public Task<int> CountAsync(CancellationToken cancellationToken) => db.RecipeReviews.CountAsync(cancellationToken);
+
     public async Task<Dictionary<Guid, ReviewTally>> TallyAsync(
         IReadOnlyCollection<Guid> recipeIds, CancellationToken cancellationToken)
     {

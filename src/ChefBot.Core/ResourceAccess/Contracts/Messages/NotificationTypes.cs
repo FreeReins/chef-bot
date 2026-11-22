@@ -18,6 +18,9 @@ internal static class NotificationTypes
     /// <summary>The week is about to start and the plan is unconfirmed or has groceries left to buy.</summary>
     public const string Shopping = "shopping";
 
+    /// <summary>The household reached a new achievement tier or chef rank.</summary>
+    public const string Achievement = "achievement";
+
     /// <summary>Sent from the Settings tab to check the webhook works.</summary>
     public const string Test = "test";
 }

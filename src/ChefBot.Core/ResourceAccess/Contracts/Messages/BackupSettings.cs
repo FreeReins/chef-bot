@@ -19,4 +19,7 @@ internal sealed class BackupSettings
 
     /// <summary>How the last backup went, in a sentence.</summary>
     public string LastResult { get; set; } = string.Empty;
+
+    /// <summary>When the scheduled check for the daily backup is due. A queued check due at another time is stale.</summary>
+    public DateTimeOffset? DueAt { get; set; }
 }

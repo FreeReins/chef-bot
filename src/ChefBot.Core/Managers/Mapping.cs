@@ -179,7 +179,8 @@ internal static partial class Mapping
         settings.ExpiringFood,
         settings.Shopping,
         settings.DailyTime,
-        settings.LastDailyRunOn);
+        settings.LastDailyRunOn,
+        settings.Achievements);
 
     public static GroceryStoreDetails ToResponse(this GroceryStore store) =>
         new(store.Name, store.IsMain, [.. store.Items], store.SeasonalProduce, [.. store.Months]);

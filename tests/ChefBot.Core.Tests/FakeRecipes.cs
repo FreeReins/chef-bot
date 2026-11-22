@@ -8,6 +8,9 @@ internal sealed class FakeRecipes : IRecipeAccess
 {
     public List<Recipe> Rows { get; } = [];
 
+    /// <summary>The favourites the search filters on; set by <see cref="TestCore"/> to its fake favourites.</summary>
+    public Func<IEnumerable<RecipeFavourite>> Favourites { get; set; } = () => [];
+
     /// <summary>Stored photo bytes, by photo id.</summary>
     public Dictionary<Guid, RecipeImageFile> ImageFiles { get; } = [];
 
@@ -15,6 +18,9 @@ internal sealed class FakeRecipes : IRecipeAccess
         Task.FromResult(Rows.Where(r => !r.IsArchived).OrderBy(r => r.Name).Select(Copies.Of).ToList());
 
     public Task<List<Recipe>> ListAllAsync(CancellationToken cancellationToken) => Task.FromResult(Rows.Select(Copies.Of).ToList());
+
+    public Task<List<Recipe>> ListAllPlainAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(Rows.Select(Copies.Of).Select(recipe => { recipe.Ingredients.Clear(); recipe.Images.Clear(); return recipe; }).ToList());
 
     public Task<RecipeSearchResult> SearchActiveAsync(RecipeQuery query, CancellationToken cancellationToken)
     {
@@ -24,7 +30,8 @@ internal sealed class FakeRecipes : IRecipeAccess
                 || r.Ingredients.Any(i => Contains(i.Text, word) || Contains(i.DisplayName, word))
                 || r.Tags.Any(tag => Contains(tag, word))))
             .Where(r => (query.Tags ?? []).All(wanted => r.Tags.Any(tag => string.Equals(tag.Trim(), wanted.Trim(), StringComparison.OrdinalIgnoreCase))))
-            .Where(r => query.OnlyIds is null || query.OnlyIds.Contains(r.Id))
+            .Where(r => !(query.FavouritesOnly || query.FavouredBy is not null)
+                || Favourites().Any(favourite => favourite.RecipeId == r.Id && (query.FavouredBy is null || favourite.UserId == query.FavouredBy)))
             .Where(r => !query.SlowCooker || r.IsSlowCooker)
             .Where(r => query.ReadyWithin is not int within || RecipeMatcher.MinutesOf(r) is int minutes && minutes <= within)
             .OrderBy(r => r.Course)

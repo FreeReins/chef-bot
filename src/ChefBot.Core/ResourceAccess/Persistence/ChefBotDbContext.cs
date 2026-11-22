@@ -34,6 +34,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     public DbSet<RecipeReviewEntity> RecipeReviews => Set<RecipeReviewEntity>();
 
+    public DbSet<AchievementUnlockEntity> AchievementUnlocks => Set<AchievementUnlockEntity>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<decimal>().HavePrecision(12, 3);
@@ -119,6 +121,7 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
             moment.ToTable("FoodMoments");
             moment.HasIndex(m => m.OccurredOn);
             moment.HasIndex(m => m.MealId);
+            moment.HasIndex(m => m.SourceId);
         });
         modelBuilder.Entity<RecipeFavouriteEntity>(favourite =>
         {
@@ -130,6 +133,11 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         {
             review.ToTable("RecipeReviews");
             review.HasIndex(r => r.RecipeId);
+        });
+        modelBuilder.Entity<AchievementUnlockEntity>(unlock =>
+        {
+            unlock.ToTable("AchievementUnlocks");
+            unlock.HasIndex(u => new { u.Key, u.Tier }).IsUnique();
         });
 
         StoreEnumsByName(modelBuilder);

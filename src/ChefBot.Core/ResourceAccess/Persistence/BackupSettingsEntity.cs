@@ -16,4 +16,6 @@ internal sealed class BackupSettingsEntity
     public DateOnly? LastRunOn { get; set; }
 
     public string LastResult { get; set; } = string.Empty;
+
+    public DateTimeOffset? DueAt { get; set; }
 }

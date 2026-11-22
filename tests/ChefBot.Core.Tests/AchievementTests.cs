@@ -100,11 +100,13 @@ public class AchievementTests
         var core = new TestCore();
         core.Clock.Now = new DateTimeOffset(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);
         core.Recipes.Rows.AddRange(TestData.Library);
+        var cook = new UserAccount { Username = "sam", DisplayName = "Sam" };
+        core.Accounts.Users.Add(cook);
 
         var plan = await core.PlanManager().StageAsync(new StagePlanRequest(), default);
-        var staged = await core.RecipeManager().GetAchievementsAsync(default);
+        var staged = await core.RecipeManager().GetAchievementsAsync(cook.Id, default);
         await core.PlanManager().ConfirmAsync(plan.Id, default);
-        var confirmed = await core.RecipeManager().GetAchievementsAsync(default);
+        var confirmed = await core.RecipeManager().GetAchievementsAsync(cook.Id, default);
 
         await Assert.That(Find(staged, AchievementKind.FirstPlan).Tier).IsEqualTo(1);
         await Assert.That(Find(staged, AchievementKind.PlanConfirmed).Tier).IsEqualTo(0);

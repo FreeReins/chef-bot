@@ -19,6 +19,7 @@ internal sealed partial class PlanManager
         var item = ShoppingEngine.AddToList(list, catalog.Identify(request.Name), request.Quantity, Units.Normalize(request.Unit), clock.Today());
 
         await shoppingList.SaveAsync(item, cancellationToken);
+        await messages.PublishAsync(new ManualShoppingChanged());
         await messages.CommitAsync(cancellationToken);
         return await ListManualItemsAsync(cancellationToken);
     }
@@ -28,6 +29,7 @@ internal sealed partial class PlanManager
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var item = await validation.ManualShoppingItemAsync(itemId, cancellationToken);
         await shoppingList.RemoveAsync(item.Id, cancellationToken);
+        await messages.PublishAsync(new ManualShoppingChanged());
         await messages.CommitAsync(cancellationToken);
         return await ListManualItemsAsync(cancellationToken);
     }
@@ -38,6 +40,7 @@ internal sealed partial class PlanManager
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var item = await validation.ManualShoppingItemAsync(itemId, cancellationToken);
         await StockAsync(item, details, cancellationToken);
+        await messages.PublishAsync(new ManualShoppingChanged());
         await messages.CommitAsync(cancellationToken);
         await ReconcileAfterBuyingAsync(changed: null, cancellationToken);
         return await ListManualItemsAsync(cancellationToken);
@@ -48,7 +51,8 @@ internal sealed partial class PlanManager
     {
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var bought = await StockManualItemsAsync(request, cancellationToken);
-        await RecordHaulAsync(bought, request, cancellationToken);
+        await AnnounceHaulAsync(null, bought, request);
+        await messages.PublishAsync(new ManualShoppingChanged());
         await messages.CommitAsync(cancellationToken);
         if (bought > 0)
         {
@@ -67,7 +71,8 @@ internal sealed partial class PlanManager
         ShoppingEngine.SendTo(stores, item, ValidationEngine.StoreNamed(stores, request.Store));
 
         await settings.SaveStoresAsync(stores, cancellationToken);
-        await ReconcileOpenPlansAsync(stores, changed: null, cancellationToken);
+        await messages.PublishAsync(new GroceryStoresChanged()); // the open plans follow in the background
+        await messages.PublishAsync(new ManualShoppingChanged());
         await messages.CommitAsync(cancellationToken);
         return DescribeManualItems(await shoppingList.ListAsync(cancellationToken), stores);
     }

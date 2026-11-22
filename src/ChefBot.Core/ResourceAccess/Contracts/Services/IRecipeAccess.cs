@@ -11,6 +11,12 @@ internal interface IRecipeAccess
     /// <summary>Every recipe, archived ones included.</summary>
     Task<List<Recipe>> ListAllAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Every recipe, archived ones too, without its ingredients and photos: for names, addresses and whether it is
+    /// archived, where loading those would be wasted on a large library.
+    /// </summary>
+    Task<List<Recipe>> ListAllPlainAsync(CancellationToken cancellationToken);
+
     /// <summary>A slice of the recipes that can be planned matching the query, with their ingredients and photos.</summary>
     Task<RecipeSearchResult> SearchActiveAsync(RecipeQuery query, CancellationToken cancellationToken);
 

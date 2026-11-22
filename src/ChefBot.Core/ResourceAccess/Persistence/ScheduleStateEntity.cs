@@ -6,4 +6,6 @@ internal sealed class ScheduleStateEntity
     public int Id { get; set; } = 1;
 
     public DateOnly? LastStagedWeek { get; set; }
+
+    public DateTimeOffset? WeeklyDueAt { get; set; }
 }

@@ -38,7 +38,9 @@ internal sealed class MaintenanceManager(
         current.MealsToday = request.MealsToday;
         current.ExpiringFood = request.ExpiringFood;
         current.Shopping = request.Shopping;
+        current.Achievements = request.Achievements;
         current.DailyTime = time;
+        await ScheduleRemindersAsync(current);
         await settings.SaveNotificationsAsync(current, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return current.ToResponse();
@@ -76,29 +78,46 @@ internal sealed class MaintenanceManager(
         var plan = await plans.FindAsync(staged.PlanId, cancellationToken);
         return plan is null
             ? new ReminderRun([], [])
-            : await SendAsync([notifications.PlanReady(plan, staged.Trigger)], cancellationToken);
+            : await DeliverAsync(notifications.PlanReady(plan, staged.Trigger), cancellationToken);
     }
 
     public async Task<ReminderRun> SendTodayAsync(CancellationToken cancellationToken)
     {
-        var today = clock.Today();
-        var plan = await plans.FindCurrentAsync(today, cancellationToken);
-        var reminders = notifications.Daily(plan, await pantry.ListAsync(cancellationToken), today, (await settings.GetAdvancedAsync(cancellationToken)).ExpiringSoonDays);
-        var run = await SendAsync(reminders, cancellationToken);
-
         var current = await settings.GetNotificationsAsync(cancellationToken);
-        current.LastDailyRunOn = today;
+        var run = await QueueTodayAsync(current, cancellationToken);
+        await ScheduleRemindersAsync(current);
         await settings.SaveNotificationsAsync(current, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return run;
     }
 
-    public async Task<ReminderRun?> SendDueRemindersAsync(CancellationToken cancellationToken)
+    public async Task<ReminderRun> SendReminderAsync(SendReminder command, CancellationToken cancellationToken)
+    {
+        // Worded now, so it says what is true when it goes out; dropped if it no longer applies.
+        var reminder = (await DailyAsync(command.On, cancellationToken)).FirstOrDefault(reminder => reminder.Type == command.Type);
+        return reminder is null ? new ReminderRun([], []) : await DeliverAsync(reminder, cancellationToken);
+    }
+
+    public Task<ReminderRun> SendAchievementsAsync(AchievementsUnlocked unlocked, CancellationToken cancellationToken) =>
+        unlocked.Unlocks.Count == 0
+            ? Task.FromResult(new ReminderRun([], []))
+            : DeliverAsync(notifications.Achievements(unlocked.Unlocks), cancellationToken);
+
+    public async Task<ReminderRun?> SendDueRemindersAsync(SendDueReminders command, CancellationToken cancellationToken)
     {
         var current = await settings.GetNotificationsAsync(cancellationToken);
-        return DailyTime.IsDue(current.DailyTime, current.LastDailyRunOn, clock.GetLocalNow())
-            ? await SendTodayAsync(cancellationToken)
+        if (command.DueAt is not null && command.DueAt != current.RemindersDueAt)
+        {
+            return null; // a newer check was scheduled, after a settings change or a restart
+        }
+
+        var run = DailyTime.IsDue(current.DailyTime, current.LastDailyRunOn, clock.GetLocalNow())
+            ? await QueueTodayAsync(current, cancellationToken)
             : null;
+        await ScheduleRemindersAsync(current);
+        await settings.SaveNotificationsAsync(current, cancellationToken);
+        await messages.CommitAsync(cancellationToken);
+        return run;
     }
 
     // ---------- backups ----------
@@ -115,6 +134,7 @@ internal sealed class MaintenanceManager(
         current.Time = time;
         current.KeepCount = request.KeepCount;
         current.KeepDays = request.KeepDays;
+        await ScheduleBackupAsync(current);
         await settings.SaveBackupsAsync(current, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return await DescribeBackupsAsync(cancellationToken);
@@ -126,12 +146,28 @@ internal sealed class MaintenanceManager(
         return await DescribeBackupsAsync(cancellationToken);
     }
 
-    public async Task<BackupFile?> RunDueBackupAsync(CancellationToken cancellationToken)
+    public async Task<BackupFile?> RunDueBackupAsync(RunDueBackup command, CancellationToken cancellationToken)
     {
         var current = await settings.GetBackupsAsync(cancellationToken);
-        return current.Enabled && DailyTime.IsDue(current.Time, current.LastRunOn, clock.GetLocalNow())
-            ? (await BackUpAsync(cancellationToken)).ToResponse()
-            : null;
+        if (command.DueAt is not null && command.DueAt != current.DueAt)
+        {
+            return null; // a newer check was scheduled, after a settings change or a restart
+        }
+
+        try
+        {
+            return current.Enabled && DailyTime.IsDue(current.Time, current.LastRunOn, clock.GetLocalNow())
+                ? (await BackUpAsync(cancellationToken)).ToResponse()
+                : null;
+        }
+        finally
+        {
+            // Even after a failed backup, so tomorrow's still happens. Read again: the backup saved its outcome.
+            var after = await settings.GetBackupsAsync(cancellationToken);
+            await ScheduleBackupAsync(after);
+            await settings.SaveBackupsAsync(after, cancellationToken);
+            await messages.CommitAsync(cancellationToken);
+        }
     }
 
     public Task<Stream> OpenBackupAsync(string name, CancellationToken cancellationToken) =>
@@ -159,31 +195,78 @@ internal sealed class MaintenanceManager(
     public Task RestoreBackupAsync(string name, CancellationToken cancellationToken) =>
         backups.RestoreAsync(validation.ExistingBackup(name), cancellationToken);
 
-    /// <summary>Sends the notifications the household wants to the webhook, if one is set.</summary>
-    private async Task<ReminderRun> SendAsync(IReadOnlyList<Notification> batch, CancellationToken cancellationToken)
+    /// <summary>Queues today's wanted reminders and marks today as done, all saved by the caller's one commit.</summary>
+    private async Task<ReminderRun> QueueTodayAsync(NotificationSettings current, CancellationToken cancellationToken)
+    {
+        var today = clock.Today();
+        var queued = current.WebhookUrl.Length == 0
+            ? []
+            : (await DailyAsync(today, cancellationToken)).Where(reminder => notifications.IsWanted(current, reminder.Type)).ToList();
+        foreach (var reminder in queued)
+        {
+            await messages.PublishAsync(new SendReminder(reminder.Type, today));
+        }
+
+        // Marked done in the same commit that queues them, so each goes out once, even after a crash.
+        current.LastDailyRunOn = today;
+        return new ReminderRun(queued.Select(reminder => reminder.Type).ToList(), []);
+    }
+
+    /// <summary>
+    /// Schedules the next reminder check, replacing any scheduled before: only the one saved as due is acted on.
+    /// Saved with <paramref name="current"/> by the caller's commit.
+    /// </summary>
+    private async Task ScheduleRemindersAsync(NotificationSettings current)
+    {
+        var next = DailyTime.NextCheck(current.DailyTime, current.LastDailyRunOn, clock.GetUtcNow(), clock.LocalTimeZone);
+        current.RemindersDueAt = next;
+        await messages.ScheduleAsync(new SendDueReminders(next), next);
+    }
+
+    /// <summary>
+    /// Schedules the next backup check, replacing any scheduled before; none while backups are off. Saved with
+    /// <paramref name="current"/> by the caller's commit.
+    /// </summary>
+    private async Task ScheduleBackupAsync(BackupSettings current)
+    {
+        current.DueAt = current.Enabled ? DailyTime.NextCheck(current.Time, current.LastRunOn, clock.GetUtcNow(), clock.LocalTimeZone) : null;
+        if (current.DueAt is { } due)
+        {
+            await messages.ScheduleAsync(new RunDueBackup(due), due);
+        }
+    }
+
+    private async Task<IReadOnlyList<Notification>> DailyAsync(DateOnly day, CancellationToken cancellationToken) =>
+        notifications.Daily(
+            await plans.FindCurrentAsync(day, cancellationToken),
+            await pantry.ListAsync(cancellationToken),
+            day,
+            (await settings.GetAdvancedAsync(cancellationToken)).ExpiringSoonDays);
+
+    /// <summary>
+    /// Sends one notification to the webhook, if one is set and the household wants this kind.
+    /// </summary>
+    /// <exception cref="TransientDeliveryException">
+    /// The webhook couldn't be reached or had a server error, so the message bus tries again later. Other failures,
+    /// such as a wrong address, won't get better by waiting, so they are only reported.
+    /// </exception>
+    private async Task<ReminderRun> DeliverAsync(Notification notification, CancellationToken cancellationToken)
     {
         var current = await settings.GetNotificationsAsync(cancellationToken);
-        var sent = new List<string>();
-        var problems = new List<string>();
-        if (current.WebhookUrl.Length == 0)
+        if (current.WebhookUrl.Length == 0 || !notifications.IsWanted(current, notification.Type))
         {
-            return new ReminderRun(sent, problems);
+            return new ReminderRun([], []);
         }
 
-        foreach (var notification in batch.Where(notification => notifications.IsWanted(current, notification.Type)))
+        var result = await webhook.SendAsync(current.WebhookUrl, notification, cancellationToken);
+        if (result.Delivered)
         {
-            var result = await webhook.SendAsync(current.WebhookUrl, notification, cancellationToken);
-            if (result.Delivered)
-            {
-                sent.Add(notification.Type);
-            }
-            else
-            {
-                problems.Add($"{notification.Type}: {result.Problem}");
-            }
+            return new ReminderRun([notification.Type], []);
         }
 
-        return new ReminderRun(sent, problems);
+        return result.Transient
+            ? throw new TransientDeliveryException($"{notification.Type}: {result.Problem}")
+            : new ReminderRun([], [$"{notification.Type}: {result.Problem}"]);
     }
 
     /// <summary>Makes a backup now, then deletes the ones that fall outside the retention rules. The outcome is saved either way.</summary>

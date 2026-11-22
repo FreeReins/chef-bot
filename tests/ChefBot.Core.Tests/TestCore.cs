@@ -1,5 +1,7 @@
 using ChefBot.Core.Engines;
 using ChefBot.Core.Managers;
+using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +20,7 @@ internal sealed class TestCore
     {
         Plans = new FakePlans(Recipes);
         Favourites = new FakeFavourites(Accounts);
+        Recipes.Favourites = () => Favourites.Rows;
         Options = options ?? TestData.Options;
         services = new(Register);
     }
@@ -35,6 +38,12 @@ internal sealed class TestCore
     public FakeAccounts Accounts { get; } = new();
 
     public FakeHistory History { get; } = new();
+
+    public FakeAchievements Achievements { get; } = new();
+
+    public FakeWebhook Webhook { get; } = new();
+
+    private int handled;
 
     public FakeFavourites Favourites { get; }
 
@@ -64,6 +73,28 @@ internal sealed class TestCore
 
     public AccountManager AccountManager() => Make<AccountManager>();
 
+    public MaintenanceManager MaintenanceManager() => Make<MaintenanceManager>();
+
+    /// <summary>
+    /// Does what the background handlers do in the app with the events published since the last call: writes the
+    /// food history, and brings the open plans in line after a pantry, store or settings change.
+    /// </summary>
+    public async Task HandleEventsAsync()
+    {
+        while (handled < Messages.Published.Count)
+        {
+            switch (Messages.Published[handled++])
+            {
+                case IKitchenMoment moment:
+                    await RecipeManager().RecordHistoryAsync(moment, Guid.NewGuid(), default);
+                    break;
+                case PantryChanged or GroceryStoresChanged or PlanningSettingsChanged:
+                    await PlanManager().RefreshOpenPlansAsync(default);
+                    break;
+            }
+        }
+    }
+
     /// <summary>A new manager each call, as each request gets in the app; the fakes and engines are shared.</summary>
     private T Make<T>()
         where T : notnull => services.Value.GetRequiredService<T>();
@@ -79,6 +110,8 @@ internal sealed class TestCore
         services.AddSingleton<IShoppingListAccess>(ShoppingList);
         services.AddSingleton<IAccountAccess>(Accounts);
         services.AddSingleton<IHistoryAccess>(History);
+        services.AddSingleton<IAchievementAccess>(Achievements);
+        services.AddSingleton<INotificationAccess>(Webhook);
         services.AddSingleton<IFavouriteAccess>(Favourites);
         services.AddSingleton<IReviewAccess>(Reviews);
         services.AddSingleton<ISettingsAccess>(Settings);
@@ -104,12 +137,14 @@ internal sealed class TestCore
         services.AddSingleton<CalendarEngine>();
         services.AddSingleton<HistoryEngine>();
         services.AddSingleton<AchievementEngine>();
+        services.AddSingleton(TestData.Notifications);
         services.AddSingleton<SecurityEngine>();
         services.AddTransient<ValidationEngine>();
 
         // The managers under test.
         services.AddTransient<PlanManager>();
         services.AddTransient<PantryManager>();
+        services.AddTransient<MaintenanceManager>();
         services.AddTransient<RecipeManager>();
         services.AddTransient<AccountManager>();
 

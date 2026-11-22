@@ -3,7 +3,7 @@
      happened (HistoryResponse); lib/history.js picks the wording. -->
 <script>
   import { onMount } from 'svelte';
-  import { run } from '../lib/app.svelte.js';
+  import { onLive, run } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { shortDate, fullDate, plural, favouriteOf } from '../lib/format.js';
   import { tell, captionText, chapterTitle, monthName, dayOf, timed } from '../lib/history.js';
@@ -15,8 +15,10 @@
   let since = $state(null);
   let totalDinners = $state(0);
   let loaded = $state(false);
+  let dug = false; // older months were loaded with "Dig deeper"
 
   async function load(before = null) {
+    dug = before !== null;
     const answer = await api('GET', before ? `/api/history?before=${before}` : '/api/history');
     chapters = before ? [...chapters, ...answer.chapters] : answer.chapters;
     olderBefore = answer.olderBefore;
@@ -26,6 +28,9 @@
   }
 
   onMount(() => { run(() => load()); });
+  // Something new happened in the kitchen while the history is open. Not while digging through older months, which
+  // a reload would fold away; they get it next time the tab opens.
+  onMount(() => onLive('history', () => (dug ? null : load())));
 </script>
 
 <section class="history">

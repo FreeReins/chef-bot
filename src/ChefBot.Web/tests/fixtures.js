@@ -84,6 +84,8 @@ function reviewed(request) {
 function defaults() {
   return {
     'GET /api/session': data.session(),
+    // The live stream: an empty one that asks not to reconnect for ten minutes, so tests see no pushes.
+    'GET /api/live': reply(200, Buffer.from('retry: 600000\n\n'), 'text/event-stream'),
     ...library(data.recipes()),
     'GET /api/plans': [data.summary(data.plan())],
     'GET /api/plans/*': data.plan(),
@@ -101,6 +103,7 @@ function defaults() {
     'GET /api/plans/*/ingredients': data.ingredients(),
     'GET /api/history': data.history(),
     'GET /api/achievements': data.achievements(),
+    'POST /api/achievements/seen': reply(204),
     'GET /api/plans/*/meals/*/alternatives': (request) => {
       const mealId = new URL(request.url()).pathname.split('/')[5];
       return data.alternatives(data.plan().meals.find((meal) => meal.id === mealId));

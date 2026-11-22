@@ -11,6 +11,9 @@ internal interface IReviewAccess
     /// <summary>Every review, oldest first.</summary>
     Task<List<RecipeReview>> ListAllAsync(CancellationToken cancellationToken);
 
+    /// <summary>How many reviews have been written, by everyone.</summary>
+    Task<int> CountAsync(CancellationToken cancellationToken);
+
     /// <summary>The reviews of these recipes added up, by recipe. Recipes with no reviews are left out.</summary>
     Task<Dictionary<Guid, ReviewTally>> TallyAsync(IReadOnlyCollection<Guid> recipeIds, CancellationToken cancellationToken);
 

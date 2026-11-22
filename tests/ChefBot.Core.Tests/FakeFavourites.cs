@@ -20,6 +20,12 @@ internal sealed class FakeFavourites(FakeAccounts accounts) : IFavouriteAccess
     public Task<List<RecipeFavourite>> ListAllAsync(CancellationToken cancellationToken) =>
         ListForRecipesAsync(Rows.Select(row => row.RecipeId).ToList(), cancellationToken);
 
+    public async Task<int> CountAsync(CancellationToken cancellationToken) => (await ListAllAsync(cancellationToken)).Count;
+
+    public async Task<List<FavouritePerson>> ListPeopleAsync(CancellationToken cancellationToken) =>
+        (await ListAllAsync(cancellationToken)).DistinctBy(favourite => favourite.UserId)
+            .Select(favourite => new FavouritePerson(favourite.UserId, favourite.UserName)).ToList();
+
     public Task<RecipeFavourite?> FindAsync(Guid recipeId, Guid userId, CancellationToken cancellationToken) =>
         Task.FromResult(Rows.FirstOrDefault(row => row.RecipeId == recipeId && row.UserId == userId) is { } row
             ? Named(row, string.Empty)

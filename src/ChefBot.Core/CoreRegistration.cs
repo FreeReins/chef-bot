@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using Wolverine;
 using Wolverine.EntityFrameworkCore;
+using Wolverine.ErrorHandling;
 using Wolverine.Postgresql;
 
 namespace ChefBot.Core;
@@ -63,6 +64,7 @@ public static class CoreRegistration
         services.AddScoped<ISettingsAccess, SettingsAccess>();
         services.AddScoped<IMessageAccess, MessageAccess>();
         services.AddScoped<IHistoryAccess, HistoryAccess>();
+        services.AddScoped<IAchievementAccess, AchievementAccess>();
         services.AddScoped<IFavouriteAccess, FavouriteAccess>();
         services.AddScoped<IReviewAccess, ReviewAccess>();
         var backupFolder = DataPath(configuration, "Data:Backups", "backups");
@@ -124,6 +126,50 @@ public static class CoreRegistration
         wolverine.PersistMessagesWithPostgresql(ConnectionString(configuration), MessagingSchema);
         wolverine.UseEntityFrameworkCoreTransactions();
         wolverine.Policies.UseDurableLocalQueues();
+        wolverine.UseChefBotQueues();
+        wolverine.UseChefBotErrorPolicies();
+    }
+
+    /// <summary>
+    /// Each handler of an event runs on its own (it can fail, retry or wait without holding up the others), on the
+    /// queue named by its <c>[StickyHandler]</c>. Queue routing stays in this one method, so a queue can later move
+    /// to another transport without touching the handlers.
+    /// </summary>
+    private static void UseChefBotQueues(this WolverineOptions wolverine)
+    {
+        wolverine.MultipleHandlerBehavior = MultipleHandlerBehavior.Separated;
+        wolverine.Durability.MessageIdentity = MessageIdentity.IdAndDestination;
+
+        wolverine.LocalQueue(MessageQueues.Plans).UseDurableInbox().Sequential();
+        wolverine.LocalQueue(MessageQueues.History).UseDurableInbox().Sequential();
+        wolverine.LocalQueue(MessageQueues.Achievements).UseDurableInbox().Sequential();
+        wolverine.LocalQueue(MessageQueues.Maintenance).UseDurableInbox().Sequential();
+        wolverine.LocalQueue(MessageQueues.Images).UseDurableInbox().MaximumParallelMessages(2);
+        wolverine.LocalQueue(MessageQueues.Notifications).UseDurableInbox().MaximumParallelMessages(2);
+        wolverine.LocalQueue(MessageQueues.Live).BufferedInMemory();
+    }
+
+    /// <summary>
+    /// Retries come from here, never from handlers. A database that hiccups is retried at once, then later; an
+    /// outside service that is down is retried over the next half hour; anything else is a bug, and goes straight to
+    /// the dead-letter table (wolverine_dead_letters), where it can be replayed once fixed.
+    /// </summary>
+    private static void UseChefBotErrorPolicies(this WolverineOptions wolverine)
+    {
+        wolverine.Policies.OnException<NpgsqlException>(exception => exception.IsTransient)
+            .Or<TimeoutException>()
+            .Or<DbUpdateException>(exception => exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+            .RetryWithCooldown(TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(250), TimeSpan.FromSeconds(1))
+            .Then.ScheduleRetry(TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30))
+            .Then.MoveToErrorQueue();
+
+        wolverine.Policies.OnException<HttpRequestException>()
+            .Or<TaskCanceledException>()
+            .Or<TransientDeliveryException>()
+            .ScheduleRetry(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30))
+            .Then.MoveToErrorQueue();
+
+        wolverine.Policies.OnAnyException().MoveToErrorQueue();
     }
 
     /// <summary>

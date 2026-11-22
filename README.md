@@ -275,6 +275,9 @@ When Caddy, Traefik, nginx or similar handles HTTPS, let it talk to ChefBot over
 - **"Always use HTTPS" stays off.** Redirecting to HTTPS, and sending `Strict-Transport-Security`, is the
   proxy's job.
 - Point the proxy at port 8080. Port 8443 isn't used in this mode.
+- **Don't buffer `/api/live`.** It is a stream of server-sent events that tells open pages what changed. ChefBot
+  sends `X-Accel-Buffering: no` for nginx; for other proxies turn response buffering off for that path. Without
+  the stream, pages still work, but changes made on another device show only after a reload.
 
 ### Upgrading
 
@@ -352,7 +355,9 @@ try each call. Both need you to be signed in.
 | `GET` `POST /api/recipes`, `PUT` `DELETE /api/recipes/{id}` | Manage local recipes. A recipe has `name`, `course`, `servings`, `isSlowCooker` and `ingredients` (lines such as `"2 cups kale"`), and optionally `description`, `instructions` (a list of steps), `prepMinutes`, `cookMinutes`, `totalMinutes`, `sourceUrl`, `author`, `yieldText`, `notes` and `tags`. Responses add `images`, `ingredientDetails` (each line's quantity, unit and food) and `stepDetails` (for each step: the `timers` it gives in seconds, a `headStart` such as preheating the oven, boiling water or a long wait, and the positions of the `ingredients` it names) and `favouredBy`: the people who have it as a favourite, each `{"userId", "name"}`, oldest first, and `rating`: `{"average", "count"}`, the average stars of its reviews to one decimal place, or null when it has none |
 | `GET /api/recipes/search?query=chicken&course=Main&page=1&pageSize=25` | One page of the library, in course order and then by name. Every parameter is optional: `query` keeps recipes whose name, ingredients or tags contain each of its words (any case), `pageSize` defaults to 25 (at most 100). `tag` (repeat it for several) keeps recipes with every tag given, `favourites=true` anyone's favourites, `favouredBy=<user id>` one person's, `slowCooker=true` slow cooker recipes, and `readyWithin=30` recipes that say they are ready within that many minutes. Answers `{"recipes": [...], "total", "page", "pageSize", "librarySize"}`, where each recipe has only `id`, `name`, `course`, `isSlowCooker`, `ingredients`, `tags`, `coverUrl` (its first photo, or null), `favouredBy` and `rating` |
 | `GET /api/history?before=2026-05-01&months=6` | The household's food history, newest month first: recipes added and retired, cooking (with debuts, fan favourites, comebacks, milestone dinners and someone's favourite being cooked picked out), reviews, big shopping hauls and people joining. Both parameters are optional; `months` defaults to 6 (at most 24). Answers `{"chapters": [...], "olderBefore", "since", "totalDinners"}`, where each moment has an `at` timestamp in the household's time zone (midnight when only the day was recorded), and a cook has `favouredBy`: whose favourite the recipe was when it was cooked, and a `Reviewed` moment has `review`: `{"stars", "notes", "reviewedBy"}`; pass `olderBefore` as `before` for older months |
-| `GET /api/achievements` | The household's kitchen achievements: `{"points", "rank", "rankPoints", "nextRankPoints", "starter": [...], "badges": [...]}`. Each achievement is `{"kind", "tier", "tiers", "progress", "goal", "optional"}`: `tier` 0 is not reached yet, `goal` is what `progress` has to reach for the next tier (null at the last), and an `optional` first step (inviting someone) earns no points. Ranks run from 0 to 5 |
+| `GET /api/achievements` | The household's kitchen achievements: `{"points", "rank", "rankPoints", "nextRankPoints", "starter": [...], "badges": [...], "unseen": [...]}`. Each achievement is `{"kind", "tier", "tiers", "progress", "goal", "optional"}`: `tier` 0 is not reached yet, `goal` is what `progress` has to reach for the next tier (null at the last), and an `optional` first step (inviting someone) earns no points. Ranks run from 0 to 5. `unseen` lists what was reached that the signed-in person hasn't been shown: `{"id", "kind", "tier", "earnedAt"}`, with `kind` null for a new rank (`tier` is then the rank) |
+| `POST /api/achievements/seen` | `{"upTo": "<id from unseen>"}`: the signed-in person was shown the new achievements up to that one, on any device |
+| `GET /api/live` | Server-sent events naming what changed, by anyone: `plan`, `shopping`, `pantry`, `recipes`, `achievements`, `backups` or `history` (and a `ping` every 25 seconds). Only the name is sent; load that part again with the API. After reconnecting, load everything |
 | `GET /api/recipes/filters` | What the library can be filtered by: `{"tags": [{"name", "recipes"}], "people": [{"userId", "name"}]}`: every tag once with how many recipes have it, most used first, and the people who have favourites |
 | `GET /api/recipes/{id}` | One recipe in full. 404 when it doesn't exist or has been archived |
 | `GET /api/recipes/{id}/export?format=json` | One recipe as a file to download, named after it. `format` is optional: `json` (the default) gives a schema.org JSON-LD file (`.json`, `application/ld+json`), which Mealie, Tandoor and other recipe apps import, as does ChefBot's own import. It adds `course`, `isSlowCooker` and `notes`, which schema.org has no word for, and lists photos only when they came from the web, by their original address. `pdf` gives a PDF to print or keep (`.pdf`): text only, without photos, on US Letter pages; letters outside western European alphabets print as `?`. `markdown` gives Markdown (`.md`) and `text` plain text (`.txt`), both UTF-8. A format it doesn't know gives JSON-LD. 404 when the recipe doesn't exist or has been archived |
@@ -518,6 +523,7 @@ Every notification is a JSON POST:
 | `expiring_food` | Daily time, when pantry food expires within `Planner:ExpiringSoonDays` | `items` (name, expiresOn, daysLeft, usedByPlan) |
 | `shopping` | Daily time, the day before a week starts and on its first day | `status`, `toBuy` |
 | `meals_today` | Daily time (off by default) | `meals` (slot, title, optional, leftover) |
+| `achievement` | When the household reaches a new badge tier, first step or chef rank | `achievements` (id, kind, tier, name) |
 | `test` | From the Settings tab | |
 
 `title` and `message` are ready to show as they are; `type` and `data` let an automation word its own
@@ -630,12 +636,16 @@ config/                     The ingredient catalog and sample recipes.
   accounts, maintenance) run each use case; engines do the planning, shopping, suggestion, validation, security
   and notification work; resource accessors are the only code that reads or writes the database, the web,
   the webhook or the backup folder. Calls only go down, and the API sees only the managers' interfaces.
-- **[Wolverine](https://wolverinefx.net)** serves the HTTP endpoints (`Endpoints/`) and carries messages between
-  managers (`Messaging/`): `PlanStaged` sends the "plan ready" notification, `PantryChanged` refreshes the open
-  plans' shopping lists, and `FetchRecipeImages` downloads imported photos in the background. Messages are stored in PostgreSQL, in the
-  `wolverine` schema, and are only sent once the change that caused them is saved, so a restart doesn't lose them.
-- **Every 10 minutes** a timer asks for the scheduled jobs: next week's plan, the daily reminders and the daily
-  backup. Each one runs only when its time has come and it hasn't run yet.
+- **[Wolverine](https://wolverinefx.net)** serves the HTTP endpoints (`Endpoints/`) and carries events between
+  managers (`Messaging/`). A change is saved together with the events it caused (`MealCooked`, `RecipesAdded`,
+  `PantryChanged`...), and each interested part reacts on its own queue afterwards: the food history, the
+  achievements, the open plans' shopping lists, webhook notifications, photo downloads and the live updates
+  pages listen to (`/api/live`). Messages are stored in PostgreSQL, in the `wolverine` schema, and are only sent
+  once the change that caused them is saved, so a restart doesn't lose them. A webhook or photo site that is down
+  is tried again over the next half hour; anything that still fails is kept in `wolverine.wolverine_dead_letters`.
+- **Scheduled jobs** (next week's plan, the daily reminders and the daily backup) are scheduled messages kept in
+  the database: each run schedules the next one, and at startup each job looks once, so a run missed while
+  ChefBot was off happens straight away.
 - **The planner** scores whole weeks, not single recipes. It starts from several random weeks and improves
   each one swap at a time (`WeekSelector`), scoring with `WeekScorer`.
 - **Every change to a plan** goes through the plan manager, which ends each change by placing the leftover
@@ -652,9 +662,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions.
 - **Accounts share everything.** There is one household per installation: no per-person plans or pantries.
 - **Amounts are only compared within the same unit.** ChefBot does not convert cups to grams. When it can't
   compare, having some of an ingredient counts as having enough.
-- **Scheduled jobs catch up, within limits.** A weekly plan due while ChefBot was stopped is staged at the next
-  check (every 10 minutes) as long as its week hasn't started; each week is staged once, so a plan you clear
-  stays cleared. Daily reminders and backups run at the next check if their time has passed that day.
+- **Scheduled jobs catch up, within limits.** A weekly plan due while ChefBot was stopped is staged when it starts
+  again, as long as its week hasn't started; each week is staged once, so a plan you clear stays cleared. Daily
+  reminders and backups run at startup if their time has passed that day.
 - **One ChefBot per database.** Changes to a plan are made one at a time inside the app, so don't run two copies
   against the same database.
 - **Notifications go one way.** ChefBot posts to a webhook; it has no API keys yet, so Home Assistant can't

@@ -16,6 +16,7 @@ internal static partial class EntityMapping
         FailedSignIns = entity.FailedSignIns,
         LockedUntil = entity.LockedUntil,
         SessionVersion = entity.SessionVersion,
+        AchievementsSeenAt = entity.AchievementsSeenAt,
     };
 
     public static UserEntity ToEntity(this UserAccount user) => new()
@@ -29,5 +30,6 @@ internal static partial class EntityMapping
         FailedSignIns = user.FailedSignIns,
         LockedUntil = user.LockedUntil,
         SessionVersion = user.SessionVersion,
+        AchievementsSeenAt = user.AchievementsSeenAt,
     };
 }

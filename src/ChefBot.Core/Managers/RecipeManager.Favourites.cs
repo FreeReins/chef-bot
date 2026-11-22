@@ -14,6 +14,7 @@ internal sealed partial class RecipeManager
         {
             await favourites.AddAsync(
                 new RecipeFavourite { RecipeId = recipe.Id, UserId = user.Id, CreatedAt = clock.GetUtcNow() }, cancellationToken);
+            await messages.PublishAsync(new RecipeFavourited(recipe.Id, user.Id));
             await messages.CommitAsync(cancellationToken);
         }
 
@@ -26,6 +27,7 @@ internal sealed partial class RecipeManager
         if (await favourites.FindAsync(recipe.Id, userId, cancellationToken) is { } favourite)
         {
             await favourites.RemoveAsync(favourite.Id, cancellationToken);
+            await messages.PublishAsync(new RecipeUnfavourited(recipe.Id, userId));
             await messages.CommitAsync(cancellationToken);
         }
 

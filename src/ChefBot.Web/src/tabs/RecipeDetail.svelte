@@ -3,8 +3,8 @@
      and cooking mode (/recipes/{id}/cook, RecipeCook.svelte) over the whole screen; sharing it as text, printing it, downloading it
      (as a PDF, Markdown, text or a schema.org file, RecipeDownloads.svelte) and archiving it are in the ⋯ menu. -->
 <script>
-  import { tick } from 'svelte';
-  import { app, run, loadRecipes, toast, ask } from '../lib/app.svelte.js';
+  import { onMount, tick } from 'svelte';
+  import { app, run, loadRecipes, toast, ask, loadRecipePage, watchRecipe } from '../lib/app.svelte.js';
   import { go, closeDialog } from '../lib/addresses.js';
   import { api } from '../lib/api.js';
   import { duration } from '../lib/format.js';
@@ -77,16 +77,8 @@
 
   // The page is rebuilt for each recipe, so this runs once per id. A recipe that is gone shows the empty state.
   app.recipeName = null;
-  run(async () => {
-    try {
-      show(await api('GET', `/api/recipes/${id}`));
-    } catch (error) {
-      if (error.status !== 404) throw error;
-      show(null);
-    } finally {
-      loaded = true;
-    }
-  });
+  run(() => loadRecipePage(id, show).finally(() => (loaded = true)));
+  onMount(() => watchRecipe(id, () => base, show));
 
   const close = () => closeDialog(base);
 

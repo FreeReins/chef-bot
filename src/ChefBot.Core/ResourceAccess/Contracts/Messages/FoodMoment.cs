@@ -34,4 +34,7 @@ internal sealed class FoodMoment
 
     /// <summary>For a cook: the names of the people who had the recipe as a favourite then, oldest favourite first.</summary>
     public List<string> FavouredBy { get; set; } = [];
+
+    /// <summary>The message that recorded it, so recording the same message again adds nothing.</summary>
+    public Guid? SourceId { get; set; }
 }

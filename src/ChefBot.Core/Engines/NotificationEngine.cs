@@ -10,7 +10,7 @@ namespace ChefBot.Core.Engines;
 /// backups to delete. It is given the plan, pantry and settings and returns decisions, so every rule can be tested
 /// without a clock or a network. Reads and saves nothing.
 /// </summary>
-internal sealed class NotificationEngine
+internal sealed partial class NotificationEngine
 {
     /// <summary>"A new plan is ready", sent whenever a week is staged.</summary>
     /// <param name="plan">The staged plan.</param>
@@ -74,6 +74,7 @@ internal sealed class NotificationEngine
         NotificationTypes.MealsToday => settings.MealsToday,
         NotificationTypes.ExpiringFood => settings.ExpiringFood,
         NotificationTypes.Shopping => settings.Shopping,
+        NotificationTypes.Achievement => settings.Achievements,
         _ => true,
     };
 

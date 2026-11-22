@@ -157,9 +157,10 @@ public interface IPlanManager
 
     /// <summary>
     /// Stages next week's plan when the weekly schedule's time has come, once per week, unless that week already
-    /// has a plan.
+    /// has a plan, then schedules the next check for when the schedule next fires. A check that isn't the one saved
+    /// as due does nothing, so only one is ever waiting.
     /// </summary>
-    Task CheckWeeklyScheduleAsync(CancellationToken cancellationToken);
+    Task CheckWeeklyScheduleAsync(CheckWeeklySchedule command, CancellationToken cancellationToken);
 
     /// <summary>When the weekly schedule next stages a plan, or null when it is switched off.</summary>
     Task<DateTimeOffset?> NextScheduledStagingAsync(CancellationToken cancellationToken);

@@ -44,6 +44,19 @@ internal sealed class FavouriteAccess(ChefBotDbContext db) : IFavouriteAccess
             .ToList();
     }
 
+    public Task<int> CountAsync(CancellationToken cancellationToken) =>
+        db.RecipeFavourites.CountAsync(favourite => db.Users.Any(user => user.Id == favourite.UserId), cancellationToken);
+
+    public async Task<List<FavouritePerson>> ListPeopleAsync(CancellationToken cancellationToken) =>
+        (await db.RecipeFavourites.AsNoTracking()
+            .GroupBy(favourite => favourite.UserId)
+            .Select(group => new { UserId = group.Key, First = group.Min(favourite => favourite.CreatedAt) })
+            .Join(db.Users, person => person.UserId, user => user.Id, (person, user) => new { person.UserId, user.DisplayName, person.First })
+            .OrderBy(person => person.First)
+            .ToListAsync(cancellationToken))
+        .Select(person => new FavouritePerson(person.UserId, person.DisplayName))
+        .ToList();
+
     public async Task<RecipeFavourite?> FindAsync(Guid recipeId, Guid userId, CancellationToken cancellationToken)
     {
         await db.RecipeFavourites.Where(favourite => favourite.RecipeId == recipeId && favourite.UserId == userId)

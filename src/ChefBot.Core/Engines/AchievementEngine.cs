@@ -65,7 +65,35 @@ internal sealed class AchievementEngine
             + cooks.Count * CookPoints;
         var rank = Array.FindLastIndex(RankPoints, start => points >= start);
         int? next = rank + 1 < RankPoints.Length ? RankPoints[rank + 1] : null;
-        return new AchievementsResponse(points, rank, RankPoints[rank], next, starter, badges);
+        return new AchievementsResponse(points, rank, RankPoints[rank], next, starter, badges, []);
+    }
+
+    /// <summary>
+    /// What <paramref name="current"/> reached beyond what was kept before: every tier above the highest kept for
+    /// each achievement, and every rank above the highest kept. Optional steps are left out, since they earn nothing.
+    /// Nothing is taken back, so a tier that drops and comes back again is not new. With nothing kept yet, rank 0
+    /// (where everyone starts) is included, so the next check knows tracking has begun.
+    /// </summary>
+    public static IReadOnlyList<AchievementUnlock> Unlocks(
+        AchievementsResponse current, IReadOnlyList<AchievementUnlock> kept, DateTimeOffset now, Guid? causedBy, bool quiet)
+    {
+        var fresh = new List<AchievementUnlock>();
+        foreach (var achievement in current.Starter.Concat(current.Badges).Where(achievement => !achievement.Optional))
+        {
+            var highest = kept.Where(unlock => unlock.Kind == achievement.Kind).Select(unlock => unlock.Tier).DefaultIfEmpty(0).Max();
+            for (var tier = highest + 1; tier <= achievement.Tier; tier++)
+            {
+                fresh.Add(new AchievementUnlock { Kind = achievement.Kind, Tier = tier, EarnedAt = now, Quiet = quiet, CausedBy = causedBy });
+            }
+        }
+
+        var highestRank = kept.Where(unlock => unlock.Kind is null).Select(unlock => unlock.Tier).DefaultIfEmpty(-1).Max();
+        for (var rank = highestRank + 1; rank <= current.Rank; rank++)
+        {
+            fresh.Add(new AchievementUnlock { Kind = null, Tier = rank, EarnedAt = now, Quiet = quiet || rank == 0, CausedBy = causedBy });
+        }
+
+        return fresh;
     }
 
     /// <summary>The longest run of Sunday-to-Saturday weeks in a row with at least one cook.</summary>

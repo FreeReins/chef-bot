@@ -19,4 +19,6 @@ internal sealed class UserEntity
     public DateTimeOffset? LockedUntil { get; set; }
 
     public int SessionVersion { get; set; }
+
+    public DateTimeOffset? AchievementsSeenAt { get; set; }
 }

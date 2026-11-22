@@ -76,7 +76,7 @@ public class PlanningSettingsTests
         var plans = core.PlanManager();
 
         var saved = await plans.SavePlannerSettingsAsync(Planning(people: 2, scheduleEnabled: false), default);
-        await plans.CheckWeeklyScheduleAsync(default);
+        await plans.CheckWeeklyScheduleAsync(new CheckWeeklySchedule(), default);
 
         await Assert.That(saved.NextStaging).IsNull();
         await Assert.That(await plans.NextScheduledStagingAsync(default)).IsNull();

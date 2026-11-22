@@ -157,6 +157,7 @@ public class StoreTests
         await Assert.That(staged.Shopping.All(item => item.Store.Length == 0)).IsTrue();
 
         var saved = await plans.SaveStoresAsync(new SaveGroceryStoresRequest([Details("Hy-Vee", main: true)]), default);
+        await core.HandleEventsAsync();
         var plan = await plans.GetAsync(staged.Id, default);
 
         await Assert.That(saved.Stores.Single().Name).IsEqualTo("Hy-Vee");

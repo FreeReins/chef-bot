@@ -15,6 +15,8 @@ internal sealed class FakeReviews : IReviewAccess
     public Task<List<RecipeReview>> ListAllAsync(CancellationToken cancellationToken) =>
         Task.FromResult(Rows.OrderBy(row => row.CreatedAt).ThenBy(row => row.Id).Select(Copy).ToList());
 
+    public Task<int> CountAsync(CancellationToken cancellationToken) => Task.FromResult(Rows.Count);
+
     public Task<Dictionary<Guid, ReviewTally>> TallyAsync(IReadOnlyCollection<Guid> recipeIds, CancellationToken cancellationToken) =>
         Task.FromResult(Rows.Where(row => recipeIds.Contains(row.RecipeId))
             .GroupBy(row => row.RecipeId)

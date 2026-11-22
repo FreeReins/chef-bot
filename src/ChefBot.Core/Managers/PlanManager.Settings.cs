@@ -35,6 +35,7 @@ internal sealed partial class PlanManager
             }
         }
 
+        await ScheduleWeeklyCheckAsync(cancellationToken);
         await messages.CommitAsync(cancellationToken);
         fresh.IsSaved = true;
         return fresh.ToResponse(PlanningEngine.NextScheduledStaging(fresh, clock.GetLocalNow()));

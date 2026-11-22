@@ -24,4 +24,6 @@ internal sealed class FoodMomentEntity
     public int? Count { get; set; }
 
     public List<string> FavouredBy { get; set; } = [];
+
+    public Guid? SourceId { get; set; }
 }

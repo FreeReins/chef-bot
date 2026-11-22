@@ -21,6 +21,9 @@ internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
     public async Task<List<Recipe>> ListAllAsync(CancellationToken cancellationToken) =>
         (await WithIngredients.ToListAsync(cancellationToken)).Select(recipe => recipe.ToContract()).ToList();
 
+    public async Task<List<Recipe>> ListAllPlainAsync(CancellationToken cancellationToken) =>
+        (await db.Recipes.AsNoTracking().ToListAsync(cancellationToken)).Select(recipe => recipe.ToContract()).ToList();
+
     public async Task<RecipeSearchResult> SearchActiveAsync(RecipeQuery query, CancellationToken cancellationToken)
     {
         var matching = db.Recipes.AsNoTracking().Where(recipe => !recipe.IsArchived);
@@ -35,9 +38,11 @@ internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
             matching = matching.Where(recipe => recipe.Tags.Any(saved => EF.Functions.ILike(saved, exact, LikeEscape)));
         }
 
-        if (query.OnlyIds is { } ids)
+        if (query.FavouritesOnly || query.FavouredBy is not null)
         {
-            matching = matching.Where(recipe => ids.Contains(recipe.Id));
+            // A correlated EXISTS, so the database answers it however many favourites there are.
+            var by = query.FavouredBy;
+            matching = matching.Where(recipe => db.RecipeFavourites.Any(favourite => favourite.RecipeId == recipe.Id && (by == null || favourite.UserId == by)));
         }
 
         if (query.SlowCooker)

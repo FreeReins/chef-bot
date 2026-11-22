@@ -10,6 +10,9 @@ internal interface IHistoryAccess
 
     Task AddAsync(FoodMoment moment, CancellationToken cancellationToken);
 
+    /// <summary>True when a moment recorded from this message is already kept.</summary>
+    Task<bool> HasSourceAsync(Guid sourceId, CancellationToken cancellationToken);
+
     /// <summary>Takes back the moments recorded for cooking a planned meal.</summary>
     Task RemoveForMealAsync(Guid mealId, CancellationToken cancellationToken);
 }

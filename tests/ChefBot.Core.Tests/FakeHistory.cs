@@ -16,6 +16,9 @@ internal sealed class FakeHistory : IHistoryAccess
         return Task.CompletedTask;
     }
 
+    public Task<bool> HasSourceAsync(Guid sourceId, CancellationToken cancellationToken) =>
+        Task.FromResult(Rows.Any(moment => moment.SourceId == sourceId));
+
     public Task RemoveForMealAsync(Guid mealId, CancellationToken cancellationToken)
     {
         Rows.RemoveAll(moment => moment.MealId == mealId);

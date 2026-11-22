@@ -14,13 +14,28 @@ public interface IMaintenanceManager
     Task<DeliveryResult> SendTestNotificationAsync(CancellationToken cancellationToken);
 
     /// <summary>Announces a newly staged plan.</summary>
+    /// <exception cref="TransientDeliveryException">The webhook is unreachable for now; try again later.</exception>
     Task<ReminderRun> SendPlanReadyAsync(PlanStaged staged, CancellationToken cancellationToken);
 
-    /// <summary>Sends today's reminders now, whatever the time.</summary>
+    /// <summary>
+    /// Queues today's reminders now, whatever the time, and marks today's as done in the same step. Each one is
+    /// delivered on its own (<see cref="SendReminderAsync"/>); <see cref="ReminderRun.Sent"/> lists the ones queued.
+    /// </summary>
     Task<ReminderRun> SendTodayAsync(CancellationToken cancellationToken);
 
-    /// <summary>Sends today's reminders if their time has come and they haven't gone out yet today. Null when not due.</summary>
-    Task<ReminderRun?> SendDueRemindersAsync(CancellationToken cancellationToken);
+    /// <summary>Delivers one queued reminder, worded as things are now; nothing when it no longer applies.</summary>
+    /// <exception cref="TransientDeliveryException">The webhook is unreachable for now; try again later.</exception>
+    Task<ReminderRun> SendReminderAsync(SendReminder command, CancellationToken cancellationToken);
+
+    /// <summary>Announces new achievement tiers and chef ranks, when the household wants that.</summary>
+    /// <exception cref="TransientDeliveryException">The webhook is unreachable for now; try again later.</exception>
+    Task<ReminderRun> SendAchievementsAsync(AchievementsUnlocked unlocked, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Queues today's reminders if their time has come and they haven't gone out yet today (null when not due), then
+    /// schedules the next check. A check that isn't the one saved as due does nothing, so only one is ever waiting.
+    /// </summary>
+    Task<ReminderRun?> SendDueRemindersAsync(SendDueReminders command, CancellationToken cancellationToken);
 
     /// <summary>How plans weigh repeats, expiring food and perishables, and the words that sort imported recipes.</summary>
     Task<AdvancedSettingsResponse> GetAdvancedSettingsAsync(CancellationToken cancellationToken);
@@ -39,8 +54,11 @@ public interface IMaintenanceManager
     /// <summary>Makes a backup now, then deletes the ones that fall outside the retention rules.</summary>
     Task<BackupsResponse> RunBackupAsync(CancellationToken cancellationToken);
 
-    /// <summary>Runs the daily backup if it is switched on, its time has come and it hasn't run yet today. Null when not due.</summary>
-    Task<BackupFile?> RunDueBackupAsync(CancellationToken cancellationToken);
+    /// <summary>
+    /// Runs the daily backup if it is switched on, its time has come and it hasn't run yet today (null when not due),
+    /// then schedules the next check. A check that isn't the one saved as due does nothing.
+    /// </summary>
+    Task<BackupFile?> RunDueBackupAsync(RunDueBackup command, CancellationToken cancellationToken);
 
     /// <summary>Opens a backup file for download.</summary>
     Task<Stream> OpenBackupAsync(string name, CancellationToken cancellationToken);

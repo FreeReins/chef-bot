@@ -30,8 +30,11 @@ For a new stored table, a new manager operation or endpoint, or a new web screen
 - Accessors take and return the contracts in `ResourceAccess/Contracts/Messages/`, never EF entities. Managers
   commit once through `IMessageAccess.CommitAsync`.
 - Managers react to each other only through messages: `IMessageAccess.PublishAsync`, handled in
-  `src/ChefBot.Api/Messaging/<Message>Handler.cs`, which calls the other manager. Handlers log expected failures;
-  no retry logic.
+  `src/ChefBot.Api/Messaging/<Message>Handler.cs` (or `<Message><Subscriber>Handler.cs` when an event has several),
+  which calls the other manager. Each handler names its queue with `[StickyHandler(MessageQueues.…)]` and must be
+  safe to run twice. Handlers log expected failures and never retry by hand: retries and dead-lettering come from
+  the error policies in `CoreRegistration`. Every message gets a `[MessageIdentity("chefbot.<name>.v1")]`, is
+  listed in `ContractJsonContext`, and only gains fields; a breaking change is a new `.v2`.
 - Ingredient needs come only from `MealRequirements`. Anything that changes a plan goes through `PlanManager`,
   which ends with `ReconcileAsync` so leftovers and the shopping list stay in step.
 - Admin-only endpoints use `[Authorize(Policy = Sessions.AdminPolicy)]`; managers don't check roles.

@@ -31,12 +31,13 @@ internal sealed partial class NotificationAccess(HttpClient http, TimeProvider c
             }
 
             logger.LogWarning("The notification webhook answered HTTP {Status} for {Type}.", (int)response.StatusCode, notification.Type);
-            return new Delivery(false, $"The webhook answered HTTP {(int)response.StatusCode}.");
+            var status = (int)response.StatusCode;
+            return new Delivery(false, $"The webhook answered HTTP {status}.", Transient: status >= 500 || status is 408 or 429);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
             logger.LogWarning("The notification webhook couldn't be reached for {Type}: {Reason}", notification.Type, exception.Message);
-            return new Delivery(false, $"The webhook couldn't be reached: {exception.Message}");
+            return new Delivery(false, $"The webhook couldn't be reached: {exception.Message}", Transient: true);
         }
     }
 

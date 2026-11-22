@@ -1,4 +1,5 @@
 using ChefBot.Api.Https;
+using ChefBot.Api.Live;
 using ChefBot.Api.Logging;
 using ChefBot.Api.Messaging;
 using ChefBot.Core;
@@ -19,7 +20,8 @@ public static class ServiceRegistration
     public static IServiceCollection AddChefBot(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddChefBotCore(configuration);
-        services.AddHostedService<MaintenanceTimer>();
+        services.AddHostedService<StartupJobs>();
+        services.AddSingleton<LiveUpdates>();
         return services;
     }
 

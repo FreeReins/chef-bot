@@ -17,6 +17,7 @@ internal static partial class EntityMapping
         Title = entity.Title,
         Count = entity.Count,
         FavouredBy = [.. entity.FavouredBy],
+        SourceId = entity.SourceId,
     };
 
     public static FoodMomentEntity ToEntity(this FoodMoment moment) => new()
@@ -31,5 +32,6 @@ internal static partial class EntityMapping
         Title = moment.Title,
         Count = moment.Count,
         FavouredBy = [.. moment.FavouredBy],
+        SourceId = moment.SourceId,
     };
 }

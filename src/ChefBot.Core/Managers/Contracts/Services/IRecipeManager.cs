@@ -99,9 +99,30 @@ public interface IRecipeManager
 
     /// <summary>
     /// The household's kitchen achievements: the first steps, badges with bronze, silver and gold tiers, and the
-    /// points and chef rank they add up to. None depend on how many people are in the household.
+    /// points and chef rank they add up to, with what <paramref name="userId"/> hasn't been shown yet.
     /// </summary>
-    Task<AchievementsResponse> GetAchievementsAsync(CancellationToken cancellationToken);
+    Task<AchievementsResponse> GetAchievementsAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Remembers that <paramref name="userId"/> was shown the new achievements up to one of them.</summary>
+    Task MarkAchievementsSeenAsync(Guid userId, AchievementsSeenRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Saves the achievement tiers and ranks reached since the last check, and announces them
+    /// (<see cref="AchievementsUnlocked"/>). The first check ever records what was already reached without announcing
+    /// it. Safe to run any number of times: what was saved is never saved again. Returns what was announced.
+    /// </summary>
+    /// <param name="causedBy">The message that asked for the check, kept with what it found.</param>
+    /// <param name="cancellationToken">Stops the check.</param>
+    Task<IReadOnlyList<AchievementUnlockResponse>> CheckAchievementsAsync(Guid? causedBy, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Writes what an event means for the food history, and announces it (<see cref="HistoryRecorded"/>) when the
+    /// history changed. Safe to run more than once for the same message: it adds nothing the second time.
+    /// </summary>
+    /// <param name="moment">The event, such as a meal cooked or recipes added.</param>
+    /// <param name="sourceId">The message that carried it, kept with what it records.</param>
+    /// <param name="cancellationToken">Stops the work.</param>
+    Task RecordHistoryAsync(IKitchenMoment moment, Guid sourceId, CancellationToken cancellationToken);
 
     /// <summary>A recipe's reviews, newest first, with the rating they add up to.</summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>

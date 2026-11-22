@@ -8,6 +8,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="ExpiringFood">Warn about pantry food that is about to expire.</param>
 /// <param name="Shopping">Remind to confirm the plan or finish the shopping as the week starts.</param>
 /// <param name="DailyTime">Local time the daily reminders are sent, as HH:mm.</param>
+/// <param name="Achievements">Announce new achievement tiers and chef ranks. On when left out.</param>
 public sealed record NotificationSettingsRequest(
     string? WebhookUrl,
     bool PlanReady,
@@ -15,4 +16,5 @@ public sealed record NotificationSettingsRequest(
     bool MealsToday,
     bool ExpiringFood,
     bool Shopping,
-    string DailyTime);
+    string DailyTime,
+    bool Achievements = true);

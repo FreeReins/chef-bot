@@ -43,7 +43,7 @@ dotnet test --solution ChefBot.slnx               # the same tests through dotne
 | Project | Holds | May depend on |
 |---|---|---|
 | `ChefBot.Core` | Everything below the API, in layers (see below). Only `Managers/Contracts/` and `CoreRegistration` are public | ASP.NET Core, Npgsql EF Core, Wolverine's EF Core and PostgreSQL storage |
-| `ChefBot.Api` | The clients of the core: Wolverine HTTP endpoints (`Endpoints/`), message handlers and the timer that queues the scheduled jobs (`Messaging/`), the MCP server's tools (`Mcp/`, each calling one manager method like an endpoint), sign-in (cookies, and API tokens for `/mcp`), HTTPS (`Https/`, with its own request and response records, since HTTPS belongs to the host rather than the core), startup wiring; serves the web page | `ChefBot.Core`'s public contracts |
+| `ChefBot.Api` | The clients of the core: Wolverine HTTP endpoints (`Endpoints/`), message handlers and the startup step that schedules the timed jobs (`Messaging/`), the live updates stream (`Live/`), the MCP server's tools (`Mcp/`, each calling one manager method like an endpoint), sign-in (cookies, and API tokens for `/mcp`), HTTPS (`Https/`, with its own request and response records, since HTTPS belongs to the host rather than the core), startup wiring; serves the web page | `ChefBot.Core`'s public contracts |
 | `ChefBot.Web` | The web page: Svelte 5 components built with Vite into `ChefBot.Web/dist`, which `ChefBot.Api` serves | The HTTP API |
 
 `ChefBot.Core` is split by what changes for different reasons. Calls only go down; nothing calls sideways:
@@ -91,8 +91,23 @@ Rules of thumb:
   `IMessageAccess.PublishAsync`, and a handler in `ChefBot.Api/Messaging/` calls the other. For example,
   `PantryManager` publishes `PantryChanged` and its handler calls `IPlanManager.RefreshOpenPlansAsync`.
 - Messages are kept in PostgreSQL (the `wolverine` schema) and only sent once the transaction that published
-  them commits. Handlers log expected problems, such as a photo that can't be downloaded, rather than throwing; there is no
-  retry logic to keep in mind.
+  them commits. Managers publish events, facts that already happened (`MealCooked`, `RecipesAdded`), and each
+  subscriber runs on its own: an event with three handlers (`PlanStaged`: the webhook, the achievements check and
+  the live page) is handled three times, each on its handler's queue (`MessageQueues`, set by `[StickyHandler]`).
+  Queues that must not overlap run one message at a time (`plans`, `history`, `achievements`, `maintenance`).
+- A message can arrive twice, so every handler must be safe to repeat: work things out again from what is saved
+  (the achievements check), or check a marker (food moments keep the message they came from). Handlers log
+  expected problems, such as a photo that can't be downloaded, rather than throwing. Retries are never written by
+  hand: `CoreRegistration` retries database hiccups and unreachable outside services (throw
+  `TransientDeliveryException` for those), and sends anything else to the `wolverine_dead_letters` table.
+- Messages are stored, so their shapes are a contract: each has `[MessageIdentity("chefbot.<name>.v1")]` and a line
+  in `ContractJsonContext`, and only gains fields. A breaking change gets a new `.v2` identity.
+- Timed jobs schedule their own next run (`IMessageAccess.ScheduleAsync`) and save when it is due; a scheduled
+  message due at another time is stale and does nothing, so only one is ever waiting. `StartupJobs` asks each job
+  to look once at startup.
+- Some state lives in this one process, which is fine for one ChefBot per database: `PlanWriteLock`,
+  `LiveUpdates` (the `/api/live` stream) and `HttpsPolicy`. A second server would need a PostgreSQL advisory
+  lock, LISTEN/NOTIFY and a broadcast respectively; don't add more such state without listing it here.
 - One way to do each thing. Ingredient needs come only from `MealRequirements`. Every change to a plan goes
   through `PlanManager`, which ends each change by placing the leftover lunches and rebuilding the shopping list,
   so they can't drift. Plan changes run one at a time (`PlanWriteLock`), which is enough because ChefBot runs as

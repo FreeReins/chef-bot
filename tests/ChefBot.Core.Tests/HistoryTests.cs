@@ -148,6 +148,7 @@ public class HistoryTests
         var stew = plan.Meals.Single(meal => meal.Title == TestData.Stew.Name && !meal.IsLeftover);
 
         await plans.SetMealStatusAsync(plan.Id, stew.Id, new MealStatusRequest(MealStatus.Cooked), default);
+        await core.HandleEventsAsync();
         var cooked = core.History.Rows.Single();
         await Assert.That(cooked.Kind).IsEqualTo(FoodMomentKind.Cooked);
         await Assert.That(cooked.RecipeId).IsEqualTo(TestData.Stew.Id);
@@ -155,10 +156,12 @@ public class HistoryTests
         await Assert.That(cooked.OccurredAt).IsEqualTo(core.Clock.Now);
 
         await plans.SetMealStatusAsync(plan.Id, stew.Id, new MealStatusRequest(MealStatus.Planned), default);
+        await core.HandleEventsAsync();
         await Assert.That(core.History.Rows).IsEmpty();
 
         await plans.SetMealStatusAsync(plan.Id, stew.Id, new MealStatusRequest(MealStatus.Cooked), default);
         await plans.ClearAsync(plan.Id, default);
+        await core.HandleEventsAsync();
         await Assert.That(core.History.Rows.Count).IsEqualTo(1);
     }
 
@@ -174,6 +177,7 @@ public class HistoryTests
 
         core.Clock.Now = stew.Date!.Value.AddDays(2).ToDateTime(new TimeOnly(9, 0));
         await plans.SetMealStatusAsync(plan.Id, stew.Id, new MealStatusRequest(MealStatus.Cooked), default);
+        await core.HandleEventsAsync();
 
         var cooked = core.History.Rows.Single();
         await Assert.That(cooked.OccurredOn).IsEqualTo(stew.Date!.Value);
@@ -209,6 +213,7 @@ public class HistoryTests
 
         await plans.SetMealStatusAsync(plan.Id, stew.Id, new MealStatusRequest(MealStatus.Cooked), default);
         await recipes.RemoveFavouriteAsync(TestData.Stew.Id, james.Id, default);
+        await core.HandleEventsAsync();
 
         await Assert.That(string.Join(", ", core.History.Rows.Single().FavouredBy)).IsEqualTo("James");
     }
@@ -260,6 +265,7 @@ public class HistoryTests
         var pie = await recipes.CreateAsync(new RecipeDraft("Lone Pie", RecipeCourse.Main, ["1 pie crust"]), default);
         await recipes.ArchiveAsync(pie.Id, default);
         await recipes.ArchiveAsync(pie.Id, default);
+        await core.HandleEventsAsync();
 
         await Assert.That(core.History.Rows.Select(row => row.Kind)).IsEquivalentTo([FoodMomentKind.RecipeAdded, FoodMomentKind.RecipeRetired]);
         var history = await recipes.GetHistoryAsync(new HistoryRequest(null, 0), default);
@@ -288,6 +294,7 @@ public class HistoryTests
         var core = new TestCore();
 
         await core.AccountManager().CreateFirstAdminAsync(new NewAccount("jamie", "Jamie", "correct horse battery"), default);
+        await core.HandleEventsAsync();
 
         var opened = core.History.Rows.Single();
         await Assert.That(opened.Kind).IsEqualTo(FoodMomentKind.KitchenOpened);

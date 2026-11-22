@@ -29,4 +29,7 @@ internal sealed class UserAccount
 
     /// <summary>Goes up whenever the password changes, which signs every older session out.</summary>
     public int SessionVersion { get; set; }
+
+    /// <summary>When the newest achievement this person has been shown was earned. Null before the first one.</summary>
+    public DateTimeOffset? AchievementsSeenAt { get; set; }
 }

@@ -24,7 +24,6 @@ internal sealed partial class PlanManager(
     IKnownStoreAccess knownStores,
     IKnownPlanStyleAccess knownStyles,
     IToDoListAccess toDoLists,
-    IHistoryAccess history,
     IFavouriteAccess favourites,
     IMessageAccess messages,
     PlanningEngine planning,
@@ -57,6 +56,7 @@ internal sealed partial class PlanManager(
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var plan = await validation.PlanAsync(planId, cancellationToken);
         await plans.RemoveAsync(plan.Id, cancellationToken);
+        await messages.PublishAsync(new PlanCleared(plan.Id));
         await messages.CommitAsync(cancellationToken);
     }
 
@@ -79,6 +79,7 @@ internal sealed partial class PlanManager(
         var plan = await validation.PlanAsync(planId, cancellationToken);
         plan.Status = PlanStatus.Confirmed;
         await plans.SaveAsync(plan, cancellationToken);
+        await messages.PublishAsync(new PlanConfirmed(plan.Id));
         await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
     }
@@ -185,33 +186,12 @@ internal sealed partial class PlanManager(
             items.RemoveAll(finished.Contains);
         }
 
-        await RecordCookingAsync(meal, request.Status, cancellationToken);
+        await AnnounceCookingAsync(plan, meal, request.Status, cancellationToken);
         meal.Status = request.Status;
         var stock = new PantrySnapshot(items, clock.Today(), (await settings.GetAdvancedAsync(cancellationToken)).ExpiringSoonDays);
         await ReconcileAsync(plan, stock, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
-    }
-
-    public async Task CheckWeeklyScheduleAsync(CancellationToken cancellationToken)
-    {
-        var state = await settings.GetScheduleAsync(cancellationToken);
-        var schedule = await settings.GetPlannerAsync(cancellationToken);
-        if (PlanningEngine.ScheduledWeekDue(schedule, clock.GetLocalNow(), state.LastStagedWeek) is not DateOnly week)
-        {
-            return;
-        }
-
-        // Recorded first, so a week that can't be planned (say, no recipes yet) isn't tried again every few minutes.
-        state.LastStagedWeek = week;
-        await settings.SaveScheduleAsync(state, cancellationToken);
-        await messages.CommitAsync(cancellationToken);
-
-        if (await plans.FindByWeekAsync(week, cancellationToken) is null)
-        {
-            var style = await StyleAsync(id: null, cancellationToken);
-            await StageAsync(week, replace: false, favorPantry: false, "schedule", style, [], cancellationToken);
-        }
     }
 
     public async Task<DateTimeOffset?> NextScheduledStagingAsync(CancellationToken cancellationToken) =>
@@ -270,14 +250,40 @@ internal sealed partial class PlanManager(
     /// <param name="stock">The pantry.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <param name="stores">The stores to shop at. Read from the settings when not given.</param>
+    /// <param name="maxLeftoverDays">How long leftovers keep. Read from the settings when not given.</param>
     private async Task ReconcileAsync(
-        MealPlan plan, PantrySnapshot stock, CancellationToken cancellationToken, IReadOnlyList<GroceryStore>? stores = null)
+        MealPlan plan, PantrySnapshot stock, CancellationToken cancellationToken, IReadOnlyList<GroceryStore>? stores = null, int? maxLeftoverDays = null)
     {
         stores ??= await settings.ListStoresAsync(cancellationToken);
-        PlanningEngine.PlaceLeftovers(plan, (await settings.GetPlannerAsync(cancellationToken)).MaxLeftoverDays);
+        PlanningEngine.PlaceLeftovers(plan, maxLeftoverDays ?? (await settings.GetPlannerAsync(cancellationToken)).MaxLeftoverDays);
         var list = shopping.BuildList(plan, stock, stores);
         shopping.ApplyList(plan, list);
         await plans.SaveAsync(plan, cancellationToken);
+        await messages.PublishAsync(new PlanChanged(plan.Id));
+    }
+
+    /// <summary>
+    /// Announces that a meal was cooked, or that "cooked" was taken back; the food history follows. Called before its
+    /// status changes. A meal marked cooked after its day counts as cooked on that day. The event remembers who had
+    /// the recipe as a favourite then, so changing favourites later doesn't change the history.
+    /// </summary>
+    private async Task AnnounceCookingAsync(MealPlan plan, PlannedMeal meal, MealStatus status, CancellationToken cancellationToken)
+    {
+        if (status == MealStatus.Cooked)
+        {
+            var today = clock.Today();
+            var late = meal.Date is { } day && day < today;
+            var favouredBy = meal.RecipeId is Guid recipeId
+                ? (await favourites.ListForRecipesAsync([recipeId], cancellationToken)).Select(favourite => favourite.UserName).ToList()
+                : [];
+            await messages.PublishAsync(new MealCooked(
+                plan.Id, meal.Id, meal.RecipeId, meal.Slot, meal.Title, meal.IsLeftover,
+                late ? meal.Date!.Value : today, late ? null : clock.GetUtcNow(), favouredBy));
+        }
+        else if (meal.Status == MealStatus.Cooked)
+        {
+            await messages.PublishAsync(new MealUncooked(plan.Id, meal.Id));
+        }
     }
 
     /// <summary>
@@ -288,52 +294,18 @@ internal sealed partial class PlanManager(
         IReadOnlyList<GroceryStore> stores, MealPlan? changed, CancellationToken cancellationToken)
     {
         var stock = await SnapshotAsync(cancellationToken);
+        var maxLeftoverDays = (await settings.GetPlannerAsync(cancellationToken)).MaxLeftoverDays;
         foreach (var plan in await plans.ListOpenAsync(clock.Today(), cancellationToken))
         {
             if (plan.Id != changed?.Id)
             {
-                await ReconcileAsync(plan, stock, cancellationToken, stores);
+                await ReconcileAsync(plan, stock, cancellationToken, stores, maxLeftoverDays);
             }
         }
 
         if (changed is not null)
         {
-            await ReconcileAsync(changed, stock, cancellationToken, stores);
-        }
-    }
-
-    /// <summary>
-    /// Keeps the food history in step with a meal's new status: cooking a meal, other than leftovers, adds a moment,
-    /// and taking "cooked" back removes it. A meal marked cooked before its day counts as cooked today. The moment
-    /// remembers who had the recipe as a favourite then, so changing favourites later doesn't change the history.
-    /// </summary>
-    private async Task RecordCookingAsync(PlannedMeal meal, MealStatus status, CancellationToken cancellationToken)
-    {
-        if (meal.Status == MealStatus.Cooked)
-        {
-            await history.RemoveForMealAsync(meal.Id, cancellationToken);
-        }
-
-        if (status == MealStatus.Cooked && !meal.IsLeftover)
-        {
-            var today = clock.Today();
-            var late = meal.Date is { } day && day < today;
-            var favouredBy = meal.RecipeId is Guid recipeId
-                ? (await favourites.ListForRecipesAsync([recipeId], cancellationToken)).Select(favourite => favourite.UserName).ToList()
-                : [];
-            await history.AddAsync(
-                new FoodMoment
-                {
-                    OccurredOn = late ? meal.Date!.Value : today,
-                    OccurredAt = late ? null : clock.GetUtcNow(),
-                    Kind = FoodMomentKind.Cooked,
-                    RecipeId = meal.RecipeId,
-                    MealId = meal.Id,
-                    Slot = meal.Slot,
-                    Title = meal.Title,
-                    FavouredBy = favouredBy,
-                },
-                cancellationToken);
+            await ReconcileAsync(changed, stock, cancellationToken, stores, maxLeftoverDays);
         }
     }
 

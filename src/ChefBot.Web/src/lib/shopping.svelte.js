@@ -2,7 +2,7 @@ import { api } from './api.js';
 import { applyPlan, loadPlan, refreshAfterPantryChange } from './plan.svelte.js';
 import { loadStores } from './settings.svelte.js';
 import { app, ask, isConfirmed, run, toast, wentOffline } from './state.svelte.js';
-import { refreshAchievements } from './achievements.svelte.js';
+import { onLive } from './live.svelte.js';
 import {
   addManualOffline, buyAllOffline, buyManualOffline, buyPlanItemOffline, removeManualOffline,
 } from './outbox.svelte.js';
@@ -26,6 +26,9 @@ async function online(send, offline) {
 }
 
 export const loadManualItems = async () => { app.manualItems = await api('GET', '/api/shopping/items'); };
+
+// Someone changed what was added by hand, here or on another device.
+onLive('shopping', () => loadManualItems());
 
 /** Puts something on the shopping list by hand: { name, quantity?, unit? }. Resolves to true once it is there. */
 export function addToShoppingList(item) {
@@ -84,7 +87,6 @@ const buyAll = () => run(() => online(async () => {
   } else {
     app.manualItems = await api('POST', '/api/shopping/items/purchase-all', {});
     await refreshAfterPantryChange();
-    refreshAchievements();
   }
 }, () => buyAllOffline(isConfirmed())));
 

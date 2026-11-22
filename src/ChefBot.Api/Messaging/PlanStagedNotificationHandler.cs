@@ -1,10 +1,13 @@
+using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Services;
+using Wolverine.Attributes;
 
 namespace ChefBot.Api.Messaging;
 
 /// <summary>Announces a newly staged plan through the notification webhook.</summary>
-public static class PlanStagedHandler
+[StickyHandler(MessageQueues.Notifications)]
+public static class PlanStagedNotificationHandler
 {
     public static async Task Handle(PlanStaged message, IMaintenanceManager maintenance, ILogger<PlanStaged> logger, CancellationToken cancellationToken)
     {

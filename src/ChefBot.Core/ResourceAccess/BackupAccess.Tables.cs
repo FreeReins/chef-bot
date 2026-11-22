@@ -68,6 +68,9 @@ internal sealed partial class BackupAccess
 
         // The calendar feed's meal times. Empty in backups made before these were settings.
         new BackupTable<CalendarSettingsEntity>("calendarTimes", BackupJson.Default.ListCalendarSettingsEntity),
+
+        // The achievement tiers and chef ranks already announced. Empty in backups made before they were kept.
+        new BackupTable<AchievementUnlockEntity>("achievementUnlocks", BackupJson.Default.ListAchievementUnlockEntity),
     ];
 
     /// <summary>A planned meal points at its recipe by id; the recipe itself is written once, under recipes.

@@ -19,6 +19,10 @@ internal sealed class HistoryAccess(ChefBotDbContext db) : IHistoryAccess
         return Task.CompletedTask;
     }
 
+    public async Task<bool> HasSourceAsync(Guid sourceId, CancellationToken cancellationToken) =>
+        db.FoodMoments.Local.Any(moment => moment.SourceId == sourceId)
+        || await db.FoodMoments.AnyAsync(moment => moment.SourceId == sourceId, cancellationToken);
+
     public async Task RemoveForMealAsync(Guid mealId, CancellationToken cancellationToken)
     {
         // Loading them tracks them, so one added earlier in this request is found too.

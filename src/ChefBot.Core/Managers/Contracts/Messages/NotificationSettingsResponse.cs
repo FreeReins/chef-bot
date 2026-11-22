@@ -9,4 +9,5 @@ public sealed record NotificationSettingsResponse(
     bool ExpiringFood,
     bool Shopping,
     string DailyTime,
-    DateOnly? LastDailyRunOn);
+    DateOnly? LastDailyRunOn,
+    bool Achievements);

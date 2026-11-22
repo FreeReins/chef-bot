@@ -1,6 +1,5 @@
 import { api } from './api.js';
 import { app, run } from './state.svelte.js';
-import { refreshAchievements } from './achievements.svelte.js';
 
 // ---------- reviews ----------
 // Each answers the recipe's reviews and rating ({ rating, reviews }, RecipeReviewsResponse), or null when it failed
@@ -19,7 +18,6 @@ export async function saveReview(recipeId, review, reviewId = null) {
   await run(async () => {
     answer = await api(reviewId ? 'PUT' : 'POST', `/api/recipes/${recipeId}/reviews${reviewId ? `/${reviewId}` : ''}`, review);
     app.recipesChanged++; // the library shows the new average
-    refreshAchievements();
   });
   return answer;
 }

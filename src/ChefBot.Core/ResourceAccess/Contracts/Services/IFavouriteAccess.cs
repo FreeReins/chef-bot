@@ -11,6 +11,12 @@ internal interface IFavouriteAccess
     /// <summary>Every favourite, each with the person's name, oldest first.</summary>
     Task<List<RecipeFavourite>> ListAllAsync(CancellationToken cancellationToken);
 
+    /// <summary>How many favourites are marked, by people who still have an account.</summary>
+    Task<int> CountAsync(CancellationToken cancellationToken);
+
+    /// <summary>Everyone with a favourite, in the order they marked their first.</summary>
+    Task<List<FavouritePerson>> ListPeopleAsync(CancellationToken cancellationToken);
+
     /// <summary>One person's favourite of one recipe, or null when they haven't marked it.</summary>
     Task<RecipeFavourite?> FindAsync(Guid recipeId, Guid userId, CancellationToken cancellationToken);
 

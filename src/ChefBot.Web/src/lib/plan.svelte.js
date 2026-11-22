@@ -3,7 +3,7 @@ import { addDays, shortDate, upcomingSunday } from './format.js';
 import { copyStyle } from './styles.js';
 import { saveStyles } from './settings.svelte.js';
 import { app, ask, isConfirmed, run, toast } from './state.svelte.js';
-import { refreshAchievements } from './achievements.svelte.js';
+import { live, onLive } from './live.svelte.js';
 
 // ---------- plan ----------
 
@@ -39,7 +39,6 @@ export async function applyPlan(plan, { quiet = false } = {}) {
   app.keep = app.keep.filter((id) => plan.meals.some((meal) => meal.id === id));
   if (!quiet) for (const note of plan.notes ?? []) toast(note);
   app.swap = null;
-  refreshAchievements(); // planning, confirming, cooking and shopping can each earn one
 }
 
 export const planAction = (path, body) => run(async () => applyPlan(await api('POST', `/api/plans/${app.plan.id}/${path}`, body)));
@@ -147,9 +146,16 @@ export function replaceMeal(mealId, body) {
   return run(async () => applyPlan(await api('PUT', `/api/plans/${app.plan.id}/meals/${mealId}`, body)));
 }
 
+/**
+ * After the pantry changed: ChefBot brings the open plans' shopping lists in line in the background and says so on
+ * the live stream, which reloads the plan. Here only what the pantry itself shows is loaded. Without the live stream,
+ * the plan is brought in line and loaded straight away instead.
+ */
 export async function refreshAfterPantryChange() {
-  if (app.plan) {
+  if (app.plan && !live.connected) {
     await applyPlan(await api('POST', `/api/plans/${app.plan.id}/refresh`), { quiet: true });
+  } else if (app.plan) {
+    app.ingredients = await ingredientsFor(app.plan);
   } else {
     await loadPantry();
   }
@@ -176,3 +182,7 @@ export const updatePantryItem = (id, changes) => run(async () => {
 
 /** Loads the pantry on its own. With a plan, the pantry comes with the plan's ingredients view instead. */
 export const loadPantry = async () => { app.pantry = await api('GET', '/api/pantry'); };
+
+// Someone changed the plan or the pantry, here or on another device.
+onLive('plan', () => loadPlan());
+onLive('pantry', () => loadPantry());

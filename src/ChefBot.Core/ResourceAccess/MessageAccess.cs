@@ -1,5 +1,6 @@
 using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Persistence;
+using Wolverine;
 using Wolverine.EntityFrameworkCore;
 
 namespace ChefBot.Core.ResourceAccess;
@@ -11,6 +12,8 @@ namespace ChefBot.Core.ResourceAccess;
 internal sealed class MessageAccess(IDbContextOutbox<ChefBotDbContext> outbox) : IMessageAccess
 {
     public Task PublishAsync(object message) => outbox.PublishAsync(message).AsTask();
+
+    public Task ScheduleAsync(object message, DateTimeOffset at) => outbox.ScheduleAsync(message, at).AsTask();
 
     public Task CommitAsync(CancellationToken cancellationToken) => outbox.SaveChangesAndFlushMessagesAsync(cancellationToken);
 }

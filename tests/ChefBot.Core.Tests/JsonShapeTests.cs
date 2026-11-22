@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using ChefBot.Core.Engines;
 using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -100,6 +101,8 @@ public class JsonShapeTests
         var notifications = new List<Notification> { TestData.Notifications.PlanReady(plan, "schedule"), TestData.Notifications.Test() };
         notifications.AddRange(TestData.Notifications.Daily(plan, [tomatoes], TestData.Sunday.AddDays(-1), 3));
         notifications.AddRange(TestData.Notifications.Daily(plan, [tomatoes], TestData.Sunday.AddDays(2), 3));
+        notifications.Add(TestData.Notifications.Achievements(
+            [new AchievementUnlockResponse(Guid.NewGuid(), AchievementKind.Dinners, 2, DateTimeOffset.UnixEpoch), new AchievementUnlockResponse(Guid.NewGuid(), null, 1, DateTimeOffset.UnixEpoch)]));
 
         var webhook = new CapturingHandler();
         var clock = new FixedClock();

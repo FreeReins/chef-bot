@@ -27,6 +27,8 @@ internal sealed partial class PlanManager
 
         await StockAsync(item, details, cancellationToken);
         await plans.SaveAsync(plan, cancellationToken);
+        await messages.PublishAsync(new ShoppingItemBought(plan.Id, item.Id));
+        await messages.PublishAsync(new PlanChanged(plan.Id));
         await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
     }
@@ -43,7 +45,8 @@ internal sealed partial class PlanManager
         }
 
         var boughtByHand = await StockManualItemsAsync(request, cancellationToken);
-        await RecordHaulAsync(toBuy.Count + boughtByHand, request, cancellationToken);
+        await AnnounceHaulAsync(plan.Id, toBuy.Count + boughtByHand, request);
+        await messages.PublishAsync(new PlanChanged(plan.Id));
         await plans.SaveAsync(plan, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         if (boughtByHand > 0)
@@ -64,7 +67,8 @@ internal sealed partial class PlanManager
         ShoppingEngine.SendTo(stores, item, ValidationEngine.StoreNamed(stores, request.Store));
 
         await settings.SaveStoresAsync(stores, cancellationToken);
-        await ReconcileOpenPlansAsync(stores, plan, cancellationToken);
+        await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken, stores);
+        await messages.PublishAsync(new GroceryStoresChanged()); // the other open plans follow in the background
         await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
     }
@@ -77,29 +81,32 @@ internal sealed partial class PlanManager
     }
 
     /// <summary>
-    /// After hand-added items were bought and committed, brings open plans' lists in line with the pantry they went
-    /// into. A second commit, because the pantry is read from the database: what was bought counts once it is saved.
+    /// After hand-added items were bought and committed, brings the plan being shown in line with the pantry they went
+    /// into; the other open plans follow in the background (<see cref="PantryChanged"/>). A second commit, because the
+    /// pantry is read from the database: what was bought counts once it is saved.
     /// </summary>
     private async Task ReconcileAfterBuyingAsync(MealPlan? changed, CancellationToken cancellationToken)
     {
-        await ReconcileOpenPlansAsync(await settings.ListStoresAsync(cancellationToken), changed, cancellationToken);
+        if (changed is not null)
+        {
+            await ReconcileAsync(changed, await SnapshotAsync(cancellationToken), cancellationToken);
+        }
+
+        await messages.PublishAsync(new PantryChanged());
         await messages.CommitAsync(cancellationToken);
     }
 
-    /// <summary>Notes a shopping trip that bought everything left on the list in the food history.</summary>
-    private async Task RecordHaulAsync(int bought, PurchaseAllRequest request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Announces a shopping trip that bought everything left on the list, when it bought anything; the food history
+    /// follows. A shop recorded on a later day keeps its day but no time.
+    /// </summary>
+    private async Task AnnounceHaulAsync(Guid? planId, int bought, PurchaseAllRequest request)
     {
         if (bought > 0)
         {
-            await history.AddAsync(
-                new FoodMoment
-                {
-                    OccurredOn = request.PurchasedOn ?? clock.Today(),
-                    OccurredAt = request.PurchasedOn is { } on && on != clock.Today() ? null : clock.GetUtcNow(),
-                    Kind = FoodMomentKind.Haul,
-                    Count = bought,
-                },
-                cancellationToken);
+            var today = clock.Today();
+            await messages.PublishAsync(new ShoppingDone(
+                planId, bought, request.PurchasedOn ?? today, request.PurchasedOn is { } on && on != today ? null : clock.GetUtcNow()));
         }
     }
 

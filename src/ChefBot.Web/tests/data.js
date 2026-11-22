@@ -245,7 +245,7 @@ export const security = () => ({ maxFailedSignIns: 5, lockoutMinutes: 15, requir
 /** NotificationSettingsResponse */
 export const notifications = () => ({
   webhookUrl: 'https://ntfy.example.com/chefbot', planReady: true, slowCooker: true, mealsToday: false,
-  expiringFood: true, shopping: false, dailyTime: '07:30', lastDailyRunOn: '2026-11-20',
+  expiringFood: true, shopping: false, achievements: true, dailyTime: '07:30', lastDailyRunOn: '2026-11-20',
 });
 
 /** PlannerSettingsResponse */

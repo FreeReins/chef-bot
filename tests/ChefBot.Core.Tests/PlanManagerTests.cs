@@ -118,8 +118,8 @@ public class PlanManagerTests
     {
         var core = WithLibrary();
 
-        await core.PlanManager().CheckWeeklyScheduleAsync(default);
-        await core.PlanManager().CheckWeeklyScheduleAsync(default);
+        await core.PlanManager().CheckWeeklyScheduleAsync(new CheckWeeklySchedule(), default);
+        await core.PlanManager().CheckWeeklyScheduleAsync(new CheckWeeklySchedule(), default);
 
         await Assert.That(core.Plans.Rows.Single().WeekStart).IsEqualTo(NextSunday);
         await Assert.That(core.Settings.Schedule.LastStagedWeek).IsEqualTo(NextSunday);
@@ -130,10 +130,10 @@ public class PlanManagerTests
     public async Task A_week_cleared_after_the_schedule_staged_it_is_not_staged_again()
     {
         var core = WithLibrary();
-        await core.PlanManager().CheckWeeklyScheduleAsync(default);
+        await core.PlanManager().CheckWeeklyScheduleAsync(new CheckWeeklySchedule(), default);
         await core.PlanManager().ClearAsync(core.Plans.Rows.Single().Id, default);
 
-        await core.PlanManager().CheckWeeklyScheduleAsync(default);
+        await core.PlanManager().CheckWeeklyScheduleAsync(new CheckWeeklySchedule(), default);
 
         await Assert.That(core.Plans.Rows.Count).IsEqualTo(0);
     }

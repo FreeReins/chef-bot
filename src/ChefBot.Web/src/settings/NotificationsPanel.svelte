@@ -11,6 +11,7 @@
     ['expiringFood', 'Food to use soon', 'When pantry food is about to expire, noting what no meal uses.'],
     ['shopping', 'Confirm the plan or finish shopping', 'The day before a week starts and on its first day.'],
     ['mealsToday', "Today's meals", 'A daily summary of what is planned.'],
+    ['achievements', 'New achievements', 'When the household earns a badge tier or a new chef rank.'],
   ];
 
   const settings = $derived(app.notifications);
@@ -36,7 +37,9 @@
 
   const describeTest = (result) => (result.delivered ? 'The test notification was delivered.' : `The test wasn't delivered. ${result.problem}`);
   const describeRun = (result) => [
-    result.sent.length ? `Sent: ${result.sent.join(', ')}.` : 'Nothing needed sending today.',
+    result.sent.length
+      ? `Sending: ${result.sent.join(', ')}. A webhook that can't be reached is tried again over the next half hour.`
+      : 'Nothing needed sending today.',
     result.problems.length ? `Not delivered: ${result.problems.join('; ')}` : '',
   ].join(' ').trim();
 </script>

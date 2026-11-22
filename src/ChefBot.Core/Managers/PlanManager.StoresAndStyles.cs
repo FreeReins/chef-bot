@@ -17,7 +17,7 @@ internal sealed partial class PlanManager
         var stores = details.ToStores(await settings.ListStoresAsync(cancellationToken));
 
         await settings.SaveStoresAsync(stores, cancellationToken);
-        await ReconcileOpenPlansAsync(stores, changed: null, cancellationToken);
+        await messages.PublishAsync(new GroceryStoresChanged()); // the open plans follow in the background
         await messages.CommitAsync(cancellationToken);
         return DescribeStores(stores);
     }
@@ -56,8 +56,7 @@ internal sealed partial class PlanManager
 
     private async Task<PlanStylesResponse> DescribeStylesAsync(IReadOnlyList<PlanStyle> styles, CancellationToken cancellationToken)
     {
-        var tags = (await recipes.ListActiveAsync(cancellationToken))
-            .SelectMany(recipe => recipe.Tags)
+        var tags = (await recipes.ListActiveTagsAsync(cancellationToken))
             .Where(tag => !string.IsNullOrWhiteSpace(tag))
             .Select(tag => tag.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)

@@ -16,6 +16,11 @@ internal sealed class NotificationSettings
 
     public bool Shopping { get; set; } = true;
 
+    public bool Achievements { get; set; } = true;
+
+    /// <summary>When the scheduled check for the daily reminders is due. A queued check due at another time is stale.</summary>
+    public DateTimeOffset? RemindersDueAt { get; set; }
+
     /// <summary>Local time the daily reminders are sent, as HH:mm.</summary>
     public string DailyTime { get; set; } = "07:30";
 
