@@ -84,9 +84,19 @@ button[aria-busy="true"]::before { content: ""; display: inline-block; flex: non
   border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
 button.icon[aria-busy="true"]::before { width: 16px; height: 16px; margin: 0; box-sizing: border-box; }
 button.icon[aria-busy="true"] > svg { display: none; }
+.with-icon[aria-busy="true"] > svg:first-child { display: none; }
 /* While a confirmation is asked (ConfirmDialog.svelte), the button that asked isn't working yet: it waits for the answer. */
 body:has(dialog.confirm[open]) button[aria-busy="true"]::before { display: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* Content on its way: plain shapes where it will go, with a sheen passing over them. Mark the whole placeholder with
+   role="status" and an aria-label, and the shapes inside aria-hidden. .line is one line of text; give it a width. */
+.skeleton { display: block; position: relative; overflow: hidden; background: var(--chip); border-radius: .3rem; }
+.skeleton.line { height: .85em; margin: .4em 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton::after { content: ""; position: absolute; inset: 0; translate: -100% 0; animation: sheen 1.4s ease-in-out infinite;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ink) 7%, transparent), transparent); }
+}
+@keyframes sheen { to { translate: 100% 0; } }
 @media (prefers-reduced-motion: reduce) { button[aria-busy="true"]::before { animation: none; border-right-color: currentColor; } }
 a.button { display: inline-block; border: 1px solid var(--line); border-radius: .4rem; background: var(--panel); color: var(--ink);
   padding: .4rem .8rem; text-decoration: none; }
@@ -98,6 +108,9 @@ a.button.back:hover :is(svg) { translate: -3px 0; }
 @media (prefers-reduced-motion: reduce) { a.button.back:hover :is(svg) { translate: none; } }
 a.button.small { padding: .15rem .55rem; font-size: .85rem; }
 a.button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+/* A button or link with a Lucide icon before its words. Add buttons use Plus and edit buttons use Pencil. */
+.with-icon, a.button.with-icon { display: inline-flex; align-items: center; gap: .35rem; }
+.with-icon > svg { flex: none; }
 .actions, .row-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 
 /* Layout */

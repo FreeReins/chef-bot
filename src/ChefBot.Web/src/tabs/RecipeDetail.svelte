@@ -19,7 +19,6 @@
   import CookingPot from '@lucide/svelte/icons/cooking-pot';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ExternalLink from '@lucide/svelte/icons/external-link';
-  import ImagePlus from '@lucide/svelte/icons/image-plus';
   import Images from '@lucide/svelte/icons/images';
   import Pencil from '@lucide/svelte/icons/pencil';
   import Ellipsis from '@lucide/svelte/icons/ellipsis';
@@ -28,7 +27,7 @@
   import Copy from '@lucide/svelte/icons/copy';
   import Printer from '@lucide/svelte/icons/printer';
   import Trash2 from '@lucide/svelte/icons/trash-2';
-  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import Plus from '@lucide/svelte/icons/plus';
 
   const MAX_PHOTO_MB = 5;
 
@@ -195,7 +194,22 @@
 <p class="back-row"><a class="button back" href="/recipes" onclick={backToList}><ArrowLeft size={16} />Back to recipes</a></p>
 
 {#if !loaded}
-  <p class="loading muted" role="status" aria-label="Loading the recipe"><LoaderCircle size={24} /></p>
+  <!-- Until the recipe arrives, its outline stands in: the photo, the name, and the ingredients beside the steps. -->
+  <div role="status" aria-label="Loading the recipe">
+    <div aria-hidden="true">
+      <span class="skeleton hero-ghost"></span>
+      <span class="skeleton line title-ghost"></span>
+      <span class="skeleton line" style:width="60%"></span>
+      <div class="cook">
+        <div class="card">
+          {#each [80, 65, 72, 55, 70, 60] as width, index (index)}<span class="skeleton line" style:width="{width}%"></span>{/each}
+        </div>
+        <div class="card">
+          {#each [95, 88, 92, 70, 90, 84, 60] as width, index (index)}<span class="skeleton line" style:width="{width}%"></span>{/each}
+        </div>
+      </div>
+    </div>
+  </div>
 {:else if !recipe}
   <div class="card empty">
     <h2>That recipe isn't in your library</h2>
@@ -327,7 +341,7 @@
       <div class="photo-actions">
         <label class="add-photo" class:busy={uploading}>
           <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onchange={addPhoto} disabled={uploading}>
-          <ImagePlus size={16} />{uploading ? 'Adding…' : 'Add photo'}
+          <Plus size={16} />{uploading ? 'Adding…' : 'Add photo'}
         </label>
         <span class="muted">JPEG, PNG, WebP or GIF, up to {MAX_PHOTO_MB} MB.</span>
         <button type="button" class="done" onclick={close}>Done</button>
@@ -338,10 +352,11 @@
 
 <style>
   .back-row { margin: 1rem 0 0; }
-  .with-icon { display: inline-flex; align-items: center; gap: .35rem; }
   .favoured { display: flex; align-items: center; gap: .35rem; margin: .5rem 0 0; color: var(--bad); font-size: .9rem; }
 
   .hero { margin-top: .75rem; }
+  .hero-ghost { margin-top: .75rem; height: min(26rem, 56vw); border-radius: .6rem; }
+  .title-ghost { width: min(22rem, 70%); height: 1.6rem; margin-top: 1rem; }
   .cover { display: block; width: 100%; max-height: 26rem; object-fit: cover; border-radius: .6rem; background: var(--chip); }
   .strip { display: flex; gap: .4rem; margin-top: .5rem; overflow-x: auto; }
   .thumb { padding: 0; border: 2px solid transparent; border-radius: .35rem; background: none; flex: 0 0 auto; }

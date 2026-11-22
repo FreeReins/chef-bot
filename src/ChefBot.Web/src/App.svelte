@@ -79,9 +79,6 @@
 
 <svelte:head><title>{title ? `${title} · ChefBot` : 'ChefBot'}</title></svelte:head>
 
-<!-- Shown while something takes a moment to save or load, so a slow click doesn't look ignored. -->
-{#if app.busy}<div class="busy-bar" role="progressbar" aria-label="Working"></div>{/if}
-
 <header class="top">
   <div class="brand">
     <span class="mark" aria-hidden="true"><ChefHat size={22} /></span>
@@ -104,6 +101,9 @@
       <button onclick={signOut}>Sign out</button>
     {/if}
   </div>
+  <!-- Shown while something takes a moment to save or load, so a slow click doesn't look ignored. Fixed to the top of
+       the window; it sits last in the header (whose first div is the title) so it is inside a landmark. -->
+  {#if app.busy}<div class="busy-bar" role="progressbar" aria-label="Working"></div>{/if}
 </header>
 
 <Toasts />

@@ -155,7 +155,6 @@
   .steps { margin: 0; padding-left: 1.4rem; display: grid; gap: .4rem; }
   .steps li > strong { display: block; }
   .actions { align-items: center; margin-top: .25rem; }
-  .with-icon { display: inline-flex; align-items: center; gap: .35rem; }
   /* Shuffle shows its own work: the arrows turn instead of the usual spinner. */
   .shuffle:global([aria-busy="true"])::before { display: none; }
   .shuffle.shuffling:disabled { opacity: 1; }

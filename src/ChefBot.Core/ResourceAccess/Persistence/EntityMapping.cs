@@ -139,6 +139,7 @@ internal static partial class EntityMapping
         Snacks = entity.Snacks,
         Sweets = entity.Sweets,
         Drinks = entity.Drinks,
+        Favourites = entity.Favourites,
         Rules = JsonSerializer.Deserialize(entity.Rules, RuleJson.Default.ListPlanRule) ?? [],
     };
 
@@ -367,6 +368,7 @@ internal static partial class EntityMapping
         Snacks = style.Snacks,
         Sweets = style.Sweets,
         Drinks = style.Drinks,
+        Favourites = style.Favourites,
         Rules = JsonSerializer.Serialize(style.Rules, RuleJson.Default.ListPlanRule),
     };
 

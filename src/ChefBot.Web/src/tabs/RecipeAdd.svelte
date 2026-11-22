@@ -12,6 +12,7 @@
   import Link from '@lucide/svelte/icons/link';
   import PencilLine from '@lucide/svelte/icons/pencil-line';
   import FileUp from '@lucide/svelte/icons/file-up';
+  import Plus from '@lucide/svelte/icons/plus';
 
   const TABS = [
     { key: 'link', label: 'From a link', icon: Link },
@@ -79,7 +80,7 @@
         <div class="link-row">
           <input id="recipe-link" type="text" inputmode="url" autocomplete="url" required
                  placeholder="https://example.com/recipes/soup" bind:value={link} disabled={reading}>
-          <button type="submit" class="primary" disabled={reading}>{reading ? 'Reading…' : 'Add'}</button>
+          <button type="submit" class="primary with-icon" disabled={reading}><Plus size={16} />{reading ? 'Reading…' : 'Add'}</button>
         </div>
         <p class="muted">Works with most recipe sites. ChefBot saves the recipe straight away; you can edit it after.</p>
       </form>

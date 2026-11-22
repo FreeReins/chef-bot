@@ -44,6 +44,7 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         configurationBuilder.Properties<LinkPurpose>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<ShoppingTargetKind>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<FoodMomentKind>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<FavouriteLean>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<decimal>().HavePrecision(12, 3);
     }
 

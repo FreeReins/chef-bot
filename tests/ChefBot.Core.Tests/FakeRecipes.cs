@@ -1,3 +1,4 @@
+using ChefBot.Core.Engines;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
 
@@ -22,6 +23,10 @@ internal sealed class FakeRecipes : IRecipeAccess
             .Where(r => query.Words.All(word => Contains(r.Name, word)
                 || r.Ingredients.Any(i => Contains(i.Text, word) || Contains(i.DisplayName, word))
                 || r.Tags.Any(tag => Contains(tag, word))))
+            .Where(r => (query.Tags ?? []).All(wanted => r.Tags.Any(tag => string.Equals(tag.Trim(), wanted.Trim(), StringComparison.OrdinalIgnoreCase))))
+            .Where(r => query.OnlyIds is null || query.OnlyIds.Contains(r.Id))
+            .Where(r => !query.SlowCooker || r.IsSlowCooker)
+            .Where(r => query.ReadyWithin is not int within || RecipeMatcher.MinutesOf(r) is int minutes && minutes <= within)
             .OrderBy(r => r.Course)
             .ThenBy(r => r.Name, StringComparer.Ordinal)
             .ThenBy(r => r.Id)
@@ -29,6 +34,9 @@ internal sealed class FakeRecipes : IRecipeAccess
         return Task.FromResult(new RecipeSearchResult(
             matching.Skip(query.Skip).Take(query.Take).Select(Copies.Of).ToList(), matching.Count));
     }
+
+    public Task<List<string>> ListActiveTagsAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(Rows.Where(r => !r.IsArchived).SelectMany(r => r.Tags).ToList());
 
     public Task<int> CountActiveAsync(CancellationToken cancellationToken) => Task.FromResult(Rows.Count(r => !r.IsArchived));
 

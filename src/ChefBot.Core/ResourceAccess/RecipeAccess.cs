@@ -29,6 +29,30 @@ internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
             matching = matching.Where(recipe => recipe.Course == course);
         }
 
+        foreach (var tag in query.Tags ?? [])
+        {
+            var exact = EscapeLike(tag.Trim());
+            matching = matching.Where(recipe => recipe.Tags.Any(saved => EF.Functions.ILike(saved, exact, LikeEscape)));
+        }
+
+        if (query.OnlyIds is { } ids)
+        {
+            matching = matching.Where(recipe => ids.Contains(recipe.Id));
+        }
+
+        if (query.SlowCooker)
+        {
+            matching = matching.Where(recipe => recipe.IsSlowCooker);
+        }
+
+        // As RecipeMatcher.MinutesOf: the total time when there is one, or else prep and cook time added up.
+        if (query.ReadyWithin is int within)
+        {
+            matching = matching.Where(recipe => recipe.TotalMinutes > 0
+                ? recipe.TotalMinutes <= within
+                : (recipe.PrepMinutes != null || recipe.CookMinutes != null) && (recipe.PrepMinutes ?? 0) + (recipe.CookMinutes ?? 0) <= within);
+        }
+
         foreach (var word in query.Words)
         {
             var pattern = $"%{EscapeLike(word)}%";
@@ -57,6 +81,11 @@ internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
             .ToListAsync(cancellationToken);
         return new RecipeSearchResult(page.Select(recipe => recipe.ToContract()).ToList(), total);
     }
+
+    public async Task<List<string>> ListActiveTagsAsync(CancellationToken cancellationToken) =>
+        (await db.Recipes.AsNoTracking().Where(recipe => !recipe.IsArchived).Select(recipe => recipe.Tags).ToListAsync(cancellationToken))
+        .SelectMany(tags => tags)
+        .ToList();
 
     public Task<int> CountActiveAsync(CancellationToken cancellationToken) =>
         db.Recipes.CountAsync(recipe => !recipe.IsArchived, cancellationToken);

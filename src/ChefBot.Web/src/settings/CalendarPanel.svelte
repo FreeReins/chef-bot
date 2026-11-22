@@ -81,6 +81,5 @@
 {/if}
 
 <style>
-  .with-icon { display: inline-flex; align-items: center; gap: .35rem; }
   #calendar-url { font-family: ui-monospace, monospace; font-size: .85rem; }
 </style>

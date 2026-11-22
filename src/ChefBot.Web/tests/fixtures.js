@@ -22,6 +22,13 @@ export const library = (recipes) => ({
   'GET /api/recipes': recipes,
   'GET /api/recipes/*': (request) => recipes.find((recipe) => new URL(request.url()).pathname.endsWith(`/${recipe.id}`))
     ?? reply(404, { detail: 'There is no recipe with that id.' }),
+  'GET /api/recipes/filters': {
+    // Most used first, as the server answers.
+    tags: Object.entries(Object.groupBy(recipes.flatMap((recipe) => recipe.tags), (tag) => tag))
+      .map(([name, uses]) => ({ name, recipes: uses.length }))
+      .sort((a, b) => b.recipes - a.recipes || a.name.localeCompare(b.name)),
+    people: [...new Map(recipes.flatMap((recipe) => recipe.favouredBy).map((fan) => [fan.userId, fan])).values()],
+  },
   // Favouriting answers as the signed-in admin would get it: the recipe with them added or taken off.
   'PUT /api/recipes/*/favourite': (request) => favourite(recipes, request, true),
   'DELETE /api/recipes/*/favourite': (request) => favourite(recipes, request, false),
@@ -35,6 +42,11 @@ export const library = (recipes) => ({
       .filter((recipe) => !course || recipe.course === course)
       .filter((recipe) => words.every((word) => [recipe.name, ...recipe.ingredients, ...recipe.tags]
         .some((text) => text.toLowerCase().includes(word))))
+      .filter((recipe) => params.getAll('tag').every((tag) => recipe.tags.some((own) => own.toLowerCase() === tag.toLowerCase())))
+      .filter((recipe) => params.get('favourites') !== 'true' || recipe.favouredBy.length > 0)
+      .filter((recipe) => !params.get('favouredBy') || recipe.favouredBy.some((fan) => fan.userId === params.get('favouredBy')))
+      .filter((recipe) => params.get('slowCooker') !== 'true' || recipe.isSlowCooker)
+      .filter((recipe) => !params.get('readyWithin') || (recipe.totalMinutes ?? Infinity) <= Number(params.get('readyWithin')))
       .sort((a, b) => COURSES.indexOf(a.course) - COURSES.indexOf(b.course) || a.name.localeCompare(b.name));
     return {
       recipes: matches.slice((page - 1) * pageSize, page * pageSize)
@@ -164,5 +176,5 @@ export { expect };
 /** Opens an address and waits until the page has left its loading screen. */
 export async function open(page, path) {
   await page.goto(path);
-  await expect(page.getByRole('status', { name: 'Loading' })).toHaveCount(0);
+  await expect(page.getByRole('status', { name: 'Loading', exact: true })).toHaveCount(0);
 }

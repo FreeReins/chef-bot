@@ -20,6 +20,7 @@
   import CheckCheck from '@lucide/svelte/icons/check-check';
   import { api } from '../lib/api.js';
   import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
+  import Plus from '@lucide/svelte/icons/plus';
 
   // With a plan the pantry comes with its ingredients view; without one it is loaded on its own, as on the Pantry tab.
   $effect(() => {
@@ -190,7 +191,7 @@
     <label>Add to the list <input id="shopping-name" name="name" required placeholder="e.g. milk"></label>
     <label>Amount <input id="shopping-quantity" name="quantity" type="number" min="0" step="any"></label>
     <label>Unit <input id="shopping-unit" name="unit" size="6" placeholder="l"></label>
-    <button type="submit">Add</button>
+    <button type="submit" class="with-icon"><Plus size={16} />Add</button>
   </form>
 
   {#if toBuy.length === 0}
@@ -224,7 +225,7 @@
             <div>
               <strong>{item.name}</strong> <Chip tone={warning.tone}>{warning.text}</Chip>
             </div>
-            <button class="small" aria-label="Add to list: {item.name}" onclick={addByName(item)}>Add to list</button>
+            <button class="small with-icon" aria-label="Add to list: {item.name}" onclick={addByName(item)}><Plus size={16} />Add to list</button>
           </li>
         {/each}
       </ul>
@@ -243,7 +244,7 @@
               {#if group.addable}
                 <IngredientLine {line}>
                   {#snippet actions()}
-                    <button class="small" aria-label="Add to list: {line.name}" onclick={addByName(line)}>Add to list</button>
+                    <button class="small with-icon" aria-label="Add to list: {line.name}" onclick={addByName(line)}><Plus size={16} />Add to list</button>
                   {/snippet}
                 </IngredientLine>
               {:else}
@@ -274,7 +275,6 @@
   .folds summary { cursor: pointer; font-weight: 600; }
   .folds details > p { margin: .25rem 0; }
   .export { margin-top: .5rem; }
-  .with-icon { display: inline-flex; align-items: center; gap: .3rem; }
 
   /* On paper: only what is left to buy, in two columns with each store kept together. */
   @media print {

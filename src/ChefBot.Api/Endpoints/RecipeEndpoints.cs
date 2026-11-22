@@ -21,11 +21,39 @@ public static class RecipeEndpoints
     /// <summary>
     /// One page of the library, such as <c>/api/recipes/search?query=chicken&amp;course=Main&amp;page=2&amp;pageSize=25</c>.
     /// Every parameter is optional: no query matches every recipe, and the page size defaults to 25 (100 at most).
+    /// <c>tag</c> may be given several times, and a recipe needs every one; <c>favourites=true</c> keeps anyone's
+    /// favourites and <c>favouredBy</c> one person's; <c>slowCooker=true</c> and <c>readyWithin</c> (minutes) narrow further.
     /// </summary>
     [WolverineGet("/api/recipes/search")]
     public static Task<RecipePageResponse> Search(
-        string? query, RecipeCourse? course, int? page, int? pageSize, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
-        recipes.SearchAsync(new RecipeSearchRequest(query, course, page ?? 1, pageSize ?? 0), cancellationToken);
+        string? query,
+        RecipeCourse? course,
+        int? page,
+        int? pageSize,
+        bool? favourites,
+        Guid? favouredBy,
+        bool? slowCooker,
+        int? readyWithin,
+        HttpContext http,
+        [FromServices] IRecipeManager recipes,
+        CancellationToken cancellationToken) =>
+        recipes.SearchAsync(
+            new RecipeSearchRequest(
+                query,
+                course,
+                page ?? 1,
+                pageSize ?? 0,
+                http.Request.Query["tag"].OfType<string>().ToList(),
+                favourites ?? false,
+                favouredBy,
+                slowCooker ?? false,
+                readyWithin),
+            cancellationToken);
+
+    /// <summary>What the library can be filtered by: every tag, and the people who have favourites.</summary>
+    [WolverineGet("/api/recipes/filters")]
+    public static Task<RecipeFiltersResponse> Filters([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.GetFiltersAsync(cancellationToken);
 
     /// <summary>
     /// Every recipe that can be planned, as one file to download: schema.org JSON-LD unless <c>format</c> asks for

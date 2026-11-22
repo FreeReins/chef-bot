@@ -10,8 +10,12 @@ namespace ChefBot.Core.Engines;
 /// </summary>
 internal static class RecipeMatcher
 {
-    public static bool Matches(Recipe recipe, PlanRule rule) => rule.Match switch
+    /// <param name="recipe">The recipe.</param>
+    /// <param name="rule">The rule.</param>
+    /// <param name="fans">How many people have each recipe as a favourite, for <see cref="RecipeMatchKind.Favourite"/>.</param>
+    public static bool Matches(Recipe recipe, PlanRule rule, IReadOnlyDictionary<Guid, int>? fans = null) => rule.Match switch
     {
+        RecipeMatchKind.Favourite => fans?.GetValueOrDefault(recipe.Id) > 0,
         RecipeMatchKind.SlowCooker => recipe.IsSlowCooker,
         RecipeMatchKind.Tag => recipe.Tags.Any(tag => rule.Values.Any(value => SameWords(tag, value))),
         RecipeMatchKind.Ingredient => recipe.Ingredients.Any(ingredient => rule.Values.Any(value => Uses(ingredient, value))),
@@ -32,6 +36,7 @@ internal static class RecipeMatcher
         RecipeMatchKind.Tag => $"tagged {Either(rule.Values)}",
         RecipeMatchKind.Ingredient => $"made with {Either(rule.Values)}",
         RecipeMatchKind.ReadyWithin => $"ready within {rule.Minutes} minutes",
+        RecipeMatchKind.Favourite => "someone's favourite",
         _ => "matching",
     };
 

@@ -10,14 +10,20 @@ namespace ChefBot.Api.Mcp;
 public sealed class RecipeTools(IRecipeManager recipes)
 {
     [McpServerTool(Name = "search_recipes", ReadOnly = true, Idempotent = true)]
-    [Description("Searches the household's recipe library. Each word of the query must appear in a recipe's name, ingredients or tags. An empty query lists every recipe. Results come a page at a time.")]
+    [Description("Searches the household's recipe library. Each word of the query must appear in a recipe's name, ingredients or tags, and every filter given must match. An empty query lists every recipe. Each result names the people who have it as a favourite. Results come a page at a time.")]
     public Task<RecipePageResponse> SearchRecipes(
         [Description("Words to look for, such as \"chicken rice\". Leave empty for all recipes.")] string? query = null,
         [Description("Only recipes of this course.")] RecipeCourse? course = null,
         [Description("The page wanted, from 1.")] int page = 1,
         [Description("Recipes per page, from 1 to 100.")] int pageSize = 20,
+        [Description("Only recipes with every one of these tags.")] string[]? tags = null,
+        [Description("True for only recipes that are at least one person's favourite.")] bool favouritesOnly = false,
+        [Description("True for only slow cooker recipes.")] bool slowCookerOnly = false,
+        [Description("Only recipes ready within this many minutes.")] int? readyWithinMinutes = null,
         CancellationToken cancellationToken = default) =>
-        McpErrors.Explain(() => recipes.SearchAsync(new RecipeSearchRequest(query, course, page, pageSize), cancellationToken));
+        McpErrors.Explain(() => recipes.SearchAsync(
+            new RecipeSearchRequest(query, course, page, pageSize, tags, favouritesOnly, null, slowCookerOnly, readyWithinMinutes),
+            cancellationToken));
 
     [McpServerTool(Name = "get_recipe", ReadOnly = true, Idempotent = true)]
     [Description("One recipe in full: ingredients with amounts, steps, servings and tags.")]

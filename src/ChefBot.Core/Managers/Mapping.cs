@@ -235,7 +235,8 @@ internal static class Mapping
         style.Snacks,
         style.Sweets,
         style.Drinks,
-        style.Rules.Select(rule => new PlanRuleDetails(rule.Limit, rule.Count, rule.Slot, rule.Match, [.. rule.Values], rule.Minutes, rule.Day)).ToList());
+        style.Rules.Select(rule => new PlanRuleDetails(rule.Limit, rule.Count, rule.Slot, rule.Match, [.. rule.Values], rule.Minutes, rule.Day)).ToList(),
+        style.Favourites);
 
     /// <summary>
     /// The styles to save for a checked request, in its order. A style keeps its id when one with the same id, or else
@@ -260,6 +261,7 @@ internal static class Mapping
                 Snacks = style.Snacks,
                 Sweets = style.Sweets,
                 Drinks = style.Drinks,
+                Favourites = style.Favourites,
                 Rules = (style.Rules ?? []).Select(rule => new PlanRule
                 {
                     Limit = rule.Limit,

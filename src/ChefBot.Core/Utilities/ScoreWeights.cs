@@ -24,6 +24,15 @@ internal sealed class ScoreWeights
     /// <summary>How much more pantry food counts when a plan is rebuilt around what was already bought.</summary>
     public double RegeneratePantryBoost { get; set; } = 4;
 
+    /// <summary>
+    /// A favourite recipe, for a plan style that leans on favourites a little. Each further person who has it as a
+    /// favourite adds less: half as much for the second, a third for the third, and so on.
+    /// </summary>
+    public double Favourite { get; set; } = 2;
+
+    /// <summary>The same, for a plan style that leans on favourites a lot.</summary>
+    public double FavouriteALot { get; set; } = 6;
+
     /// <summary>Per ingredient a swap suggestion would add to the shopping list.</summary>
     public double MissingIngredient { get; set; } = -0.5;
 }

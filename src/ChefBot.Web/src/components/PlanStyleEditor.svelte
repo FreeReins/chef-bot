@@ -4,9 +4,12 @@
 <script>
   import { app } from '../lib/app.svelte.js';
   import { DAYS } from '../lib/format.js';
-  import { LIMITS, RULE_SLOTS, MATCHES, newRule, newStyle, copyStyle, ruleText, styleSummary } from '../lib/styles.js';
+  import { LIMITS, RULE_SLOTS, MATCHES, FAVOURITE_LEANS, newRule, newStyle, copyStyle, ruleText, styleSummary } from '../lib/styles.js';
   import Chip from './Chip.svelte';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Check from '@lucide/svelte/icons/check';
 
   /** styles: PlanStyleDetails[], changed in place. */
   let { styles = $bindable() } = $props();
@@ -91,9 +94,9 @@
             {#if !style.isDefault}
               <button type="button" class="small" onclick={() => makeDefault(style)}>Make default</button>
             {/if}
-            <button type="button" class="small" aria-expanded={String(editing === index)} aria-label="{editing === index ? 'Done editing' : 'Edit'} {style.name}"
+            <button type="button" class="small with-icon" aria-expanded={String(editing === index)} aria-label="{editing === index ? 'Done editing' : 'Edit'} {style.name}"
                     onclick={() => (editing = editing === index ? null : index)}>
-              {editing === index ? 'Done' : 'Edit'}
+              {#if editing === index}<Check size={16} />Done{:else}<Pencil size={16} />Edit{/if}
             </button>
             <button type="button" class="icon remove" aria-label="Remove {style.name}" title="Remove" onclick={() => remove(index)}><Trash2 size={16} /></button>
           </div>
@@ -134,6 +137,17 @@
             </fieldset>
 
             <fieldset>
+              <legend>Lean on favourites</legend>
+              <div class="leans">
+                {#each FAVOURITE_LEANS as [key, label] (key)}
+                  <label class="lean"><input type="radio" name="favourites-{index}" value={key} bind:group={style.favourites}>{label}</label>
+                {/each}
+              </div>
+              <p class="muted hint">{FAVOURITE_LEANS.find(([key]) => key === (style.favourites ?? 'ALittle'))?.[2]}
+                A recipe more people love counts for more. Meals planned recently are still avoided first.</p>
+            </fieldset>
+
+            <fieldset>
               <legend>Rules for the recipes</legend>
               {#each style.rules as rule, ruleIndex (ruleIndex)}
                 <div class="rule" role="group" aria-label="Rule {ruleIndex + 1}">
@@ -171,7 +185,7 @@
               {:else}
                 <p class="muted">No rules: any recipe of the right course can be chosen.</p>
               {/each}
-              <button type="button" class="small" onclick={() => style.rules.push(newRule())}>Add a rule</button>
+              <button type="button" class="small with-icon" onclick={() => style.rules.push(newRule())}><Plus size={16} />Add a rule</button>
               <p class="muted hint">
                 For example: at least 3 dinners slow cooker; no meals made with beef, pork; at least 2 dinners made with
                 chicken; at least 4 dinners ready within 30 minutes. A rule your recipes can't meet is relaxed for that
@@ -193,8 +207,8 @@
         <strong>{style.name}</strong>
         <span class="muted">{style.description}</span>
       </span>
-      <button type="button" class="small" disabled={has(style.name)} aria-label="{has(style.name) ? 'Added' : 'Add'} {style.name}"
-              onclick={() => add(style)}>{has(style.name) ? 'Added' : 'Add'}</button>
+      <button type="button" class="small with-icon" disabled={has(style.name)} aria-label="{has(style.name) ? 'Added' : 'Add'} {style.name}"
+              onclick={() => add(style)}>{#if has(style.name)}<Check size={16} />Added{:else}<Plus size={16} />Add{/if}</button>
     </div>
   {/each}
 </div>
@@ -203,7 +217,7 @@
   <label>Or make your own
     <input bind:value={ownName} placeholder="Style name" maxlength="60">
   </label>
-  <button type="submit" disabled={!ownName.trim() || has(ownName)}>Add style</button>
+  <button type="submit" class="with-icon" disabled={!ownName.trim() || has(ownName)}><Plus size={16} />Add style</button>
 </form>
 
 <style>
@@ -225,6 +239,10 @@
   .rule .values { flex: 1 1 10rem; }
   .minutes { display: inline-flex; gap: .3rem; align-items: center; font-size: .9rem; }
   .hint { font-size: .8rem; }
+  .leans { display: flex; flex-wrap: wrap; gap: .25rem; }
+  .lean { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; padding: .25rem .7rem .25rem .5rem;
+    border: 1px solid var(--line); border-radius: 1rem; background: var(--panel); cursor: pointer; }
+  .lean:has(input:checked) { background: var(--accent-bg); border-color: var(--accent); }
   .known { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: 0 1.25rem; }
   .known-style { display: flex; gap: .55rem; align-items: flex-start; justify-content: space-between; padding: .4rem 0;
     border-top: 1px solid var(--line); }

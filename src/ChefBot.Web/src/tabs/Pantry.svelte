@@ -9,9 +9,9 @@
   import { amount, shortDate, parseDate, freshness, plural, DAYS, FOOD_GROUPS } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
   import Trash2 from '@lucide/svelte/icons/trash-2';
-  import ListPlus from '@lucide/svelte/icons/list-plus';
   import Pencil from '@lucide/svelte/icons/pencil';
   import Refrigerator from '@lucide/svelte/icons/refrigerator';
+  import Plus from '@lucide/svelte/icons/plus';
 
   /** Above this many items, a box to find one by name is shown. */
   const FILTER_FROM = 8;
@@ -157,7 +157,7 @@
               <button class="icon" id="edit-{item.id}" aria-label="Change the amount or date of {item.name}" title="Change the amount or date"
                       onclick={() => edit(item)}><Pencil size={16} /></button>
               <button class="icon" aria-label="Add {item.name} to the shopping list" title="Add to the shopping list"
-                      onclick={pendingClick(() => restock(item))}><ListPlus size={16} /></button>
+                      onclick={pendingClick(() => restock(item))}><Plus size={16} /></button>
               <button class="icon remove" aria-label="Remove {item.name}" title="Remove"
                       onclick={pendingClick(() => removePantryItem(item))}><Trash2 size={16} /></button>
             </div>
@@ -174,7 +174,7 @@
     <label>Amount <input id="pantry-quantity" name="quantity" type="number" min="0" step="any"></label>
     <label>Unit <input id="pantry-unit" name="unit" size="6" placeholder="head"></label>
     <label>Expires <input id="pantry-expires" name="expiresOn" type="date"></label>
-    <button type="submit">Add</button>
+    <button type="submit" class="with-icon"><Plus size={16} />Add</button>
   </form>
 
   {#if pantry.length === 0}

@@ -455,9 +455,13 @@ internal sealed class PlanManager(
         var stock = await SnapshotAsync(cancellationToken);
         var kept = existing?.Meals.Where(meal => keep.Contains(meal.Id) && !meal.IsLeftover).ToList() ?? [];
 
+        var library = await recipes.ListActiveAsync(cancellationToken);
+        var fans = (await favourites.ListForRecipesAsync(library.Select(recipe => recipe.Id).ToList(), cancellationToken))
+            .GroupBy(favourite => favourite.RecipeId)
+            .ToDictionary(group => group.Key, group => group.Count());
         var draft = planning.Plan(new PlanRequest(
             weekStart,
-            await recipes.ListActiveAsync(cancellationToken),
+            library,
             await plans.RecipeIdsPlannedAsync(weekStart.AddDays(-options.AvoidRepeatDays), weekStart, cancellationToken),
             stock,
             clock.GetUtcNow(),
@@ -465,7 +469,8 @@ internal sealed class PlanManager(
             Seed: existing is null ? null : Random.Shared.Next(),
             PantryBoost: favorPantry ? options.Weights.RegeneratePantryBoost : 1,
             Style: style,
-            Kept: kept));
+            Kept: kept,
+            Fans: fans));
 
         if (existing is not null)
         {

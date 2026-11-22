@@ -40,13 +40,49 @@ internal sealed class RecipeManager(
         var page = Math.Max(request.Page, 1);
         var pageSize = request.PageSize < 1 ? DefaultPageSize : Math.Min(request.PageSize, MaxPageSize);
         var words = (request.Query ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var query = new RecipeQuery(words, request.Course, (int)Math.Min((long)(page - 1) * pageSize, int.MaxValue), pageSize);
+        IReadOnlyCollection<Guid>? onlyIds = null;
+        if (request.Favourites || request.FavouredBy is not null)
+        {
+            onlyIds = (await favourites.ListAllAsync(cancellationToken))
+                .Where(favourite => request.FavouredBy is null || favourite.UserId == request.FavouredBy)
+                .Select(favourite => favourite.RecipeId)
+                .ToHashSet();
+        }
+
+        var query = new RecipeQuery(
+            words,
+            request.Course,
+            (int)Math.Min((long)(page - 1) * pageSize, int.MaxValue),
+            pageSize,
+            (request.Tags ?? []).Where(tag => !string.IsNullOrWhiteSpace(tag)).Select(tag => tag.Trim()).ToList(),
+            onlyIds,
+            request.SlowCooker,
+            request.ReadyWithin is > 0 ? request.ReadyWithin : null);
 
         var found = await recipes.SearchActiveAsync(query, cancellationToken);
         var librarySize = await recipes.CountActiveAsync(cancellationToken);
         var favoured = await FavouredByAsync(found.Recipes, cancellationToken);
         return new RecipePageResponse(
             found.Recipes.Select(recipe => recipe.ToSummary(favoured(recipe))).ToList(), found.Total, page, pageSize, librarySize);
+    }
+
+    public async Task<RecipeFiltersResponse> GetFiltersAsync(CancellationToken cancellationToken)
+    {
+        var tags = (await recipes.ListActiveTagsAsync(cancellationToken))
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .Select(tag => tag.Trim())
+            .GroupBy(tag => tag, StringComparer.OrdinalIgnoreCase)
+            .Select(tag => new RecipeTagResponse(
+                tag.GroupBy(spelling => spelling, StringComparer.Ordinal).OrderByDescending(spelling => spelling.Count()).First().Key,
+                tag.Count()))
+            .OrderByDescending(tag => tag.Recipes)
+            .ThenBy(tag => tag.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var people = (await favourites.ListAllAsync(cancellationToken))
+            .DistinctBy(favourite => favourite.UserId)
+            .Select(favourite => new FavouriteResponse(favourite.UserId, favourite.UserName))
+            .ToList();
+        return new RecipeFiltersResponse(tags, people);
     }
 
     public async Task<RecipeResponse> GetAsync(Guid id, CancellationToken cancellationToken) =>

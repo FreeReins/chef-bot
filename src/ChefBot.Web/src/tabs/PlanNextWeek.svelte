@@ -7,6 +7,7 @@
   import { pendingClick } from '../lib/pending.js';
   import WorkingLine from '../components/WorkingLine.svelte';
   import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Plus from '@lucide/svelte/icons/plus';
 
   /** title: the card's heading. intro: a sentence under it saying what planning does. */
   let { title, intro } = $props();
@@ -32,7 +33,7 @@
   {#if noRecipes}
     <p>There are no recipes to plan with yet. Add some first.</p>
     <div class="actions">
-      {#if isAdmin()}<a class="button primary-link" href="/recipes/samples">Add sample recipes</a>{/if}
+      {#if isAdmin()}<a class="button primary-link with-icon" href="/recipes/samples"><Plus size={16} />Add sample recipes</a>{/if}
       <a class="button" href="/recipes">Go to Recipes</a>
     </div>
   {:else}
@@ -44,7 +45,7 @@
           </select>
         </label>
       {/if}
-      <button class="primary with-icon" onclick={plan}>
+      <button class="primary with-icon twinkle" onclick={plan}>
         {#if !planning}<Sparkles size={16} aria-hidden="true" />{/if}Plan {shortDate(weekStart)} to {shortDate(addDays(weekStart, 6))}
       </button>
       <WorkingLine active={planning} lines={PLANNING} />
@@ -65,10 +66,9 @@
   .plan-next p { margin: 0; }
   .choose { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
   .style-line { font-size: .9rem; }
-  .with-icon { display: inline-flex; align-items: center; gap: .4rem; }
-  .with-icon :global(svg) { flex: none; }
+  .twinkle { gap: .4rem; }
   @media (prefers-reduced-motion: no-preference) {
-    .with-icon:hover :global(svg) { animation: twinkle .6s ease-in-out; }
+    .twinkle:hover :global(svg) { animation: twinkle .6s ease-in-out; }
   }
   @keyframes twinkle { 50% { transform: rotate(15deg) scale(1.15); } }
   a.primary-link { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }

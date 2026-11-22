@@ -13,9 +13,13 @@ public interface IRecipeManager
 
     /// <summary>
     /// One page of the recipes that can be planned, in course order and then by name, keeping those whose name,
-    /// ingredients or tags contain every word of the query. A page past the last comes back empty.
+    /// ingredients or tags contain every word of the query and that pass every filter asked for. A page past the last
+    /// comes back empty.
     /// </summary>
     Task<RecipePageResponse> SearchAsync(RecipeSearchRequest request, CancellationToken cancellationToken);
+
+    /// <summary>What the library can be filtered by: its tags, and the people who have favourites.</summary>
+    Task<RecipeFiltersResponse> GetFiltersAsync(CancellationToken cancellationToken);
 
     /// <summary>One recipe that can be planned, in full.</summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>

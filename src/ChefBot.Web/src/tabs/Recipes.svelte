@@ -1,5 +1,5 @@
-<!-- The Recipes tab: the library across the full width, as photo cards or a compact list, found by words and course a
-     page at a time. Each recipe has a heart to make it a favourite, and says whose favourite it is. Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
+<!-- The Recipes tab: the library across the full width, as photo cards or a compact list, found a page at a time by
+     words, and under "Filters" by course, favourites, tags, slow cooker and time. Each recipe has a heart to make it a favourite, and says whose favourite it is. Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
 <script>
   import { untrack } from 'svelte';
   import { app, run, isAdmin } from '../lib/app.svelte.js';
@@ -8,7 +8,6 @@
   import RecipeDetail from './RecipeDetail.svelte';
   import RecipeAdd from './RecipeAdd.svelte';
   import { deal } from '../lib/motion.js';
-  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
   import ChefHat from '@lucide/svelte/icons/chef-hat';
   import Plus from '@lucide/svelte/icons/plus';
   import LayoutGrid from '@lucide/svelte/icons/layout-grid';
@@ -16,12 +15,17 @@
   import Download from '@lucide/svelte/icons/download';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import RecipeDownloads from '../components/RecipeDownloads.svelte';
+  import TagFilter from '../components/TagFilter.svelte';
   import FavouriteButton from '../components/FavouriteButton.svelte';
-  import { favouriteOf } from '../lib/format.js';
+  import { favouriteOf, possessive } from '../lib/format.js';
+  import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
   import Heart from '@lucide/svelte/icons/heart';
+  import X from '@lucide/svelte/icons/x';
 
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
   const PAGE_SIZE = 24;
+  /** The choices for "Ready within", in minutes. */
+  const TIMES = [15, 30, 45, 60, 90];
   /** How long typing pauses before the search runs, in milliseconds. */
   const TYPING_PAUSE = 250;
   /** Where this browser remembers whether the library is shown as cards or a list. */
@@ -30,6 +34,12 @@
   let typed = $state('');   // what is in the search box
   let query = $state('');   // what was searched for, once typing paused
   let course = $state('');  // '' for every course
+  let favourites = $state(''); // '' for all recipes, 'mine', 'any', or another person's id
+  let tags = $state([]);       // tags a recipe must all have
+  let slowCooker = $state(false);
+  let readyWithin = $state(''); // minutes as text, '' for any time
+  let filtersOpen = $state(false); // whether the filters panel shows
+  let filterChoices = $state({ tags: [], people: [] }); // RecipeFiltersResponse
   let page = $state(1);
   let result = $state(null); // RecipePageResponse for the page shown
   let loading = $state(false); // a newer page is on its way; the one shown stays, dimmed, until it arrives
@@ -61,6 +71,11 @@
     const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
     if (query) params.set('query', query);
     if (course) params.set('course', course);
+    if (favourites === 'any') params.set('favourites', 'true');
+    else if (favourites) params.set('favouredBy', favourites === 'mine' ? app.session?.user?.id : favourites);
+    for (const tag of tags) params.append('tag', tag);
+    if (slowCooker) params.set('slowCooker', 'true');
+    if (readyWithin) params.set('readyWithin', readyWithin);
     const ticket = ++latest;
     loading = true;
     // run() clears old messages as it starts; untracked, so that doesn't make this effect run again.
@@ -73,12 +88,53 @@
     }).finally(() => { if (ticket === latest) loading = false; }));
   });
 
+  // What the library can be filtered by, again whenever it may have changed.
+  $effect(() => {
+    void app.recipesChanged;
+    untrack(() => run(async () => { filterChoices = await api('GET', '/api/recipes/filters'); }));
+  });
+
   const librarySize = $derived(result?.librarySize ?? app.recipeCount);
-  const filtering = $derived(query !== '' || course !== '');
+  /** How many filters are on, for the Filters button. Each tag counts as one. */
+  const filterCount = $derived((course ? 1 : 0) + (favourites ? 1 : 0) + tags.length + (slowCooker ? 1 : 0) + (readyWithin ? 1 : 0));
+  const filtering = $derived(query !== '' || filterCount > 0);
+  const otherPeople = $derived(filterChoices.people.filter((person) => person.userId !== app.session?.user?.id));
+
+  /** Starts again from the first page after any filter changes. */
+  const refilter = () => (page = 1);
+
+  /** Turns every filter off. The search words stay unless `everything` is true. */
+  function clearFilters(everything = false) {
+    if (everything) { typed = ''; query = ''; }
+    course = ''; favourites = ''; tags = []; slowCooker = false; readyWithin = '';
+    refilter();
+  }
+
+  /** The filters that are on, as removable labels under the search while the panel is closed. */
+  const activeFilters = $derived([
+    ...(course ? [{ key: 'course', label: course, remove: () => { course = ''; refilter(); } }] : []),
+    ...(favourites ? [{
+      key: 'favourites',
+      label: favourites === 'mine' ? 'My favourites' : favourites === 'any' ? "Anyone's favourites"
+        : `${possessive(otherPeople.find((person) => person.userId === favourites)?.name ?? 'Someone')} favourites`,
+      remove: () => { favourites = ''; refilter(); },
+    }] : []),
+    ...tags.map((tag) => ({ key: `tag:${tag}`, label: `#${tag}`, remove: () => { tags = tags.filter((chosen) => chosen !== tag); refilter(); } })),
+    ...(slowCooker ? [{ key: 'slow', label: 'Slow cooker', remove: () => { slowCooker = false; refilter(); } }] : []),
+    ...(readyWithin ? [{ key: 'time', label: `Within ${readyWithin} min`, remove: () => { readyWithin = ''; refilter(); } }] : []),
+  ]);
+
+  /** A heart changed on a card: the people with favourites may have changed too, so the choices are fetched again. */
+  function favouriteChanged(recipe, list) {
+    recipe.favouredBy = list;
+    run(async () => { filterChoices = await api('GET', '/api/recipes/filters'); });
+  }
   const pageCount = $derived(result ? Math.max(1, Math.ceil(result.total / result.pageSize)) : 1);
   const groups = $derived(COURSES
     .map((name) => ({ course: name, recipes: (result?.recipes ?? []).filter((recipe) => recipe.course === name) }))
     .filter((group) => group.recipes.length > 0));
+  /** How many empty tiles stand in while the first page loads: as many as there are recipes, up to two rows or so. */
+  const ghostCount = $derived(Math.min(app.recipeCount, 8));
   const adding = $derived(app.recipeDialog?.startsWith('new-') ?? false);
 
   // This component stays while a recipe is open, so the search, course and page are kept; coming back to the list
@@ -128,40 +184,106 @@
 
     {#if librarySize > 0}
       <div class="card filters" role="search" aria-label="Find recipes">
-        <label class="grow">Search
-          <input id="recipe-search" type="search" placeholder="Name, ingredient or tag" bind:value={typed} oninput={onType}>
-        </label>
-        <label>Course
-          <select id="recipe-course" bind:value={course} onchange={() => (page = 1)}>
-            <option value="">All courses</option>
-            {#each COURSES as name (name)}<option value={name}>{name}</option>{/each}
-          </select>
-        </label>
-        <div class="segmented layout" role="group" aria-label="Show recipes as">
-          <button type="button" aria-pressed={layout === 'grid'} onclick={() => showAs('grid')}><LayoutGrid size={16} />Cards</button>
-          <button type="button" aria-pressed={layout === 'list'} onclick={() => showAs('list')}><List size={16} />List</button>
+        <div class="bar">
+          <label class="search">
+            <span class="sr-only">Search</span>
+            <input id="recipe-search" type="search" placeholder="Search by name, ingredient or tag" bind:value={typed} oninput={onType}>
+          </label>
+          <button type="button" class="filters-toggle" class:on={filterCount > 0} aria-expanded={filtersOpen} aria-controls="recipe-filters"
+                  onclick={() => (filtersOpen = !filtersOpen)}>
+            <SlidersHorizontal size={16} />Filters{#if filterCount}<span class="badge" aria-label="{filterCount} on">{filterCount}</span>{/if}
+            <ChevronDown size={16} class="chevron" />
+          </button>
+          <div class="segmented layout" role="group" aria-label="Show recipes as">
+            <button type="button" aria-pressed={layout === 'grid'} onclick={() => showAs('grid')}><LayoutGrid size={16} /><span class="label">Cards</span></button>
+            <button type="button" aria-pressed={layout === 'list'} onclick={() => showAs('list')}><List size={16} /><span class="label">List</span></button>
+          </div>
         </div>
-        <p class="muted" aria-live="polite">
+
+        <div id="recipe-filters" class="panel" hidden={!filtersOpen}>
+          <div class="choices">
+            <label>Course
+              <select id="recipe-course" bind:value={course} onchange={refilter}>
+                <option value="">All courses</option>
+                {#each COURSES as name (name)}<option value={name}>{name}</option>{/each}
+              </select>
+            </label>
+            <label>Favourites
+              <select id="recipe-favourites" bind:value={favourites} onchange={refilter}>
+                <option value="">All recipes</option>
+                <option value="mine">My favourites</option>
+                <option value="any">Anyone's favourites</option>
+                {#each otherPeople as person (person.userId)}<option value={person.userId}>{possessive(person.name)} favourites</option>{/each}
+              </select>
+            </label>
+            <label>Ready within
+              <select id="recipe-time" bind:value={readyWithin} onchange={refilter}>
+                <option value="">Any time</option>
+                {#each TIMES as minutes (minutes)}<option value={String(minutes)}>{minutes} minutes</option>{/each}
+              </select>
+            </label>
+            <label class="slow"><input type="checkbox" bind:checked={slowCooker} onchange={refilter}>Slow cooker only</label>
+          </div>
+          <TagFilter id="recipe-tags" tags={filterChoices.tags} bind:chosen={tags} onchange={refilter} />
+          {#if filterCount}
+            <p class="panel-foot"><button type="button" class="small" onclick={() => clearFilters()}>Clear filters</button></p>
+          {/if}
+        </div>
+
+        <p class="muted status" aria-live="polite">
           {#if result && filtering}{result.total} {result.total === 1 ? 'recipe matches' : 'recipes match'}{/if}
+          {#if filterCount && !filtersOpen}
+            {#each activeFilters as filter (filter.key)}
+              <span class="active">{filter.label}<button type="button" class="icon" aria-label="Remove filter {filter.label}" onclick={filter.remove}><X size={13} /></button></span>
+            {/each}
+          {/if}
         </p>
       </div>
     {/if}
 
     {#if !result}
-      <p class="loading muted" role="status" aria-label="Loading recipes"><LoaderCircle size={24} /></p>
+      <!-- Until the first page arrives, empty tiles stand where the recipes will go, in the layout chosen. -->
+      <div role="status" aria-label="Loading recipes">
+        <span class="skeleton line course-ghost" aria-hidden="true"></span>
+        {#if layout === 'grid'}
+          <ul class="cards" aria-hidden="true">
+            {#each { length: ghostCount }, index (index)}
+              <li class="ghost">
+                <span class="skeleton cover"></span>
+                <span class="text">
+                  <span class="skeleton line" style:width="{70 - (index % 3) * 12}%"></span>
+                  <span class="skeleton line" style:width="90%"></span>
+                </span>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <ul class="plain card rows" aria-hidden="true">
+            {#each { length: ghostCount }, index (index)}
+              <li class="ghost">
+                <span class="skeleton thumb"></span>
+                <span class="text">
+                  <span class="skeleton line" style:width="{45 - (index % 3) * 8}%"></span>
+                  <span class="skeleton line" style:width="75%"></span>
+                </span>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
     {:else if librarySize === 0}
       <div class="card empty">
         <ChefHat size={36} aria-hidden="true" />
         <h3>No recipes yet</h3>
         <p class="muted">Add one from a recipe site, type one in, or import files from another app.</p>
         <div class="row-actions start">
-          <a class="button primary" href="/recipes/new/link">Add from a link</a>
+          <a class="button primary with-icon" href="/recipes/new/link"><Plus size={16} />Add from a link</a>
           <a class="button" href="/recipes/new/write">Type one in</a>
           <a class="button" href="/recipes/new/files">Import files</a>
         </div>
       </div>
     {:else if result.total === 0}
-      <p class="muted">No recipes match. Try fewer words or another course.</p>
+      <p class="muted">No recipes match. Try fewer words or filters, or <button type="button" class="link" onclick={() => clearFilters(true)}>clear them all</button>.</p>
     {/if}
 
     <div class="results" class:loading={loading && result} aria-busy={loading && result ? 'true' : undefined}>
@@ -183,7 +305,7 @@
                   {#if recipe.description?.trim()}<span class="blurb">{recipe.description}</span>{/if}
                 </span>
               </a>
-              <FavouriteButton {recipe} class="on-cover" onchange={(list) => (recipe.favouredBy = list)} />
+              <FavouriteButton {recipe} class="on-cover" onchange={(list) => favouriteChanged(recipe, list)} />
               {#if recipe.isSlowCooker || recipe.tags.length}
                 <div class="chips">
                   {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
@@ -208,7 +330,7 @@
                 {#if recipe.favouredBy?.length}<p class="row-favoured">{@render favoured(recipe)}</p>{/if}
                 {#if recipe.description?.trim()}<p class="muted blurb">{recipe.description}</p>{/if}
               </div>
-              <FavouriteButton {recipe} class="icon" onchange={(list) => (recipe.favouredBy = list)} />
+              <FavouriteButton {recipe} class="icon" onchange={(list) => favouriteChanged(recipe, list)} />
             </li>
           {/each}
         </ul>
@@ -237,11 +359,31 @@
   .add { display: inline-flex; align-items: center; gap: .35rem; }
   .downloads:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; }
   .downloads span { color: var(--muted); margin-right: .25rem; }
-  .filters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: end; }
-  .filters label { display: grid; gap: .25rem; }
-  .filters .grow { flex: 1; min-width: 12rem; }
-  .filters p { margin: 0; flex-basis: 100%; }
-  .filters p:empty { display: none; }
+  .filters { display: grid; gap: .6rem; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+  .search { flex: 1 1 14rem; min-width: 0; }
+  .search input { width: 100%; }
+  .filters-toggle { display: inline-flex; align-items: center; gap: .4rem; }
+  .filters-toggle.on { border-color: var(--accent); color: var(--accent); }
+  .filters-toggle :global(.chevron) { transition: rotate .15s; }
+  .filters-toggle[aria-expanded="true"] :global(.chevron) { rotate: 180deg; }
+  @media (prefers-reduced-motion: reduce) { .filters-toggle :global(.chevron) { transition: none; } }
+  .badge { min-width: 1.3rem; padding: 0 .35rem; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+    font-size: .75rem; line-height: 1.3rem; text-align: center; }
+  .panel:not([hidden]) { display: grid; gap: .9rem; padding-top: .8rem; border-top: 1px solid var(--line); }
+  .choices { display: grid; gap: .6rem 1rem; align-items: end; grid-template-columns: repeat(auto-fill, minmax(min(8.5rem, 100%), 1fr)); }
+  .choices label { display: grid; gap: .25rem; }
+  .choices select { width: 100%; }
+  .choices label.slow { display: flex; align-items: center; gap: .45rem; min-height: 2.4rem; margin: 0; padding: 0; border: 0; }
+  .panel-foot { margin: 0; display: flex; justify-content: flex-end; }
+  .status { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .5rem; }
+  .status:empty { display: none; }
+  .active { display: inline-flex; align-items: center; gap: .1rem; padding: .05rem .15rem .05rem .55rem; border-radius: 999px;
+    background: var(--accent-bg); color: var(--ink); font-size: .8rem; }
+  .active .icon { padding: .15rem; border-radius: 999px; }
+  button.link { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; font: inherit; cursor: pointer; }
+  /* On a phone the layout buttons keep their icons only, so the search keeps its room. */
+  @media (max-width: 32rem) { .layout .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } }
   .layout button { display: inline-flex; align-items: center; gap: .3rem; }
   .empty :global(svg) { color: var(--area-recipes); }
   .empty h3 { margin: .5rem 0 .25rem; }
@@ -270,6 +412,11 @@
   .row-favoured { margin: .1rem 0 0; }
   .cards .chips { padding: 0 .8rem; }
   .cards li::after { content: ""; padding-bottom: .7rem; }
+  /* The empty tiles shown while the first page loads don't react to the pointer. */
+  .cards li.ghost:hover { border-color: var(--line); box-shadow: none; translate: none; }
+  .cards .ghost .cover { border-radius: 0; }
+  .cards .ghost .text { padding: .6rem .8rem 0; }
+  .course-ghost { width: 6rem; height: 1.1rem; margin: 1.25rem 0 .75rem; }
 
   .rows li { display: flex; gap: .75rem; align-items: flex-start; }
   .rows li:first-child { border-top: 0; }

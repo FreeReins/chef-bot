@@ -109,7 +109,6 @@
 </form>
 
 <style>
-  .with-icon { display: inline-flex; align-items: center; gap: .35rem; }
   #mcp-address, #token-secret, #token-command { font-family: ui-monospace, monospace; font-size: .85rem; }
   .issued { border-color: var(--accent); }
   .tokens { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: .5rem; }

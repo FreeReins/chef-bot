@@ -80,7 +80,7 @@ const rule = (limit, count, slot, match, extra = {}) => ({ limit, count, slot, m
 /** PlanStyleDetails */
 const style = (id, name, extra = {}) => ({
   id, name, description: '', isDefault: false, cookingDays: ['Sunday', 'Tuesday', 'Thursday', 'Saturday'], leftoverLunches: true,
-  breakfasts: 2, snacks: 3, sweets: 1, drinks: 0, rules: [], ...extra,
+  breakfasts: 2, snacks: 3, sweets: 1, drinks: 0, rules: [], favourites: 'ALittle', ...extra,
 });
 
 /** PlanStylesResponse: two saved styles, the starter styles, and what rules can name. */
@@ -194,9 +194,9 @@ export const recipes = () => [
     ],
   }),
   recipe(ids.stew, 'Beef and Barley Stew', 'Main', {
-    isSlowCooker: true, ingredients: ['beef chuck', 'barley', 'carrots'], favouredBy: [{ userId: ids.sam, name: 'James' }],
+    isSlowCooker: true, ingredients: ['beef chuck', 'barley', 'carrots'], favouredBy: [{ userId: '00000000-0000-4000-8000-000000000a01', name: 'James' }],
   }),
-  recipe(ids.curry, 'Chickpea Curry', 'Main', { ingredients: ['chickpeas', 'spinach', 'coconut milk'] }),
+  recipe(ids.curry, 'Chickpea Curry', 'Main', { ingredients: ['chickpeas', 'spinach', 'coconut milk'], tags: ['quick', 'vegetarian'], totalMinutes: 35 }),
   recipe(ids.oats, 'Overnight Oats', 'Breakfast'),
   recipe(ids.granola, 'Maple Granola', 'Snack', { ingredients: ['oats', 'maple syrup'] }),
   recipe(ids.crumble, 'Pear and Ginger Crumble', 'Sweet', { ingredients: ['pears', 'ginger', 'butter'] }),
@@ -212,6 +212,12 @@ export const manyRecipes = (count) => {
   ));
   return [...recipes(), ...extra];
 };
+
+/** RecipeResponse[]: the usual recipes, sharing `count` tags between them unevenly, as a big imported library might. */
+export const manyTags = (count) => recipes().map((recipe, index) => ({
+  ...recipe,
+  tags: [...recipe.tags, ...Array.from({ length: count }, (_, tag) => `tag ${tag + 1}`).filter((_, tag) => tag % (index + 1) === 0)],
+}));
 
 /** GroceryStoresResponse */
 export const stores = () => ({

@@ -17,4 +17,7 @@ public enum RecipeMatchKind
 
     /// <summary>The recipe is ready within the rule's number of minutes.</summary>
     ReadyWithin,
+
+    /// <summary>The recipe is at least one person's favourite.</summary>
+    Favourite,
 }

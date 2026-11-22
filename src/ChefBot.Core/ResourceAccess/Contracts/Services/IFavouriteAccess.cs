@@ -8,6 +8,9 @@ internal interface IFavouriteAccess
     /// <summary>The favourites of these recipes, each with the person's name, oldest first.</summary>
     Task<List<RecipeFavourite>> ListForRecipesAsync(IReadOnlyCollection<Guid> recipeIds, CancellationToken cancellationToken);
 
+    /// <summary>Every favourite, each with the person's name, oldest first.</summary>
+    Task<List<RecipeFavourite>> ListAllAsync(CancellationToken cancellationToken);
+
     /// <summary>One person's favourite of one recipe, or null when they haven't marked it.</summary>
     Task<RecipeFavourite?> FindAsync(Guid recipeId, Guid userId, CancellationToken cancellationToken);
 

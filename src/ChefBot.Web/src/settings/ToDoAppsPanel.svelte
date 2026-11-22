@@ -112,6 +112,5 @@
   .fields { display: grid; gap: .5rem .75rem; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); }
   .fields .wide { grid-column: 1 / -1; }
   .hint { margin: .5rem 0; }
-  .with-icon { display: inline-flex; align-items: center; gap: .3rem; }
   .unsaved { align-self: center; }
 </style>

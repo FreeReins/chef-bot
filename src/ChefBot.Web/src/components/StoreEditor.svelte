@@ -6,6 +6,9 @@
   import Chip from './Chip.svelte';
   import X from '@lucide/svelte/icons/x';
   import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Pencil from '@lucide/svelte/icons/pencil';
+  import Check from '@lucide/svelte/icons/check';
 
   /** stores: [{ name, isMain, items, seasonalProduce, months }], changed in place. */
   let { stores = $bindable() } = $props();
@@ -104,8 +107,8 @@
             {:else}
               <button type="button" class="small" onclick={() => makeMain(store)}>Make main store</button>
             {/if}
-            <button type="button" class="small" aria-expanded={String(editing === index)} onclick={() => open(index)}>
-              {editing === index ? 'Done' : 'Edit'}
+            <button type="button" class="small with-icon" aria-expanded={String(editing === index)} onclick={() => open(index)}>
+              {#if editing === index}<Check size={16} />Done{:else}<Pencil size={16} />Edit{/if}
             </button>
             <button type="button" class="icon remove" aria-label="Remove {store.name}" title="Remove" onclick={() => remove(index)}><Trash2 size={16} /></button>
           </div>
@@ -129,7 +132,7 @@
               <form class="inline add-item" onsubmit={(event) => addItem(store, event)}>
                 <input list="store-ingredients" bind:value={typed} placeholder="Add an ingredient, such as chicken"
                        aria-label="Ingredient always bought at {store.name}">
-                <button type="submit" class="small">Add</button>
+                <button type="submit" class="small with-icon"><Plus size={16} />Add</button>
               </form>
             </div>
             <label class="check">
@@ -176,7 +179,9 @@
         <span class="muted">{store.description}</span>
         {#if store.items.length}<span class="muted clip" title={store.items.join(', ')}>For {store.items.join(', ')}</span>{/if}
       </span>
-      <button type="button" class="small" disabled={has(store.name)} onclick={() => add(store)}>{has(store.name) ? 'Added' : 'Add'}</button>
+      <button type="button" class="small with-icon" disabled={has(store.name)} onclick={() => add(store)}>
+        {#if has(store.name)}<Check size={16} />Added{:else}<Plus size={16} />Add{/if}
+      </button>
     </div>
   {:else}
     <p class="muted">No known store matches. Add it as your own below.</p>
@@ -187,7 +192,7 @@
   <label>Or add your own
     <input bind:value={ownName} placeholder="Store name" maxlength="60">
   </label>
-  <button type="submit" disabled={!ownName.trim() || has(ownName)}>Add store</button>
+  <button type="submit" class="with-icon" disabled={!ownName.trim() || has(ownName)}><Plus size={16} />Add store</button>
 </form>
 
 <style>

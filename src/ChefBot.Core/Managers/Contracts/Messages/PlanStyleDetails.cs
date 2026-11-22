@@ -15,6 +15,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Sweets">How many sweets to plan, made once on any day.</param>
 /// <param name="Drinks">How many drinks to plan, made once on any day.</param>
 /// <param name="Rules">Rules about the recipes chosen, applied in order.</param>
+/// <param name="Favourites">How much the household's favourite recipes are preferred. Recipes planned recently are still avoided first.</param>
 public sealed record PlanStyleDetails(
     Guid? Id,
     string Name,
@@ -26,4 +27,5 @@ public sealed record PlanStyleDetails(
     int Snacks,
     int Sweets,
     int Drinks,
-    IReadOnlyList<PlanRuleDetails>? Rules);
+    IReadOnlyList<PlanRuleDetails>? Rules,
+    FavouriteLean Favourites = FavouriteLean.ALittle);

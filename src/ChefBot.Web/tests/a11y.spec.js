@@ -12,6 +12,11 @@ const weeks = (...plans) => ({
   'GET /api/plans/*': (request) => plans.find((plan) => request.url().endsWith(plan.id)) ?? plans[0],
 });
 const staged = weeks(data.plan('Staged'));
+/** Never answers, so the page stays on its loading placeholder. */
+const holding = () => new Promise(() => {});
+/** The library search, held open except for the one-recipe count the page asks for as it starts. */
+const searchHeld = (request) => (new URL(request.url()).searchParams.get('pageSize') === '1'
+  ? library(data.recipes())['GET /api/recipes/search'](request) : holding());
 
 /** { name, path, answers?: routes for api.set(), act?: async (page, api) => {} run before checking } */
 const VIEWS = [
@@ -82,10 +87,66 @@ const VIEWS = [
 
   // Recipes
   { name: 'recipes', path: '/recipes' },
+  { name: 'recipes, loading', path: '/recipes', answers: { 'GET /api/recipes/search': searchHeld },
+    act: (page) => page.getByRole('status', { name: 'Loading recipes' }).waitFor() },
+  {
+    name: 'recipes as a list, loading', path: '/recipes', answers: { 'GET /api/recipes/search': searchHeld },
+    act: async (page) => {
+      await page.evaluate(() => localStorage.setItem('chefbot.recipes.layout', 'list'));
+      await page.reload();
+      await page.getByRole('status', { name: 'Loading recipes' }).waitFor();
+    },
+  },
   {
     name: 'recipes, the download all choices open', path: '/recipes',
     act: (page) => page.getByRole('button', { name: 'Download all' }).click()
       .then(() => page.getByRole('link', { name: 'Download as PDF' }).waitFor()),
+  },
+  {
+    name: 'recipes, filters open with a tag and a time chosen', path: '/recipes',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Filters' }).click();
+      await page.getByRole('textbox', { name: 'Tags' }).fill('veg');
+      await page.getByRole('button', { name: /^#vegetarian / }).click();
+      await page.getByRole('combobox', { name: 'Ready within' }).selectOption('45');
+      await page.getByText('1 recipe matches').waitFor();
+    },
+  },
+  {
+    name: 'recipes, filters chosen and the panel closed again', path: '/recipes',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Filters' }).click();
+      await page.getByRole('combobox', { name: 'Course' }).selectOption('Main');
+      await page.getByRole('button', { name: /^#quick / }).click();
+      await page.getByRole('button', { name: /^Filters/ }).click();
+      await page.getByRole('button', { name: 'Remove filter #quick' }).waitFor();
+    },
+  },
+  {
+    name: "recipes, someone else's favourites", path: '/recipes',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Filters' }).click();
+      await page.getByRole('combobox', { name: 'Favourites' }).selectOption({ label: "James' favourites" });
+      await page.getByText('1 recipe matches').waitFor();
+    },
+  },
+  {
+    name: 'recipes, filters that match nothing', path: '/recipes',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Filters' }).click();
+      await page.getByRole('combobox', { name: 'Favourites' }).selectOption('My favourites');
+      await page.getByRole('checkbox', { name: 'Slow cooker only' }).check();
+      await page.getByText('No recipes match').waitFor();
+    },
+  },
+  {
+    name: 'recipes, filters open in a library with very many tags', path: '/recipes', answers: library(data.manyTags(150)),
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Filters' }).click();
+      await page.getByText(/^and \d+ more: type to find them$/).waitFor();
+      await page.getByRole('textbox', { name: 'Tags' }).fill('tag 1');
+      await page.getByText('Matching').waitFor();
+    },
   },
   {
     name: 'recipes, searching with no match', path: '/recipes',
@@ -111,6 +172,8 @@ const VIEWS = [
   { name: 'add a recipe by typing it in', path: '/recipes/new/write' },
   { name: 'add recipes from files', path: '/recipes/new/files' },
   { name: 'a recipe', path: `/recipes/${data.ids.tacos}` },
+  { name: 'a recipe, loading', path: `/recipes/${data.ids.tacos}`, answers: { [`GET /api/recipes/${data.ids.tacos}`]: holding },
+    act: (page) => page.getByRole('status', { name: 'Loading the recipe' }).waitFor() },
   {
     name: 'a recipe with its menu open', path: `/recipes/${data.ids.tacos}`,
     act: (page) => page.getByRole('button', { name: /^More actions/ }).click()
@@ -202,10 +265,17 @@ const VIEWS = [
     name: 'settings: a plan style open for editing, with every kind of rule', path: '/settings/styles',
     act: async (page) => {
       await page.getByRole('button', { name: 'Edit Classic week' }).click();
-      for (const match of ['Tag', 'Ingredient', 'ReadyWithin']) {
+      for (const match of ['Tag', 'Ingredient', 'ReadyWithin', 'Favourite']) {
         await page.getByRole('button', { name: 'Add a rule' }).click();
         await page.getByRole('combobox', { name: 'what it looks for' }).last().selectOption(match);
       }
+    },
+  },
+  {
+    name: 'settings: a plan style leaning on favourites a lot', path: '/settings/styles',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Edit Classic week' }).click();
+      await page.getByRole('radio', { name: 'A lot' }).check();
     },
   },
   { name: 'settings: stores', path: '/settings/stores' },

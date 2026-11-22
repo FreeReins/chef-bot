@@ -31,6 +31,7 @@ internal sealed partial class KnownPlanStyleAccess(string path) : IKnownPlanStyl
                 Snacks = entry.Snacks,
                 Sweets = entry.Sweets,
                 Drinks = entry.Drinks,
+                Favourites = entry.Favourites ?? FavouriteLean.ALittle,
                 Rules = entry.Rules.Select(rule => new PlanRule
                 {
                     Limit = rule.Limit,
@@ -71,6 +72,9 @@ internal sealed partial class KnownPlanStyleAccess(string path) : IKnownPlanStyl
         public int Sweets { get; init; }
 
         public int Drinks { get; init; }
+
+        /// <summary>Null when the file leaves it out, which means a little.</summary>
+        public FavouriteLean? Favourites { get; init; }
 
         public IReadOnlyList<RuleEntry> Rules { get; init => field = value ?? []; } = [];
     }

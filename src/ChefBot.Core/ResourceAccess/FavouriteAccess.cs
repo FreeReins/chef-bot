@@ -32,6 +32,18 @@ internal sealed class FavouriteAccess(ChefBotDbContext db) : IFavouriteAccess
             .ToList();
     }
 
+    public async Task<List<RecipeFavourite>> ListAllAsync(CancellationToken cancellationToken)
+    {
+        var names = await db.Users.AsNoTracking().ToDictionaryAsync(user => user.Id, user => user.DisplayName, cancellationToken);
+        await db.RecipeFavourites.LoadAsync(cancellationToken);
+        return db.RecipeFavourites.Local
+            .Where(favourite => names.ContainsKey(favourite.UserId))
+            .OrderBy(favourite => favourite.CreatedAt)
+            .ThenBy(favourite => favourite.Id)
+            .Select(favourite => favourite.ToContract(names[favourite.UserId]))
+            .ToList();
+    }
+
     public async Task<RecipeFavourite?> FindAsync(Guid recipeId, Guid userId, CancellationToken cancellationToken)
     {
         await db.RecipeFavourites.Where(favourite => favourite.RecipeId == recipeId && favourite.UserId == userId)

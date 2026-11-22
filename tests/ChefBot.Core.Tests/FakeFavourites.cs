@@ -17,6 +17,9 @@ internal sealed class FakeFavourites(FakeAccounts accounts) : IFavouriteAccess
             .Select(pair => Named(pair.Row, pair.User!.DisplayName))
             .ToList());
 
+    public Task<List<RecipeFavourite>> ListAllAsync(CancellationToken cancellationToken) =>
+        ListForRecipesAsync(Rows.Select(row => row.RecipeId).ToList(), cancellationToken);
+
     public Task<RecipeFavourite?> FindAsync(Guid recipeId, Guid userId, CancellationToken cancellationToken) =>
         Task.FromResult(Rows.FirstOrDefault(row => row.RecipeId == recipeId && row.UserId == userId) is { } row
             ? Named(row, string.Empty)

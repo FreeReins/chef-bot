@@ -5,8 +5,8 @@ using ChefBot.Core.Utilities;
 namespace ChefBot.Core.Engines;
 
 /// <summary>
-/// Scores a set of recipes as a week: higher when they share perishables, suit the season
-/// and use up what is in the pantry, lower when they lean on one protein. Planning uses it to choose a week,
+/// Scores a set of recipes as a week: higher when they share perishables, suit the season, use up what is in the
+/// pantry and are the household's favourites, lower when they lean on one protein. Planning uses it to choose a week,
 /// and swaps use it to rank single recipes.
 /// </summary>
 /// <param name="catalog">What is known about each ingredient.</param>
@@ -14,7 +14,16 @@ namespace ChefBot.Core.Engines;
 /// <param name="pantry">What is on hand.</param>
 /// <param name="month">The month being planned, for seasons.</param>
 /// <param name="pantryBoost">Multiplies the reward for using pantry food. Above 1 when a plan is rebuilt around what was bought.</param>
-internal sealed class WeekScorer(IngredientCatalog catalog, PlannerOptions options, PantrySnapshot pantry, int month, double pantryBoost = 1)
+/// <param name="fans">How many people have each recipe as a favourite.</param>
+/// <param name="favouriteWeight">What a recipe with one fan adds; each further fan adds less (1, 1/2, 1/3, ...). 0 ignores favourites.</param>
+internal sealed class WeekScorer(
+    IngredientCatalog catalog,
+    PlannerOptions options,
+    PantrySnapshot pantry,
+    int month,
+    double pantryBoost = 1,
+    IReadOnlyDictionary<Guid, int>? fans = null,
+    double favouriteWeight = 0)
 {
     private readonly Dictionary<Guid, Profile> _profiles = new();
 
@@ -84,6 +93,13 @@ internal sealed class WeekScorer(IngredientCatalog catalog, PlannerOptions optio
             {
                 score += weights.ExpiringSoon;
             }
+        }
+
+        // More fans count for more, with each further fan adding less, so a recipe everyone loves comes ahead of one
+        // person's pick without crowding everyone else's favourites out.
+        for (var fan = 1; fan <= (fans?.GetValueOrDefault(recipe.Id) ?? 0); fan++)
+        {
+            score += favouriteWeight / fan;
         }
 
         var profile = new Profile(

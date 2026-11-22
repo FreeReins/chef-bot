@@ -9,6 +9,8 @@
   import { pendingClick } from '../lib/pending.js';
   import { celebrate } from '../lib/motion.js';
   import Chip from './Chip.svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Check from '@lucide/svelte/icons/check';
 
   /**
    * onadded(count) runs after the chosen samples are saved and `app.recipeCount` has been reloaded.
@@ -108,10 +110,10 @@
   </div>
 
   <div class="row-actions" style="margin-top:.75rem">
-    <button type="button" class="primary" disabled={picked.length === 0 && !sending} onclick={add}>
-      {#if sending}Adding {sending} {sending === 1 ? 'recipe' : 'recipes'}…
-      {:else if available.length === 0}All samples added
-      {:else}Add {picked.length} sample {picked.length === 1 ? 'recipe' : 'recipes'}{/if}
+    <button type="button" class="primary with-icon" disabled={picked.length === 0 && !sending} onclick={add}>
+      {#if sending}<Plus size={16} />Adding {sending} {sending === 1 ? 'recipe' : 'recipes'}…
+      {:else if available.length === 0}<Check size={16} />All samples added
+      {:else}<Plus size={16} />Add {picked.length} sample {picked.length === 1 ? 'recipe' : 'recipes'}{/if}
     </button>
   </div>
 {/if}

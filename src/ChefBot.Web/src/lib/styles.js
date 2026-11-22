@@ -7,7 +7,14 @@ export const LIMITS = [['AtLeast', 'At least'], ['AtMost', 'At most'], ['Exactly
 /** The kinds of meal a rule can count, plural as they read in a rule. '' stands for every kind of meal. */
 export const RULE_SLOTS = [['Dinner', 'dinners'], ['Breakfast', 'breakfasts'], ['Snack', 'snacks'], ['Sweet', 'sweets'], ['Drink', 'drinks'], ['', 'meals of any kind']];
 
-export const MATCHES = [['SlowCooker', 'slow cooker'], ['Tag', 'tagged'], ['Ingredient', 'made with'], ['ReadyWithin', 'ready within']];
+export const MATCHES = [['SlowCooker', 'slow cooker'], ['Tag', 'tagged'], ['Ingredient', 'made with'], ['ReadyWithin', 'ready within'], ['Favourite', "someone's favourite"]];
+
+/** How much a style leans on favourite recipes, with what each choice means. */
+export const FAVOURITE_LEANS = [
+  ['Off', 'Not at all', 'Favourites are planned like any other recipe.'],
+  ['ALittle', 'A little', 'Favourites get a nudge, about as much as produce in season.'],
+  ['ALot', 'A lot', 'Favourites come first, after anything planned recently.'],
+];
 
 const SHORT_DAYS = DAYS.map((day) => day.slice(0, 3));
 
@@ -17,7 +24,7 @@ export const newRule = () => ({ limit: 'AtLeast', count: 1, slot: 'Dinner', matc
 /** A new style of the household's own, before it is changed: four dinners spaced for leftover lunches. */
 export const newStyle = (name) => ({
   id: null, name, description: '', isDefault: false, cookingDays: ['Sunday', 'Tuesday', 'Thursday', 'Saturday'],
-  leftoverLunches: true, breakfasts: 0, snacks: 0, sweets: 0, drinks: 0, rules: [],
+  leftoverLunches: true, breakfasts: 0, snacks: 0, sweets: 0, drinks: 0, rules: [], favourites: 'ALittle',
 });
 
 /** A copy of a style that can be changed without touching the original. */
@@ -38,6 +45,7 @@ export function matchText(rule) {
     case 'SlowCooker': return 'slow cooker';
     case 'Tag': return `tagged ${either(rule.values ?? [])}`;
     case 'Ingredient': return `made with ${either(rule.values ?? [])}`;
+    case 'Favourite': return "someone's favourite";
     default: return `ready within ${rule.minutes ?? '?'} minutes`;
   }
 }
@@ -63,6 +71,8 @@ export function styleSummary(style) {
   if (style.snacks) parts.push(plural(style.snacks, 'snack'));
   if (style.sweets) parts.push(plural(style.sweets, 'sweet'));
   if (style.drinks) parts.push(plural(style.drinks, 'drink'));
+  if (style.favourites === 'ALot') parts.push('favourites first');
+  else if (style.favourites === 'Off') parts.push('favourites not preferred');
   return parts.join(' · ');
 }
 

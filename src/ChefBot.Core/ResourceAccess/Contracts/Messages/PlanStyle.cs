@@ -35,6 +35,9 @@ internal sealed class PlanStyle
 
     public int Drinks { get; set; }
 
+    /// <summary>How much the household's favourite recipes are preferred.</summary>
+    public FavouriteLean Favourites { get; set; } = FavouriteLean.ALittle;
+
     /// <summary>Rules about the recipes chosen, applied in order.</summary>
     public List<PlanRule> Rules { get; set; } = [];
 

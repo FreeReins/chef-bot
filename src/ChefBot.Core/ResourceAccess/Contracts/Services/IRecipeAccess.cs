@@ -17,6 +17,9 @@ internal interface IRecipeAccess
     /// <summary>How many recipes can be planned.</summary>
     Task<int> CountActiveAsync(CancellationToken cancellationToken);
 
+    /// <summary>The tags of every recipe that can be planned, as written, repeats included.</summary>
+    Task<List<string>> ListActiveTagsAsync(CancellationToken cancellationToken);
+
     Task<Recipe?> FindAsync(Guid id, CancellationToken cancellationToken);
 
     /// <summary>Adds the recipe, or updates the stored one with the same id.</summary>

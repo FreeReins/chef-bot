@@ -21,7 +21,8 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         var run = new Run(
             request,
             style,
-            new WeekScorer(catalog, options, request.Pantry, request.WeekStart.Month, request.PantryBoost),
+            new WeekScorer(
+                catalog, options, request.Pantry, request.WeekStart.Month, request.PantryBoost, request.Fans, FavouriteWeight(style.Favourites)),
             new Random(request.Seed ?? request.WeekStart.DayNumber),
             new MealPlan
             {
@@ -362,7 +363,7 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
 
         foreach (var rule in rules)
         {
-            var keptMatching = kept.Count(recipe => RecipeMatcher.Matches(recipe, rule));
+            var keptMatching = kept.Count(recipe => RecipeMatcher.Matches(recipe, rule, run.Request.Fans));
             var count = Math.Clamp(rule.Count, 0, total);
             var (wantMatching, wantOther) = rule.Limit switch
             {
@@ -374,8 +375,12 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
             wantMatching = Math.Clamp(wantMatching, 0, open.Count);
             wantOther = Math.Clamp(wantOther, 0, open.Count - wantMatching);
 
-            var matching = Reserve(open, filters, pool, rule, matches: true, wantMatching, dayOf);
-            if (matching.Count < wantMatching)
+            var matching = Reserve(run, open, filters, pool, rule, matches: true, wantMatching, dayOf);
+            if (matching.Count < wantMatching && rule.Match == RecipeMatchKind.Favourite)
+            {
+                run.Warnings.Add($"Only {matching.Count + keptMatching} of {count} {RecipeMatcher.Plural(slot)} could be someone's favourite without repeating a recent meal. Add more favourites, or change the plan style.");
+            }
+            else if (matching.Count < wantMatching)
             {
                 run.Warnings.Add(matching.Count + Math.Min(keptMatching, count) == 0
                     ? $"No {RecipeMatcher.Plural(slot)} could be {RecipeMatcher.Describe(rule)}, as there are no such recipes yet. Add some, or change the plan style."
@@ -383,7 +388,7 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
             }
 
             var rest = open.Where(key => !matching.Contains(key)).ToList();
-            var other = Reserve(rest, filters, pool, rule, matches: false, rule.Limit == RuleLimit.Exactly ? rest.Count : wantOther, dayOf);
+            var other = Reserve(run, rest, filters, pool, rule, matches: false, rule.Limit == RuleLimit.Exactly ? rest.Count : wantOther, dayOf);
             if (other.Count < Math.Min(wantOther, rest.Count))
             {
                 run.Warnings.Add($"There weren't enough recipes that aren't {RecipeMatcher.Describe(rule)}, so some {RecipeMatcher.Plural(slot)} are. Add some, or change the plan style.");
@@ -418,20 +423,28 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
     /// Narrows up to <paramref name="count"/> slots to recipes that match the rule (or don't), choosing slots that can
     /// still be filled: the rule's day first, then the least narrowed. Never more than there are such recipes.
     /// </summary>
+    /// <remarks>
+    /// Favourites planned recently don't count, so a rule asking for favourites is relaxed before a recent meal is
+    /// repeated to meet it.
+    /// </remarks>
     private static List<TSlot> Reserve<TSlot>(
+        Run run,
         IEnumerable<TSlot> candidates, Dictionary<TSlot, List<Filter>> filters, IReadOnlyList<Recipe> pool,
         PlanRule rule, bool matches, int count, Func<TSlot, DayOfWeek?> dayOf)
         where TSlot : notnull
     {
-        count = Math.Min(count, pool.Count(recipe => RecipeMatcher.Matches(recipe, rule) == matches));
+        var filter = new Filter(rule, matches, run.Request.Fans);
+        var eligible = matches && rule.Match == RecipeMatchKind.Favourite
+            ? pool.Where(recipe => !run.Request.RecentRecipeIds.Contains(recipe.Id)).ToList()
+            : pool;
+        count = Math.Min(count, eligible.Count(filter.Allows));
         if (count <= 0)
         {
             return [];
         }
 
-        var filter = new Filter(rule, matches);
         var chosen = candidates
-            .Where(key => pool.Any(recipe => filter.Allows(recipe) && filters[key].All(other => other.Allows(recipe))))
+            .Where(key => eligible.Any(recipe => filter.Allows(recipe) && filters[key].All(other => other.Allows(recipe))))
             .OrderBy(key => matches && rule.Day is not null && dayOf(key) == rule.Day ? 0 : 1)
             .ThenBy(key => filters[key].Count)
             .Take(count)
@@ -486,10 +499,18 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
     }
 
     /// <summary>One rule narrowing a slot: to recipes that match it, or to recipes that don't.</summary>
-    private sealed record Filter(PlanRule Rule, bool Matches)
+    private sealed record Filter(PlanRule Rule, bool Matches, IReadOnlyDictionary<Guid, int>? Fans)
     {
-        public bool Allows(Recipe recipe) => RecipeMatcher.Matches(recipe, Rule) == Matches;
+        public bool Allows(Recipe recipe) => RecipeMatcher.Matches(recipe, Rule, Fans) == Matches;
     }
+
+    /// <summary>What a favourite recipe adds to a week's score, for the style's choice.</summary>
+    private double FavouriteWeight(FavouriteLean lean) => lean switch
+    {
+        FavouriteLean.ALittle => options.Weights.Favourite,
+        FavouriteLean.ALot => options.Weights.FavouriteALot,
+        _ => 0,
+    };
 
     /// <summary>The state of one planning pass.</summary>
     private sealed record Run(
