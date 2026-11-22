@@ -32,49 +32,40 @@ public static class LiveEndpoints
     {
         yield return new SseItem<string>(string.Empty, "ping") { ReconnectionInterval = ReconnectAfter };
 
-        await using var topics = live.ListenAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        await using var topics = live.ListenAsync(stop.Token).GetAsyncEnumerator(stop.Token);
         var next = topics.MoveNextAsync().AsTask();
-        while (!cancellationToken.IsCancellationRequested)
+        try
         {
-            var ping = Task.Delay(PingEvery, cancellationToken);
-            Task finished;
-            try
+            while (true)
             {
-                finished = await Task.WhenAny(next, ping);
-            }
-            catch (OperationCanceledException)
-            {
-                yield break;
-            }
+                var ping = Task.Delay(PingEvery, stop.Token);
+                var finished = await Task.WhenAny(next, ping);
+                if (!finished.IsCompletedSuccessfully)
+                {
+                    yield break; // The page went away.
+                }
 
-            if (finished == ping)
-            {
-                if (ping.IsCanceled)
+                if (finished == ping)
+                {
+                    yield return new SseItem<string>(string.Empty, "ping");
+                    continue;
+                }
+
+                if (!await next)
                 {
                     yield break;
                 }
 
-                yield return new SseItem<string>(string.Empty, "ping");
-                continue;
+                yield return new SseItem<string>(string.Empty, topics.Current);
+                next = topics.MoveNextAsync().AsTask();
             }
-
-            bool more;
-            try
-            {
-                more = await next;
-            }
-            catch (OperationCanceledException)
-            {
-                yield break;
-            }
-
-            if (!more)
-            {
-                yield break;
-            }
-
-            yield return new SseItem<string>(string.Empty, topics.Current);
-            next = topics.MoveNextAsync().AsTask();
+        }
+        finally
+        {
+            // Disposing topics while a MoveNextAsync is still running throws NotSupportedException, so stop it first.
+            stop.Cancel();
+            await ((Task)next).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         }
     }
 }
