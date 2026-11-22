@@ -1,0 +1,13 @@
+{
+  "name": "ChefBot",
+  "short_name": "ChefBot",
+  "description": "Meal planning around what you have.",
+  "start_url": "/shopping",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f4",
+  "theme_color": "#a84d26",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

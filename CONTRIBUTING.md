@@ -201,6 +201,12 @@ has none.
   dialog. The actions that load or change it are in one module per area: `plan`, `shopping`, `recipes`, `setup`,
   `settings` and `session` (`src/lib/<area>.svelte.js`). `app.svelte.js` re-exports them all, so components
   import from it; the modules in `src/lib/` import from each other directly. Svelte redraws what changed.
+- Offline mode: `public/sw.js` is a service worker that keeps the page itself (index.html and `/assets`, never
+  `/api`). `src/lib/offline.svelte.js` saves what the Shopping and Pantry tabs show in localStorage and shows it
+  when ChefBot can't be reached (`app.offline`). `src/lib/outbox.svelte.js` queues the shopping changes made
+  meanwhile and sends them in order once ChefBot answers. `api()` fails with `error.offline` when a request never
+  reached ChefBot. An action that should work offline catches that and makes its change through the outbox, as
+  the actions in `shopping.svelte.js` do. `tests/offline.spec.js` covers it, using `api.offline` in the stub.
 - Every view has its own address (`/recipes/{id}`, `/settings/backups`, ...) so it can be bookmarked. The list
   is at the top of `src/lib/addresses.js`. Move between views with plain `<a href>` links or `go(path)` from
   there, not by setting `app.tab`; the server answers any path that isn't a file or `/api` with `index.html`.

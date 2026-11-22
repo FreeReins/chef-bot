@@ -1,7 +1,7 @@
 <!-- ChefBot's page: first-run setup, sign-in, then planning and reviewing a week, shopping, the pantry, the food history and (for
      admins) inviting people. State and actions live in lib/app.svelte.js. -->
 <script>
-  import { app, isAdmin, run, start, signOut } from './lib/app.svelte.js';
+  import { app, isAdmin, run, start, signOut, needsConnection } from './lib/app.svelte.js';
   import { shortDate } from './lib/format.js';
   import SetupAccount from './screens/SetupAccount.svelte';
   import SetupHttps from './screens/SetupHttps.svelte';
@@ -23,6 +23,7 @@
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import ThemeToggle from './components/ThemeToggle.svelte';
   import SetupProgress from './components/SetupProgress.svelte';
+  import OfflineBanner from './components/OfflineBanner.svelte';
   import { stepIn, stepOut, rise } from './lib/motion.js';
   import CalendarDays from '@lucide/svelte/icons/calendar-days';
   import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
@@ -32,6 +33,7 @@
   import Users from '@lucide/svelte/icons/users';
   import SettingsIcon from '@lucide/svelte/icons/settings';
   import CodeXml from '@lucide/svelte/icons/code-xml';
+  import WifiOff from '@lucide/svelte/icons/wifi-off';
 
   const TABS = [
     { key: 'plan', label: 'Plan', icon: CalendarDays },
@@ -115,6 +117,7 @@
       <a href="/{tab.key}" style="--area: {tab.area}" aria-current={app.tab === tab.key ? 'page' : undefined}><tab.icon size={18} /><span class="tab-label">{tab.label}</span></a>
     {/each}
   </nav>
+  {#if app.offline}<OfflineBanner />{/if}
 {/if}
 
 <main id="view">
@@ -135,7 +138,17 @@
     </div>
   {:else}
     {#key app.tab}
-      <div in:rise={{ duration: 160 }}><View /></div>
+      <div in:rise={{ duration: 160 }}>
+        {#if needsConnection()}
+          <!-- Offline, only the shopping list and the pantry were saved on this device. -->
+          <div class="card needs-connection">
+            <span class="empty-icon" style="--area: var(--area-{app.tab})" aria-hidden="true"><WifiOff size={24} /></span>
+            <p class="muted">This needs ChefBot. The <a href="/shopping">Shopping</a> and <a href="/pantry">Pantry</a> tabs work offline.</p>
+          </div>
+        {:else}
+          <View />
+        {/if}
+      </div>
     {/key}
   {/if}
 </main>
@@ -204,6 +217,9 @@
     .loading-mark :global(svg) { animation: simmer 1.1s ease-in-out infinite; transform-origin: 50% 90%; }
   }
   @keyframes simmer { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-4px) rotate(-6deg); } 60% { transform: translateY(-2px) rotate(4deg); } }
+  .needs-connection { display: flex; gap: .9rem; align-items: center; margin-top: 1rem; padding: 1rem; }
+  .needs-connection .empty-icon { flex: none; margin: 0; }
+  .needs-connection p { margin: 0; }
   .stage { display: grid; }
   .scene { grid-area: 1 / 1; min-width: 0; }
   /* The progress bar above already makes the gap at the top of the step. */

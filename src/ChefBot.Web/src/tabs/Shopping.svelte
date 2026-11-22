@@ -23,8 +23,9 @@
   import Plus from '@lucide/svelte/icons/plus';
 
   // With a plan the pantry comes with its ingredients view; without one it is loaded on its own, as on the Pantry tab.
+  // Offline, the pantry saved last time is shown instead.
   $effect(() => {
-    if (!app.plan) untrack(() => run(loadPantry));
+    if (!app.plan && !app.offline) untrack(() => run(loadPantry));
   });
 
   const lines = $derived(app.plan ? (app.ingredients?.ingredients ?? []) : []);
@@ -33,7 +34,7 @@
   const bought = $derived(byStatus('Purchased'));
   const handAdded = $derived(app.manualItems.map((item) => ({
     name: item.name, status: 'ToBuy', quantity: item.quantity, unit: item.unit, store: item.store || null,
-    group: item.group, isOptional: false, usedIn: [], manualId: item.id,
+    group: item.group, isOptional: false, usedIn: [], manualId: item.id, pending: item.pending,
   })));
   const toBuy = $derived([...planToBuy, ...handAdded]);
   // What "Mark all as bought" covers: everything once the plan is confirmed, otherwise only the hand-added items.
@@ -180,7 +181,8 @@
       <button class="small with-icon" onclick={() => window.print()}><Printer size={14} />Print</button>
       <button class="small with-icon" onclick={downloadCsv}><Download size={14} />Download CSV</button>
       {#each app.shoppingTargets as target (target.id)}
-        <button class="small with-icon" onclick={() => sendTo(target)} disabled={sendingTo !== null}>
+        <button class="small with-icon" onclick={() => sendTo(target)} disabled={sendingTo !== null || app.offline}
+                title={app.offline ? 'Needs ChefBot: you are offline' : undefined}>
           <ListTodo size={14} />{sendingTo === target.id ? `Sending to ${target.name}…` : `Send to ${target.name}`}
         </button>
       {/each}

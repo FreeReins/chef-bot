@@ -149,6 +149,28 @@ next to HTTP on 8080. Nothing needs to be installed or issued.
 - To use your own certificate, or to run behind a reverse proxy, see
   [Your own certificate](#your-own-certificate) and [Behind a reverse proxy](#behind-a-reverse-proxy).
 
+### Offline on your phone
+
+The Shopping and Pantry tabs keep working with no connection, for example in a shop with no signal. You can tick
+items off, add items, remove the ones you added and mark everything as bought. The changes are sent to ChefBot as
+soon as the phone can reach it again. Items count as bought on the day you ticked them. The pantry can only be read
+while offline, and the other tabs need ChefBot.
+
+Phones only keep a web page for offline use over HTTPS with a certificate they trust. With ChefBot's own
+certificate:
+
+1. Download the certificate from the setup wizard or the Settings tab, on the phone itself.
+2. Install and trust it:
+   - **iPhone:** open the downloaded profile in Settings and install it. Then turn it on under
+     Settings → General → About → Certificate Trust Settings.
+   - **Android:** Settings → Security → Encryption & credentials → Install a certificate → CA certificate.
+3. Open `https://your-host:8443` while connected and sign in. You can also add it to the home screen.
+
+After that, open ChefBot as usual. When it can't be reached, a banner says so and shows when the list was last
+loaded. With your own trusted certificate or a reverse proxy, only step 3 is needed. Over plain HTTP the page
+still works offline while it stays open, but a reload needs the connection. Signing out removes the saved list
+from the phone.
+
 ## Running the container
 
 Every release is published as a container image, so ChefBot runs anywhere Docker or Podman does. It needs a

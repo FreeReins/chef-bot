@@ -24,6 +24,9 @@ Run these from the repository root. A web change is done when both pass with no 
   from `src/lib/app.svelte.js`, which re-exports them; modules in `src/lib/` import from each other directly.
   A form's own submit stays in its component.
 - Wrap anything that calls the API in `run()`, so failures show as a message.
+- When ChefBot can't be reached, `api()` throws with `error.offline` and `run()` switches the page to offline
+  mode (`app.offline`). Only the shopping actions queue changes in the outbox (`src/lib/outbox.svelte.js`). Any
+  other action just fails offline.
 - An async button uses `onclick={pendingClick(() => action())}` and a form's submit uses `pending(event, ...)`,
   both from `src/lib/pending.js`. They give a spinner and ignore a second press. The action must return its
   `run()` promise. Keep busy buttons clickable (no `pointer-events: none`): `keyboard.spec.js` clicks twice.

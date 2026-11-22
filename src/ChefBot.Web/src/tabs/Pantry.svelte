@@ -19,7 +19,7 @@
   // With a plan, the pantry comes with its ingredients view; without one, it is loaded on its own. Only the plan
   // is tracked, so a toast shown by run() doesn't load it again.
   $effect(() => {
-    if (!app.plan) untrack(() => run(loadPantry));
+    if (!app.plan && !app.offline) untrack(() => run(loadPantry));
   });
 
   const pantry = $derived(app.plan
@@ -155,11 +155,11 @@
             {@render summary(item, usedFor)}
             <div class="row-actions">
               <button class="icon" id="edit-{item.id}" aria-label="Change the amount or date of {item.name}" title="Change the amount or date"
-                      onclick={() => edit(item)}><Pencil size={16} /></button>
+                      disabled={app.offline} onclick={() => edit(item)}><Pencil size={16} /></button>
               <button class="icon" aria-label="Add {item.name} to the shopping list" title="Add to the shopping list"
                       onclick={pendingClick(() => restock(item))}><Plus size={16} /></button>
               <button class="icon remove" aria-label="Remove {item.name}" title="Remove"
-                      onclick={pendingClick(() => removePantryItem(item))}><Trash2 size={16} /></button>
+                      disabled={app.offline} onclick={pendingClick(() => removePantryItem(item))}><Trash2 size={16} /></button>
             </div>
           </div>
         {/if}
@@ -169,13 +169,17 @@
 {/snippet}
 
 <section>
-  <form class="inline card" onsubmit={add}>
-    <label>Add an item <input id="pantry-name" name="name" required placeholder="e.g. cabbage"></label>
-    <label>Amount <input id="pantry-quantity" name="quantity" type="number" min="0" step="any"></label>
-    <label>Unit <input id="pantry-unit" name="unit" size="6" placeholder="head"></label>
-    <label>Expires <input id="pantry-expires" name="expiresOn" type="date"></label>
-    <button type="submit" class="with-icon"><Plus size={16} />Add</button>
-  </form>
+  {#if app.offline}
+    <p class="card offline-note">Offline: the pantry can be changed once ChefBot can be reached. You can still add items to the shopping list.</p>
+  {:else}
+    <form class="inline card" onsubmit={add}>
+      <label>Add an item <input id="pantry-name" name="name" required placeholder="e.g. cabbage"></label>
+      <label>Amount <input id="pantry-quantity" name="quantity" type="number" min="0" step="any"></label>
+      <label>Unit <input id="pantry-unit" name="unit" size="6" placeholder="head"></label>
+      <label>Expires <input id="pantry-expires" name="expiresOn" type="date"></label>
+      <button type="submit" class="with-icon"><Plus size={16} />Add</button>
+    </form>
+  {/if}
 
   {#if pantry.length === 0}
     <div class="card empty">
@@ -225,6 +229,7 @@
 </section>
 
 <style>
+  .offline-note { border-left: 4px solid var(--warn); font-size: .95rem; }
   /* Each food group is a block in its own colour (--group-* in styles.css): a coloured heading over a rule, and a
      bar down the side of its items, so the sections tell apart as you scroll. */
   .group { margin-top: 1.4rem; }

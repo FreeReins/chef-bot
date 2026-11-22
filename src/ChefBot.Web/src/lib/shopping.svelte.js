@@ -1,9 +1,28 @@
 import { api } from './api.js';
 import { applyPlan, loadPlan, refreshAfterPantryChange } from './plan.svelte.js';
 import { loadStores } from './settings.svelte.js';
-import { app, ask, isConfirmed, run, toast } from './state.svelte.js';
+import { app, ask, isConfirmed, run, toast, wentOffline } from './state.svelte.js';
+import {
+  addManualOffline, buyAllOffline, buyManualOffline, buyPlanItemOffline, removeManualOffline,
+} from './outbox.svelte.js';
 
 // ---------- hand-added shopping items ----------
+
+/**
+ * Adding, removing and buying work offline too: `online` sends the change, and when ChefBot can't be reached (already,
+ * or as it turns out now) `offline` makes it on the page and keeps it in the outbox until ChefBot answers again.
+ */
+async function online(send, offline) {
+  if (!app.offline) {
+    try {
+      return await send();
+    } catch (error) {
+      if (!error.offline) throw error;
+      wentOffline();
+    }
+  }
+  return offline();
+}
 
 export const loadManualItems = async () => { app.manualItems = await api('GET', '/api/shopping/items'); };
 
@@ -11,7 +30,9 @@ export const loadManualItems = async () => { app.manualItems = await api('GET', 
 export function addToShoppingList(item) {
   let added = false;
   return run(async () => {
-    app.manualItems = await api('POST', '/api/shopping/items', item);
+    await online(
+      async () => { app.manualItems = await api('POST', '/api/shopping/items', item); },
+      () => addManualOffline(item));
     added = true;
   }).then(() => added);
 }
@@ -19,23 +40,27 @@ export function addToShoppingList(item) {
 /** Takes a hand-added item off the list without buying it, with an Undo that puts it back. */
 export const removeManualItem = (id) => run(async () => {
   const item = app.manualItems.find((other) => other.id === id);
-  app.manualItems = await api('DELETE', `/api/shopping/items/${id}`);
-  if (item) {
-    toast(`${item.name} was taken off the list.`, 'note', {
-      label: 'Undo',
-      run: () => addToShoppingList({ name: item.name, quantity: item.quantity, unit: item.unit || null }),
-    });
-  }
+  // Online, Undo adds it again; offline, it takes the removal back out of the outbox.
+  const undo = await online(async () => {
+    app.manualItems = await api('DELETE', `/api/shopping/items/${id}`);
+    return () => addToShoppingList({ name: item.name, quantity: item.quantity, unit: item.unit || null });
+  }, () => removeManualOffline(id));
+  if (item && undo) toast(`${item.name} was taken off the list.`, 'note', { label: 'Undo', run: undo });
 });
 
 /**
- * Buys hand-added items: `path` is `{id}/purchase` or `purchase-all`. What was bought goes into the pantry, so the
- * plan's shopping list and the pantry are reloaded too.
+ * Buys a hand-added item. What was bought goes into the pantry, so the plan's shopping list and the pantry are
+ * reloaded too.
  */
-export const buyManual = (path) => run(async () => {
-  app.manualItems = await api('POST', `/api/shopping/items/${path}`, {});
+export const buyManual = (id) => run(() => online(async () => {
+  app.manualItems = await api('POST', `/api/shopping/items/${id}/purchase`, {});
   await refreshAfterPantryChange();
-});
+}, () => buyManualOffline(id)));
+
+/** Ticks one of the plan's shopping items off, once the plan is confirmed. */
+export const buyPlanItem = (itemId) => run(() => online(
+  async () => applyPlan(await api('POST', `/api/plans/${app.plan.id}/shopping/${itemId}/purchase`, {})),
+  () => buyPlanItemOffline(itemId)));
 
 /**
  * Marks everything on the shopping list as bought, once the person confirms: `count` is how many items that is. With a
@@ -51,7 +76,7 @@ export async function buyEverything(count) {
   await buyAll();
 }
 
-const buyAll = () => run(async () => {
+const buyAll = () => run(() => online(async () => {
   if (isConfirmed()) {
     await applyPlan(await api('POST', `/api/plans/${app.plan.id}/shopping/purchase-all`, {}));
     await loadManualItems();
@@ -59,7 +84,7 @@ const buyAll = () => run(async () => {
     app.manualItems = await api('POST', '/api/shopping/items/purchase-all', {});
     await refreshAfterPantryChange();
   }
-});
+}, () => buyAllOffline(isConfirmed())));
 
 /** Buys a hand-added item's ingredient at another store from now on. Open plans' lists follow, so they reload too. */
 export const setManualStore = (id, store) => run(async () => {

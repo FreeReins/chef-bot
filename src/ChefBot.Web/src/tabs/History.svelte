@@ -96,11 +96,12 @@
   .intro h2 { margin-bottom: .25rem; }
   .intro p { margin: 0; }
 
-  /* The noodle: a wavy line drawn as a mask, so it takes the pasta colour in both themes, repeating down the page. */
+  /* The noodle: a wavy line drawn as a mask (public/noodle.svg), so it takes the pasta colour in both themes, repeating down
+     the page. The masks are files, not data: URLs, because ChefBot's Content-Security-Policy (img-src 'self') blocks those. */
   .timeline { position: relative; padding: .5rem 0 1rem; --noodle-x: 50%; }
   .noodle { position: absolute; top: 0; bottom: 0; left: var(--noodle-x); width: 26px; translate: -50% 0; z-index: 0;
     background: var(--noodle);
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='90' viewBox='0 0 26 90'%3E%3Cpath d='M13 0 C 25 22, 1 23, 13 45 S 1 68, 13 90' fill='none' stroke='black' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E") repeat-y center top / 26px 90px; }
+    mask: url("/noodle.svg") repeat-y center top / 26px 90px; }
 
   .chapter { position: relative; z-index: 1; margin: 0 0 1.5rem; }
   /* Each month's sign hangs on the noodle, in sauce red. */
@@ -113,9 +114,15 @@
 
   .moments { list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem; }
   /* Wide screens: the plate sits on the noodle and its card alternates left and right of it. */
-  .moment { display: grid; grid-template-columns: 1fr 3rem 1fr; align-items: center; gap: .5rem;
+  .moment { position: relative; display: grid; grid-template-columns: 1fr 6.5rem 1fr; align-items: center;
     animation: wobble .5s ease-out both; animation-delay: var(--delay); }
-  .moment .plate { grid-column: 2; grid-row: 1; }
+  /* A strand of spaghetti from the noodle under the plate to the card, so no card floats. It starts at the plate's
+     centre and tucks under the card's edge; both cover its ends. */
+  .moment::before { content: ''; position: absolute; top: 50%; right: 50%; width: 4.5rem; height: 12px; translate: 0 -50%;
+    z-index: -1; background: var(--noodle);
+    mask: url("/strand.svg") repeat-x left center / 24px 12px; }
+  .moment.right::before { right: auto; left: 50%; }
+  .moment .plate { position: relative; grid-column: 2; grid-row: 1; }
   .moment .card { grid-column: 1; grid-row: 1; margin: 0; }
   .moment.right .card { grid-column: 3; }
   .plate { display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; justify-self: center; font-size: 1.3rem;
@@ -151,7 +158,8 @@
     .timeline { --noodle-x: 1.3rem; }
     .sign { margin-left: 0; rotate: none; }
     .chapter:nth-of-type(even) .sign { rotate: none; }
-    .moment { grid-template-columns: 2.6rem minmax(0, 1fr); }
+    .moment { grid-template-columns: 2.6rem minmax(0, 1fr); gap: 1.6rem; }
+    .moment::before, .moment.right::before { right: auto; left: 1.3rem; }
     .moment .plate { grid-column: 1; }
     .moment .card, .moment.right .card { grid-column: 2; }
     .deeper, .the-end { text-align: left; margin-left: 0; }

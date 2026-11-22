@@ -1,8 +1,9 @@
 /**
- * Calls ChefBot's JSON API. Throws an Error carrying the server's message and `status` when the request fails.
+ * Calls ChefBot's JSON API. Throws an Error carrying the server's message and `status` when the request fails, or one
+ * with `offline` set when ChefBot can't be reached at all.
  */
 export async function api(method, path, body) {
-  return answer(await fetch(path, {
+  return answer(await reach(path, {
     method,
     headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -14,7 +15,18 @@ export async function api(method, path, body) {
  * Fails the same way as `api`.
  */
 export async function upload(path, file, contentType) {
-  return answer(await fetch(path, { method: 'POST', headers: { 'Content-Type': contentType }, body: file }));
+  return answer(await reach(path, { method: 'POST', headers: { 'Content-Type': contentType }, body: file }));
+}
+
+/** fetch(), except that a request that never reached ChefBot (no signal, the server is off) fails with `offline`. */
+async function reach(path, init) {
+  try {
+    return await fetch(path, init);
+  } catch {
+    const error = new Error("ChefBot can't be reached.");
+    error.offline = true;
+    throw error;
+  }
 }
 
 /** The response's JSON, or an Error carrying the server's message and `status` when the request failed. */

@@ -1,7 +1,7 @@
 <!-- One line of the shopping list. A line still to buy has a box to tick it off: a plan's line once the plan is
      confirmed, a line added by hand (it has a manualId) any time. Lines added by hand can also be removed. An `actions` snippet adds the caller's own buttons beside the line's. -->
 <script>
-  import { app, isConfirmed, planAction, setShoppingStore, buyManual, removeManualItem, setManualStore } from '../lib/app.svelte.js';
+  import { app, isConfirmed, buyPlanItem, setShoppingStore, buyManual, removeManualItem, setManualStore } from '../lib/app.svelte.js';
   import { amount, shortDate } from '../lib/format.js';
   import { collapse } from '../lib/motion.js';
   import Chip from '../components/Chip.svelte';
@@ -15,12 +15,13 @@
   const canBuy = $derived(toBuy && (manual || isConfirmed()));
   const stores = $derived(app.stores?.stores ?? []);
   const canMove = $derived(toBuy && stores.length > 0);
+  // Moving to another store rebuilds every open list, so it waits until ChefBot can be reached.
 
   // Struck through as soon as it is ticked; the line leaves the list once the purchase is saved.
   let buying = $state(false);
   const buy = async () => {
     buying = true;
-    await (manual ? buyManual(`${line.manualId}/purchase`) : planAction(`shopping/${line.shoppingItemId}/purchase`, {}));
+    await (manual ? buyManual(line.manualId) : buyPlanItem(line.shoppingItemId));
     buying = false;
   };
   const move = (store) => (manual ? setManualStore(line.manualId, store) : setShoppingStore(line.shoppingItemId, store));
@@ -34,8 +35,9 @@
   <!-- The name ticks the box too, a bigger target than the box alone. -->
   <svelte:element this={canBuy ? 'label' : 'div'} class="what" for={canBuy ? `tick-${itemId}` : undefined}>
     <strong>{line.name}</strong> <span class="amount">{amount(line.quantity, line.unit)}</span>
-    {#if line.isOptional || line.expiresOn}
+    {#if line.isOptional || line.expiresOn || line.pending}
       <span class="chips">
+        {#if line.pending}<Chip tone="warn">Not sent yet</Chip>{/if}
         {#if line.isOptional}<Chip>Optional</Chip>{/if}
         {#if line.expiresOn}<Chip tone="warn">Use by {shortDate(line.expiresOn)}</Chip>{/if}
       </span>
@@ -44,7 +46,8 @@
   </svelte:element>
   <div class="row-actions">
     {#if canMove}
-      <select class="store" aria-label="Where to buy {line.name}" title="Where to buy it" value={line.store ?? ''}
+      <select class="store" aria-label="Where to buy {line.name}" title={app.offline ? 'Needs ChefBot: you are offline' : 'Where to buy it'}
+              value={line.store ?? ''} disabled={app.offline}
               onchange={(event) => move(event.currentTarget.value)}>
         {#each stores as store (store.name)}<option value={store.name}>{store.name}</option>{/each}
         <option value="">Any store</option>

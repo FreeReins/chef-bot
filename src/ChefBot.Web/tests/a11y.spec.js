@@ -18,6 +18,14 @@ const holding = () => new Promise(() => {});
 const searchHeld = (request) => (new URL(request.url()).searchParams.get('pageSize') === '1'
   ? library(data.recipes())['GET /api/recipes/search'](request) : holding());
 
+/** Reloads the page with no connection, once the browser has saved what it shows offline. */
+async function goOffline(page, api) {
+  await page.waitForFunction(() => localStorage.getItem('chefbot-offline'));
+  api.offline = true;
+  await page.reload();
+  await page.getByText('Offline.', { exact: true }).waitFor();
+}
+
 /** { name, path, answers?: routes for api.set(), act?: async (page, api) => {} run before checking } */
 const VIEWS = [
   // Before signing in
@@ -69,6 +77,17 @@ const VIEWS = [
   { name: 'shopping without a plan, empty list', path: '/shopping', answers: { ...noPlan, 'GET /api/pantry': [] } },
   { name: 'shopping, printed', path: '/shopping', act: (page) => page.emulateMedia({ media: 'print' }) },
   { name: 'shopping with to-do apps to send to', path: '/shopping', answers: { 'GET /api/shopping/targets': data.shoppingTargets() } },
+  {
+    name: 'shopping, offline with a change not sent yet', path: '/shopping', answers: { 'GET /api/shopping/items': data.manualItems() },
+    act: async (page, api) => {
+      await goOffline(page, api);
+      await page.getByLabel('Add to the list').fill('bread');
+      await page.getByRole('button', { name: 'Add', exact: true }).click();
+      await page.getByText('Not sent yet').waitFor();
+    },
+  },
+  { name: 'pantry, offline', path: '/pantry', act: goOffline },
+  { name: 'recipes, offline', path: '/recipes', act: goOffline },
   { name: 'pantry with a plan', path: '/pantry' },
   { name: 'pantry without a plan', path: '/pantry', answers: noPlan },
   {

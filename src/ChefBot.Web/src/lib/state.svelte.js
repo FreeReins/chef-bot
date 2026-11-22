@@ -41,6 +41,9 @@ export const app = $state({
   importing: 0,        // recipe files being sent by FileImport.svelte; setup can't move on until they are in
   setupDirection: 1,   // which way the last setup move went: 1 forward, -1 back, so the steps slide the right way
   dealt: 0,            // when a week was last planned or shuffled (Date.now()), so the board deals its new meals in
+  offline: false,      // true while ChefBot can't be reached: Shopping and Pantry show what was saved (offline.svelte.js)
+  offlineSince: null,  // when what is shown offline was last loaded from ChefBot (an ISO time)
+  outbox: [],          // shopping changes made offline, oldest first, waiting to be sent (outbox.svelte.js)
 });
 
 export const isConfirmed = () => app.plan?.status === 'Confirmed';
@@ -53,7 +56,9 @@ export async function run(action) {
   try {
     await action();
   } catch (error) {
-    if (error.status === 401 && app.screen === 'app') {
+    if (error.offline) {
+      wentOffline();
+    } else if (error.status === 401 && app.screen === 'app') {
       app.screen = 'sign-in';
       toast('Your session has ended. Sign in again.', 'error');
     } else {
@@ -62,6 +67,20 @@ export async function run(action) {
   } finally {
     app.busy--;
   }
+}
+
+/**
+ * Notes that ChefBot can't be reached, once per spell offline. Only signed-in views have a list to fall back on;
+ * before that, the error is shown like any other.
+ */
+export function wentOffline() {
+  if (app.screen !== 'app') {
+    toast("ChefBot can't be reached. Check your connection, then reload the page.", 'error');
+    return;
+  }
+  if (app.offline) return;
+  app.offline = true;
+  toast("ChefBot can't be reached. The shopping list still works, and your changes are sent when you're back online.");
 }
 
 // ---------- toasts ----------

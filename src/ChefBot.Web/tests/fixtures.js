@@ -123,6 +123,8 @@ class ApiStub {
   unknown = [];
   /** Every request made, as 'METHOD /path?query', in order. */
   requests = [];
+  /** While true, every request fails as if ChefBot can't be reached (no signal, server off), and isn't recorded. */
+  offline = false;
   #routes = new Map();
 
   constructor(page) {
@@ -141,6 +143,7 @@ class ApiStub {
 
   async install() {
     await this.page.route('**/api/**', async (route) => {
+      if (this.offline) return route.abort('internetdisconnected');
       const request = route.request();
       const url = new URL(request.url());
       const key = `${request.method()} ${url.pathname}`;
