@@ -1,5 +1,6 @@
 using ChefBot.Core.Engines.Transformation;
 using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Tests;
@@ -125,22 +126,24 @@ public class IngredientTests
     [Test]
     public async Task Classifies_recipes_by_whole_word_labels()
     {
-        var classifier = new RecipeClassifier(new ClassifierOptions
+        var words = new ClassifierWords
         {
             BreakfastWords = ["breakfast"],
+            SnackWords = [],
             SweetWords = ["dessert", "cake"],
+            DrinkWords = [],
             SlowCookerWords = ["slow cooker"],
             NotAMealWords = ["side", "sides"],
-        });
+        };
 
-        var potRoast = classifier.Classify("Pot Roast", ["Slow-Cooker", "Dinner"]);
+        var potRoast = RecipeClassifier.Classify("Pot Roast", ["Slow-Cooker", "Dinner"], words);
         await Assert.That(potRoast.Course).IsEqualTo(RecipeCourse.Main);
         await Assert.That(potRoast.IsSlowCooker).IsTrue();
-        await Assert.That(classifier.Classify("Lemon Bars", ["Dessert"]).Course).IsEqualTo(RecipeCourse.Sweet);
-        await Assert.That(classifier.Classify("Pancakes", ["Breakfast"]).Course).IsEqualTo(RecipeCourse.Breakfast);
-        await Assert.That(classifier.Classify("Coleslaw", ["Sides"]).Course).IsEqualTo(RecipeCourse.Other);
+        await Assert.That(RecipeClassifier.Classify("Lemon Bars", ["Dessert"], words).Course).IsEqualTo(RecipeCourse.Sweet);
+        await Assert.That(RecipeClassifier.Classify("Pancakes", ["Breakfast"], words).Course).IsEqualTo(RecipeCourse.Breakfast);
+        await Assert.That(RecipeClassifier.Classify("Coleslaw", ["Sides"], words).Course).IsEqualTo(RecipeCourse.Other);
 
         // "cake" must not match inside "Pancakes", and names are not used to pick a course.
-        await Assert.That(classifier.Classify("Crab Cakes", ["Pancakes night"]).Course).IsEqualTo(RecipeCourse.Main);
+        await Assert.That(RecipeClassifier.Classify("Crab Cakes", ["Pancakes night"], words).Course).IsEqualTo(RecipeCourse.Main);
     }
 }

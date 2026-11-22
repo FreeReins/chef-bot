@@ -269,16 +269,12 @@ public static class ServiceRegistration
         var configuration = services.GetRequiredService<IConfiguration>();
         var loggers = services.GetRequiredService<ILoggerFactory>();
 
-        // A webhook in the configuration is the starting value until one is saved on the Settings tab.
-        await scope.ServiceProvider.GetRequiredService<IMaintenanceManager>()
-            .UseDefaultWebhookAsync(configuration["Notifications:WebhookUrl"], CancellationToken.None);
-
         // When ChefBot serves HTTPS, plain HTTP visitors are sent to it until an admin decides otherwise.
         var rules = await scope.ServiceProvider.GetRequiredService<IAccountManager>()
             .UseDefaultHttpsRuleAsync(services.GetRequiredService<CertificateStore>().IsEnabled, CancellationToken.None);
         services.GetRequiredService<HttpsPolicy>().RequireHttps = rules.RequireHttps;
 
-        if (scope.ServiceProvider.GetRequiredService<IPlanManager>().NextScheduledStaging() is { } next)
+        if (await scope.ServiceProvider.GetRequiredService<IPlanManager>().NextScheduledStagingAsync(CancellationToken.None) is { } next)
         {
             loggers.CreateLogger("ChefBot.Schedule").LogInformation("Next week's plan will be staged automatically at {When}.", next);
         }

@@ -59,6 +59,15 @@ internal sealed partial class BackupAccess
 
         // Everyone's ratings and notes on recipes. Empty in backups made before reviews.
         new BackupTable<RecipeReviewEntity>("recipeReviews", BackupJson.Default.ListRecipeReviewEntity),
+
+        // The people plans are for, the weekly schedule and leftovers. Empty in backups made before these were settings.
+        new BackupTable<PlannerSettingsEntity>("planner", BackupJson.Default.ListPlannerSettingsEntity),
+
+        // Repeats, expiring food, perishables and the course words. Empty in backups made before these were settings.
+        new BackupTable<AdvancedSettingsEntity>("advanced", BackupJson.Default.ListAdvancedSettingsEntity),
+
+        // The calendar feed's meal times. Empty in backups made before these were settings.
+        new BackupTable<CalendarSettingsEntity>("calendarTimes", BackupJson.Default.ListCalendarSettingsEntity),
     ];
 
     /// <summary>A planned meal points at its recipe by id; the recipe itself is written once, under recipes.

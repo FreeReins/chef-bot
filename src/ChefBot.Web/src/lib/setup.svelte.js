@@ -1,7 +1,7 @@
 import { api } from './api.js';
 import { copyStyle } from './styles.js';
 import { loadFileFormats, loadRecipes } from './recipes.svelte.js';
-import { loadStores, loadStyles } from './settings.svelte.js';
+import { loadPlanning, loadStores, loadStyles } from './settings.svelte.js';
 import { app, run } from './state.svelte.js';
 
 // ---------- setup ----------
@@ -54,11 +54,12 @@ async function openSetupRecipes() {
 }
 
 /**
- * Setup: choose how weeks are planned. Until the household has styles, every starter style is offered, the first as
- * the default; choices not saved yet are kept while moving between steps.
+ * Setup: how many people to plan for, and how weeks are planned. Until the household has styles, every starter style
+ * is offered, the first as the default; choices not saved yet are kept while moving between steps.
  */
 async function openSetupStyles() {
-  await loadStyles();
+  await Promise.all([loadStyles(), loadPlanning()]);
+  app.peopleDraft ??= app.planning.people;
   app.styleDraft ??= app.styles.styles.length
     ? $state.snapshot(app.styles.styles)
     : app.styles.known.map((style, index) => ({ ...copyStyle(style), isDefault: index === 0 }));

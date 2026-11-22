@@ -18,4 +18,18 @@ public static class PlanStyleEndpoints
     public static Task<PlanStylesResponse> Save(
         SavePlanStylesRequest request, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
         plans.SaveStylesAsync(request, cancellationToken);
+
+    /// <summary>How many people plans are for, when next week is planned by itself, and how long leftovers keep.</summary>
+    [WolverineGet("/api/planning")]
+    public static Task<PlannerSettingsResponse> GetPlanning([FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.GetPlannerSettingsAsync(cancellationToken);
+
+    /// <summary>
+    /// Changes how many people plans are for, the weekly schedule and how long leftovers keep. Weeks not yet confirmed
+    /// are resized. Anyone signed in can change them.
+    /// </summary>
+    [WolverinePut("/api/planning")]
+    public static Task<PlannerSettingsResponse> SavePlanning(
+        PlannerSettingsRequest request, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.SavePlannerSettingsAsync(request, cancellationToken);
 }

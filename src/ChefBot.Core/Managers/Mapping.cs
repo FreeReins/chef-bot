@@ -8,7 +8,7 @@ using ChefBot.Core.Utilities;
 namespace ChefBot.Core.Managers;
 
 /// <summary>Turns the internal data contracts and engine results into the public response messages, and back.</summary>
-internal static class Mapping
+internal static partial class Mapping
 {
     public static PlanResponse ToResponse(this MealPlan plan, IEnumerable<string> notes)
     {

@@ -21,7 +21,7 @@ internal sealed class JsonRecipeFormat(SchemaRecipe schema) : IRecipeFileFormat
     public bool CanRead(string text) => true;
 
     /// <exception cref="RuleViolationException">The file isn't JSON or holds no recipes at all.</exception>
-    public RecipeFile Read(string text)
+    public RecipeFile Read(string text, ClassifierWords words)
     {
         using var document = Parse(text, "JSON recipe");
         var entries = SchemaRecipe.Entries(document.RootElement).ToList();
@@ -30,7 +30,7 @@ internal sealed class JsonRecipeFormat(SchemaRecipe schema) : IRecipeFileFormat
             throw new RuleViolationException("No recipes were found in that file. Each recipe needs a name and a list of ingredients.");
         }
 
-        var recipes = entries.Select(schema.Read).OfType<RecipeText>().ToList();
+        var recipes = entries.Select(entry => schema.Read(entry, words)).OfType<RecipeText>().ToList();
         return new RecipeFile(recipes, entries.Count - recipes.Count);
     }
 }

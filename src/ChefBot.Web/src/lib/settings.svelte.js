@@ -49,6 +49,24 @@ export async function saveStyles(styles) {
   app.styles = await api('PUT', '/api/plan-styles', { styles: cleanStyles(styles) });
 }
 
+// ---------- planning ----------
+
+/** Loads how many people plans are for, the weekly schedule and how long leftovers keep. */
+export async function loadPlanning() {
+  app.planning = await api('GET', '/api/planning');
+}
+
+/**
+ * Saves some of the planning settings, keeping the rest as they are. Weeks not yet confirmed are resized for a new
+ * number of people, so the plan is reloaded when that changed.
+ */
+export async function savePlanning(changes) {
+  const before = app.planning;
+  const { nextStaging, isSaved, ...current } = before;
+  app.planning = await api('PUT', '/api/planning', { ...current, ...changes });
+  if (app.planning.people !== before.people || app.planning.maxLeftoverDays !== before.maxLeftoverDays) await loadPlan();
+}
+
 // ---------- settings ----------
 
 export const httpsUrl = () => `https://${location.hostname}${app.https.port === 443 ? '' : `:${app.https.port}`}/`;

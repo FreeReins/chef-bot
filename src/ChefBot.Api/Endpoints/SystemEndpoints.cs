@@ -10,9 +10,22 @@ using Wolverine.Http;
 
 namespace ChefBot.Api.Endpoints;
 
-/// <summary>System-wide settings: sign-in rules and HTTPS, and the server's recent log.</summary>
+/// <summary>System-wide settings: sign-in rules, HTTPS and the advanced planning settings, and the server's recent log.</summary>
 public static class SystemEndpoints
 {
+    /// <summary>How plans weigh repeats, expiring food and perishables, and the words that sort imported recipes, with their defaults.</summary>
+    [Authorize(Policy = Sessions.AdminPolicy)]
+    [WolverineGet("/api/system/advanced")]
+    public static Task<AdvancedSettingsResponse> GetAdvanced([FromServices] IMaintenanceManager maintenance, CancellationToken cancellationToken) =>
+        maintenance.GetAdvancedSettingsAsync(cancellationToken);
+
+    /// <summary>Changes the advanced settings. A value left out, or null, goes back to its default.</summary>
+    [Authorize(Policy = Sessions.AdminPolicy)]
+    [WolverinePut("/api/system/advanced")]
+    public static Task<AdvancedSettingsResponse> SaveAdvanced(
+        AdvancedSettingsRequest request, [FromServices] IMaintenanceManager maintenance, CancellationToken cancellationToken) =>
+        maintenance.SaveAdvancedSettingsAsync(request, cancellationToken);
+
     /// <summary>The sign-in rules. "Always use HTTPS" reads as off while HTTPS is switched off, since it does nothing then.</summary>
     [Authorize(Policy = Sessions.AdminPolicy)]
     [WolverineGet("/api/system/security")]

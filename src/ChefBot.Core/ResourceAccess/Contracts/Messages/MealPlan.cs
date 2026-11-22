@@ -20,6 +20,12 @@ internal sealed class MealPlan
     /// <summary>True when weekday lunches are planned from the leftovers of recent dinners. Copied from the style when the plan was made.</summary>
     public bool LeftoverLunches { get; set; } = true;
 
+    /// <summary>
+    /// How many people each breakfast, lunch and dinner is for. Taken from the planning settings when the plan is made,
+    /// and again while it is staged if they change.
+    /// </summary>
+    public int People { get; set; } = PlannerSettings.DefaultPeople;
+
     public List<PlannedMeal> Meals { get; set; } = [];
 
     public List<ShoppingItem> ShoppingItems { get; set; } = [];

@@ -16,6 +16,9 @@ internal sealed class MealPlanEntity
 
     public bool LeftoverLunches { get; set; } = true;
 
+    /// <summary>Backups made before plans had their own count are read as the old default of two.</summary>
+    public int People { get; set; } = 2;
+
     public List<PlannedMealEntity> Meals { get; set; } = [];
 
     public List<ShoppingItemEntity> ShoppingItems { get; set; } = [];

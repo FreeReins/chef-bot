@@ -15,7 +15,7 @@ public class FileSizeTests
     private static readonly Dictionary<string, int> Allowed = new()
     {
         // One algorithm: choosing the week's meals reads best in one place.
-        ["src/ChefBot.Core/Engines/PlanningEngine.cs"] = 528,
+        ["src/ChefBot.Core/Engines/PlanningEngine.cs"] = 429,
 
         // Page layout for one document; not yet split.
         ["src/ChefBot.Core/Engines/Transformation/RecipePdfWriter.cs"] = 426,

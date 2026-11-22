@@ -1,26 +1,27 @@
 using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines.Transformation;
 
-/// <summary>Decides which course an imported recipe belongs to from its labels.</summary>
-internal sealed class RecipeClassifier(ClassifierOptions options)
+/// <summary>Decides which course an imported recipe belongs to from its labels, using the household's course words.</summary>
+internal static class RecipeClassifier
 {
-    public (RecipeCourse Course, bool IsSlowCooker) Classify(string name, IEnumerable<string> labels)
+    public static (RecipeCourse Course, bool IsSlowCooker) Classify(string name, IEnumerable<string> labels, ClassifierWords words)
     {
         var padded = labels.Select(Pad).ToList();
-        var isSlowCooker = ContainsAny(padded.Append(Pad(name)).ToList(), options.SlowCookerWords);
-        return (CourseOf(padded), isSlowCooker);
+        var isSlowCooker = ContainsAny(padded.Append(Pad(name)).ToList(), words.SlowCookerWords);
+        return (CourseOf(padded, words), isSlowCooker);
     }
 
-    private RecipeCourse CourseOf(IReadOnlyCollection<string> labels)
+    private static RecipeCourse CourseOf(IReadOnlyCollection<string> labels, ClassifierWords words)
     {
-        if (ContainsAny(labels, options.BreakfastWords)) return RecipeCourse.Breakfast;
-        if (ContainsAny(labels, options.SnackWords)) return RecipeCourse.Snack;
-        if (ContainsAny(labels, options.SweetWords)) return RecipeCourse.Sweet;
-        if (ContainsAny(labels, options.DrinkWords)) return RecipeCourse.Drink;
-        if (ContainsAny(labels, options.NotAMealWords)) return RecipeCourse.Other;
-        if (options.MainWords.Count > 0 && !ContainsAny(labels, options.MainWords)) return RecipeCourse.Other;
+        if (ContainsAny(labels, words.BreakfastWords)) return RecipeCourse.Breakfast;
+        if (ContainsAny(labels, words.SnackWords)) return RecipeCourse.Snack;
+        if (ContainsAny(labels, words.SweetWords)) return RecipeCourse.Sweet;
+        if (ContainsAny(labels, words.DrinkWords)) return RecipeCourse.Drink;
+        if (ContainsAny(labels, words.NotAMealWords)) return RecipeCourse.Other;
+        if (words.MainWords.Count > 0 && !ContainsAny(labels, words.MainWords)) return RecipeCourse.Other;
         return RecipeCourse.Main;
     }
 

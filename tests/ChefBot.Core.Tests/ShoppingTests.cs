@@ -152,7 +152,7 @@ public class ShoppingTests
         var apples = TestData.Stocked("apples", 4m);
         TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, TestData.PantryOf(cabbage, apples), []));
 
-        var overview = TestData.Shopping.BuildOverview(plan, [cabbage, apples], TestData.Sunday, TestData.Options.ExpiringSoonDays);
+        var overview = TestData.Shopping.BuildOverview(plan, [cabbage, apples], TestData.Sunday, AdvancedSettings.DefaultExpiringSoonDays);
 
         IngredientStatus StatusOf(string name) => overview.Ingredients.First(line => line.Name == name).Status;
 
@@ -172,7 +172,7 @@ public class ShoppingTests
         var plan = PlanOf(TestData.Bowls, TestData.Tacos, TestData.Bowls);
         var cabbage = TestData.Stocked("cabbage", 1m, "head");
 
-        var line = TestData.Shopping.BuildOverview(plan, [cabbage], TestData.Sunday, TestData.Options.ExpiringSoonDays).Pantry.Single();
+        var line = TestData.Shopping.BuildOverview(plan, [cabbage], TestData.Sunday, AdvancedSettings.DefaultExpiringSoonDays).Pantry.Single();
 
         // Bowls are cooked once for two dinners, but both dinners are listed.
         await Assert.That(line.UsedFor.Select(meal => meal.Id)).IsEquivalentTo(plan.Meals.Select(meal => meal.Id), TUnit.Assertions.Enums.CollectionOrdering.Matching);
@@ -191,7 +191,7 @@ public class ShoppingTests
         var cabbage = TestData.Stocked("cabbage", 1m, "head");
         var apples = TestData.Stocked("apples", 4m);
 
-        var pantry = TestData.Shopping.BuildOverview(plan, [cabbage, apples], TestData.Sunday, TestData.Options.ExpiringSoonDays).Pantry;
+        var pantry = TestData.Shopping.BuildOverview(plan, [cabbage, apples], TestData.Sunday, AdvancedSettings.DefaultExpiringSoonDays).Pantry;
 
         await Assert.That(pantry.Single(line => line.Item.Key == "cabbage").UsedFor.Select(meal => meal.Id)).IsEquivalentTo([dinners[1].Id]);
         await Assert.That(pantry.Single(line => line.Item.Key == "apple").UsedFor).IsEmpty();

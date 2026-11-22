@@ -3,7 +3,6 @@ using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
-using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Tests;
 
@@ -39,7 +38,7 @@ public class WeekPlannerTests
         await Assert.That(lunches.All(lunch => lunch.IsLeftover)).IsTrue();
 
         // Sunday's dinner feeds two people that night and Monday's and Tuesday's lunches.
-        await Assert.That(sunday.Portions).IsEqualTo(TestData.Options.DinnerPortions + 2 * TestData.Options.LunchPortions);
+        await Assert.That(sunday.Portions).IsEqualTo(PlannerSettings.DefaultPeople * 3);
     }
 
     [Test]
@@ -133,8 +132,8 @@ public class WeekPlannerTests
         var sunday = TestData.Dinners(plan)[0];
         var replacement = TestData.Library.First(recipe => recipe.Course == RecipeCourse.Main && plan.Meals.All(meal => meal.RecipeId != recipe.Id));
 
-        TestData.Planning.UseRecipe(sunday, replacement);
-        TestData.Planning.PlaceLeftovers(plan);
+        PlanningEngine.UseRecipe(sunday, replacement, plan.People);
+        PlanningEngine.PlaceLeftovers(plan, PlannerSettings.DefaultMaxLeftoverDays);
 
         var monday = plan.Meals.Single(meal => meal.Slot == MealSlot.Lunch && meal.Date == TestData.Sunday.AddDays(1));
         await Assert.That(monday.RecipeId == replacement.Id).IsTrue();
@@ -149,7 +148,7 @@ public class WeekPlannerTests
         var thursday = TestData.Dinners(plan)[2];
 
         thursday.Status = MealStatus.Skipped;
-        TestData.Planning.PlaceLeftovers(plan);
+        PlanningEngine.PlaceLeftovers(plan, PlannerSettings.DefaultMaxLeftoverDays);
 
         // Friday's lunch falls back to Tuesday's dinner, which is still within three days.
         var friday = plan.Meals.Single(meal => meal.Slot == MealSlot.Lunch && meal.Date == TestData.Sunday.AddDays(5));
@@ -159,13 +158,13 @@ public class WeekPlannerTests
     [Test]
     public async Task The_weekly_schedule_fires_on_the_next_matching_day_and_time()
     {
-        var schedule = new WeeklyScheduleOptions { Day = DayOfWeek.Saturday, Time = "09:00" };
+        var schedule = new PlannerSettings { ScheduleDay = DayOfWeek.Saturday, ScheduleTime = "09:00" };
         var offset = TimeSpan.FromHours(-6);
         var saturdayNine = new DateTimeOffset(2026, 11, 7, 9, 0, 0, offset);
 
-        var before = schedule.NextOccurrence(new DateTimeOffset(2026, 11, 7, 8, 0, 0, offset));
-        var after = schedule.NextOccurrence(new DateTimeOffset(2026, 11, 7, 10, 0, 0, offset));
-        var midweek = schedule.NextOccurrence(new DateTimeOffset(2026, 11, 4, 12, 0, 0, offset));
+        var before = PlanningEngine.NextOccurrence(schedule, new DateTimeOffset(2026, 11, 7, 8, 0, 0, offset));
+        var after = PlanningEngine.NextOccurrence(schedule, new DateTimeOffset(2026, 11, 7, 10, 0, 0, offset));
+        var midweek = PlanningEngine.NextOccurrence(schedule, new DateTimeOffset(2026, 11, 4, 12, 0, 0, offset));
 
         await Assert.That(before == saturdayNine).IsTrue();
         await Assert.That(after == saturdayNine.AddDays(7)).IsTrue();

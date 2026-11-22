@@ -18,7 +18,7 @@ namespace ChefBot.Core.Engines.Transformation;
 /// <see cref="JsonRecipeFormat"/> uses it for files, and <see cref="SchemaOrgPage"/> and the site readers in
 /// <c>Sites/</c> for web pages. It is a helper, not an engine.
 /// </summary>
-internal sealed partial class SchemaRecipe(RecipeClassifier classifier)
+internal sealed partial class SchemaRecipe
 {
     private static readonly string[] IngredientTextFields = ["display", "originalText", "note", "text", "name"];
     private static readonly string[] LabelFields = ["tags", "recipeCategory", "categories", "keywords", "tools"];
@@ -50,22 +50,22 @@ internal sealed partial class SchemaRecipe(RecipeClassifier classifier)
     /// makes them absolute.
     /// </summary>
     /// <returns>Null when the page has no recipe with a name and ingredients.</returns>
-    public RecipeText? FromPage(IDocument page)
+    public RecipeText? FromPage(IDocument page, ClassifierWords words)
     {
         var fromJsonLd = page.QuerySelectorAll("script[type='application/ld+json' i]")
-            .Select(script => FirstIn(script.TextContent))
+            .Select(script => FirstIn(script.TextContent, words))
             .FirstOrDefault(recipe => recipe is not null);
-        var found = fromJsonLd ?? Microdata.Recipes(page).Select(FirstIn).FirstOrDefault(recipe => recipe is not null);
+        var found = fromJsonLd ?? Microdata.Recipes(page).Select(json => FirstIn(json, words)).FirstOrDefault(recipe => recipe is not null);
         return found is null ? null : CleanPageText(found);
     }
 
     /// <summary>The first usable recipe in some JSON text, or null when it isn't JSON or holds none.</summary>
-    public RecipeText? FirstIn(string json)
+    public RecipeText? FirstIn(string json, ClassifierWords words)
     {
         try
         {
             using var document = JsonDocument.Parse(json, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
-            return Entries(document.RootElement).Select(Read).FirstOrDefault(recipe => recipe is not null);
+            return Entries(document.RootElement).Select(entry => Read(entry, words)).FirstOrDefault(recipe => recipe is not null);
         }
         catch (JsonException)
         {
@@ -74,7 +74,7 @@ internal sealed partial class SchemaRecipe(RecipeClassifier classifier)
     }
 
     /// <summary>One recipe object. Null when it has no name or no ingredients.</summary>
-    public RecipeText? Read(JsonElement entry)
+    public RecipeText? Read(JsonElement entry, ClassifierWords words)
     {
         if (entry.ValueKind != JsonValueKind.Object) return null;
 
@@ -85,7 +85,7 @@ internal sealed partial class SchemaRecipe(RecipeClassifier classifier)
         if (string.IsNullOrEmpty(name) || ingredients.Count == 0) return null;
 
         var labels = LabelFields.Select(field => Property(entry, field)).OfType<JsonElement>().SelectMany(Labels).ToList();
-        var (course, isSlowCooker) = classifier.Classify(name, labels);
+        var (course, isSlowCooker) = RecipeClassifier.Classify(name, labels, words);
         if (Text(Property(entry, "course")) is { } written && Enum.TryParse<RecipeCourse>(written.Trim(), ignoreCase: true, out var chosen))
         {
             course = chosen;

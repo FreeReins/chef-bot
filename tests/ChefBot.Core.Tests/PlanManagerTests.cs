@@ -1,5 +1,7 @@
+using ChefBot.Core.Engines;
 using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Tests;
@@ -139,12 +141,12 @@ public class PlanManagerTests
     [Test]
     public async Task The_schedule_is_due_from_its_time_until_the_week_starts()
     {
-        var planning = TestData.Planning;
+        var schedule = new PlannerSettings();
 
-        await Assert.That(planning.ScheduledWeekDue(SaturdayTen.AddHours(-2), null) is null).IsTrue();
-        await Assert.That(planning.ScheduledWeekDue(SaturdayTen, null)).IsEqualTo(NextSunday);
-        await Assert.That(planning.ScheduledWeekDue(SaturdayTen.AddDays(1), null)).IsEqualTo(NextSunday);
-        await Assert.That(planning.ScheduledWeekDue(SaturdayTen.AddDays(2), null) is null).IsTrue();
-        await Assert.That(planning.ScheduledWeekDue(SaturdayTen, NextSunday) is null).IsTrue();
+        await Assert.That(PlanningEngine.ScheduledWeekDue(schedule, SaturdayTen.AddHours(-2), null) is null).IsTrue();
+        await Assert.That(PlanningEngine.ScheduledWeekDue(schedule, SaturdayTen, null)).IsEqualTo(NextSunday);
+        await Assert.That(PlanningEngine.ScheduledWeekDue(schedule, SaturdayTen.AddDays(1), null)).IsEqualTo(NextSunday);
+        await Assert.That(PlanningEngine.ScheduledWeekDue(schedule, SaturdayTen.AddDays(2), null) is null).IsTrue();
+        await Assert.That(PlanningEngine.ScheduledWeekDue(schedule, SaturdayTen, NextSunday) is null).IsTrue();
     }
 }

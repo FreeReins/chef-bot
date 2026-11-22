@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
-using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Engines;
 
@@ -13,7 +12,7 @@ namespace ChefBot.Core.Engines;
 /// skipped meals are left out. Times are floating, with no time zone, so each calendar shows them at that time of day
 /// wherever it is. Reads and saves nothing.
 /// </summary>
-internal sealed class CalendarEngine(CalendarOptions options)
+internal sealed class CalendarEngine
 {
     /// <summary>The longest line, in UTF-8 bytes, before it is folded onto the next (RFC 5545 section 3.1).</summary>
     private const int LineOctets = 75;
@@ -30,7 +29,8 @@ internal sealed class CalendarEngine(CalendarOptions options)
     /// <param name="plans">The plans to show.</param>
     /// <param name="site">ChefBot's own address, ending in a slash, for links to recipes.</param>
     /// <param name="now">When the feed is written, for each event's timestamp.</param>
-    public string Write(IEnumerable<MealPlan> plans, Uri site, DateTimeOffset now)
+    /// <param name="times">When each meal starts, how long it lasts and when slow cooker reminders go off.</param>
+    public string Write(IEnumerable<MealPlan> plans, Uri site, DateTimeOffset now, CalendarSettings times)
     {
         var lines = new List<string>
         {
@@ -50,10 +50,10 @@ internal sealed class CalendarEngine(CalendarOptions options)
             .SelectMany(plan => plan.Meals)
             .Where(meal => meal.Date is not null && meal.Status != MealStatus.Skipped)
             .OrderBy(meal => meal.Date)
-            .ThenBy(meal => StartOf(meal.Slot));
+            .ThenBy(meal => StartOf(meal.Slot, times));
         foreach (var meal in meals)
         {
-            lines.AddRange(Event(meal, site, stamp));
+            lines.AddRange(Event(meal, site, stamp, times));
         }
 
         lines.Add("END:VCALENDAR");
@@ -99,10 +99,10 @@ internal sealed class CalendarEngine(CalendarOptions options)
         text.Append("\r\n");
     }
 
-    private IEnumerable<string> Event(PlannedMeal meal, Uri site, string stamp)
+    private static IEnumerable<string> Event(PlannedMeal meal, Uri site, string stamp, CalendarSettings times)
     {
-        var start = meal.Date!.Value.ToDateTime(StartOf(meal.Slot));
-        var end = start.AddMinutes(Math.Max(options.MealMinutes, 5));
+        var start = meal.Date!.Value.ToDateTime(StartOf(meal.Slot, times));
+        var end = start.AddMinutes(Math.Max(times.MealMinutes, 5));
         var title = meal.IsLeftover ? $"{meal.Title} (leftovers)" : meal.Title;
         var recipe = meal.RecipeId is Guid recipeId ? new Uri(site, $"recipes/{recipeId}").AbsoluteUri : null;
         var slowCooker = meal.Recipe?.IsSlowCooker == true && !meal.IsLeftover;
@@ -122,23 +122,23 @@ internal sealed class CalendarEngine(CalendarOptions options)
         yield return $"DESCRIPTION:{Escape(string.Join("\n", notes))}";
         if (recipe is not null) yield return $"URL:{recipe}";
         yield return "TRANSP:TRANSPARENT";
-        if (slowCooker && options.SlowCookerHours > 0 && meal.Status == MealStatus.Planned)
+        if (slowCooker && times.SlowCookerHours > 0 && meal.Status == MealStatus.Planned)
         {
             yield return "BEGIN:VALARM";
             yield return "ACTION:DISPLAY";
             yield return $"DESCRIPTION:{Escape($"Start the slow cooker for {meal.Title}.")}";
-            yield return $"TRIGGER:-PT{options.SlowCookerHours}H";
+            yield return $"TRIGGER:-PT{times.SlowCookerHours}H";
             yield return "END:VALARM";
         }
 
         yield return "END:VEVENT";
     }
 
-    private TimeOnly StartOf(MealSlot slot) => slot switch
+    private static TimeOnly StartOf(MealSlot slot, CalendarSettings times) => slot switch
     {
-        MealSlot.Breakfast => CalendarOptions.Time(options.BreakfastTime, new TimeOnly(8, 0)),
-        MealSlot.Lunch => CalendarOptions.Time(options.LunchTime, new TimeOnly(12, 30)),
-        _ => CalendarOptions.Time(options.DinnerTime, new TimeOnly(18, 30)),
+        MealSlot.Breakfast => CalendarSettings.Time(times.BreakfastTime, new TimeOnly(8, 0)),
+        MealSlot.Lunch => CalendarSettings.Time(times.LunchTime, new TimeOnly(12, 30)),
+        _ => CalendarSettings.Time(times.DinnerTime, new TimeOnly(18, 30)),
     };
 
     private static string Floating(DateTime time) => time.ToString("yyyyMMdd'T'HHmmss", CultureInfo.InvariantCulture);

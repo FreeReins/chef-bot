@@ -17,7 +17,7 @@ namespace ChefBot.Core.Engines.Transformation;
 /// in <c>recipe_instructions</c> and notes in <c>notes</c>. Photos are files beside it in the .zip, at
 /// <c>data/recipes/{recipe id}/images/original.webp</c>, so only the .zip brings them.
 /// </summary>
-internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeArchiveFormat
+internal sealed class MealieBackupFormat : IRecipeArchiveFormat
 {
     /// <summary>The largest <c>database.json</c> read from a .zip, so a crafted archive can't fill the memory.</summary>
     private const int MaxDatabaseBytes = 256 * 1024 * 1024;
@@ -32,10 +32,10 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeA
     public bool CanRead(string text) => text.Contains("\"recipes_ingredients\"", StringComparison.Ordinal);
 
     /// <exception cref="RuleViolationException">The file isn't JSON or holds no recipes.</exception>
-    public RecipeFile Read(string text) => Read(text, new Dictionary<Guid, byte[]>());
+    public RecipeFile Read(string text, ClassifierWords words) => Read(text, new Dictionary<Guid, byte[]>(), words);
 
     /// <exception cref="RuleViolationException">The .zip has no database.json, or it can't be read.</exception>
-    public RecipeFile ReadArchive(Stream archive)
+    public RecipeFile ReadArchive(Stream archive, ClassifierWords words)
     {
         ZipArchive zip;
         try
@@ -64,11 +64,11 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeA
                 }
             }
 
-            return Read(Encoding.UTF8.GetString(json), photos);
+            return Read(Encoding.UTF8.GetString(json), photos, words);
         }
     }
 
-    private RecipeFile Read(string text, IReadOnlyDictionary<Guid, byte[]> photos)
+    private static RecipeFile Read(string text, IReadOnlyDictionary<Guid, byte[]> photos, ClassifierWords words)
     {
         using var document = Parse(text, "Mealie backup");
         var tables = document.RootElement;
@@ -108,7 +108,7 @@ internal sealed class MealieBackupFormat(RecipeClassifier classifier) : IRecipeA
                 named.TryAdd(name, photo);
             }
 
-            var (course, isSlowCooker) = classifier.Classify(name, labels[id]);
+            var (course, isSlowCooker) = RecipeClassifier.Classify(name, labels[id], words);
             var servings = PositiveAmount(Property(recipe, "recipe_servings"))
                 ?? PositiveAmount(Property(recipe, "recipe_yield_quantity"))
                 ?? PositiveAmount(Property(recipe, "recipe_yield"));

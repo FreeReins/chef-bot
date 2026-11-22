@@ -21,6 +21,12 @@ internal sealed class FakeSettings : ISettingsAccess
 
     public CalendarFeed CalendarFeed { get; set; } = new();
 
+    public PlannerSettings Planner { get; set; } = new();
+
+    public AdvancedSettings Advanced { get; set; } = new();
+
+    public CalendarSettings CalendarTimes { get; set; } = new();
+
     public Task<SecuritySettings> GetSecurityAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Security));
 
     public Task SaveSecurityAsync(SecuritySettings settings, CancellationToken cancellationToken) =>
@@ -45,6 +51,33 @@ internal sealed class FakeSettings : ISettingsAccess
     public Task<CalendarFeed> GetCalendarFeedAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(CalendarFeed));
 
     public Task SaveCalendarFeedAsync(CalendarFeed feed, CancellationToken cancellationToken) => Set(() => CalendarFeed = Copies.Of(feed));
+
+    public Task<PlannerSettings> GetPlannerAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Planner));
+
+    public Task SavePlannerAsync(PlannerSettings settings, CancellationToken cancellationToken) =>
+        Set(() =>
+        {
+            Planner = Copies.Of(settings);
+            Planner.IsSaved = true;
+        });
+
+    public Task<AdvancedSettings> GetAdvancedAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(Advanced));
+
+    public Task SaveAdvancedAsync(AdvancedSettings settings, CancellationToken cancellationToken) =>
+        Set(() =>
+        {
+            Advanced = Copies.Of(settings);
+            Advanced.IsSaved = true;
+        });
+
+    public Task<CalendarSettings> GetCalendarTimesAsync(CancellationToken cancellationToken) => Task.FromResult(Copies.Of(CalendarTimes));
+
+    public Task SaveCalendarTimesAsync(CalendarSettings settings, CancellationToken cancellationToken) =>
+        Set(() =>
+        {
+            CalendarTimes = Copies.Of(settings);
+            CalendarTimes.IsSaved = true;
+        });
 
     public Task<List<GroceryStore>> ListStoresAsync(CancellationToken cancellationToken) =>
         Task.FromResult(Stores.Select(Copies.Of).OrderBy(store => store.Position).ToList());

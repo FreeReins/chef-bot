@@ -46,9 +46,6 @@ public static class CoreRegistration
 
         // Settings and reference data: loaded once, never changed while running.
         services.AddSingleton(planner);
-        services.AddSingleton(configuration.GetSection("Classifier").Get<ClassifierOptions>() ?? new ClassifierOptions());
-        services.AddSingleton(configuration.GetSection("Schedule").Get<WeeklyScheduleOptions>() ?? new WeeklyScheduleOptions());
-        services.AddSingleton(configuration.GetSection("Calendar").Get<CalendarOptions>() ?? new CalendarOptions());
         services.AddSingleton(IngredientCatalog.FromJson(File.ReadAllText(DataPath(configuration, "Data:IngredientCatalog", "config/ingredients.json"))));
         services.TryAddSingleton(TimeProvider.System);
 
@@ -87,7 +84,6 @@ public static class CoreRegistration
             .ConfigurePrimaryHttpMessageHandler(PublicWeb.Handler);
 
         // Engines. They hold no state; ValidationEngine reads through the accessors, so it lives per request.
-        services.AddSingleton<RecipeClassifier>();
         // Recipe file formats, chosen by file name ending and then by the first one that recognises the file.
         // Add a line here for each new kind of file; put specific formats before general ones like JsonRecipeFormat.
         services.AddSingleton<IRecipeFileFormat, MealieBackupFormat>();

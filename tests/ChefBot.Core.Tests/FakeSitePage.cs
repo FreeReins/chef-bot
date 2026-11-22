@@ -17,8 +17,8 @@ internal sealed class FakeSitePage(SchemaRecipe schema) : IRecipePageReader
 
     public Uri PageToFetch(Uri url) => new(url, url.AbsolutePath.TrimEnd('/') + "/print");
 
-    public RecipeText? Read(Uri url, IDocument page) =>
-        schema.FromPage(page) is { } recipe
+    public RecipeText? Read(Uri url, IDocument page, ClassifierWords words) =>
+        schema.FromPage(page, words) is { } recipe
             ? recipe with { Ingredients = page.QuerySelectorAll("li.ingredient").Select(item => item.TextContent.Trim()).ToList() }
             : null;
 }

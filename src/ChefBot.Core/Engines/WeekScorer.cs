@@ -16,6 +16,7 @@ namespace ChefBot.Core.Engines;
 /// <param name="pantryBoost">Multiplies the reward for using pantry food. Above 1 when a plan is rebuilt around what was bought.</param>
 /// <param name="fans">How many people have each recipe as a favourite.</param>
 /// <param name="favouriteWeight">What a recipe with one fan adds; each further fan adds less (1, 1/2, 1/3, ...). 0 ignores favourites.</param>
+/// <param name="perishableWithinDays">Ingredients that keep no longer than this are worth sharing between meals.</param>
 internal sealed class WeekScorer(
     IngredientCatalog catalog,
     PlannerOptions options,
@@ -23,7 +24,8 @@ internal sealed class WeekScorer(
     int month,
     double pantryBoost = 1,
     IReadOnlyDictionary<Guid, int>? fans = null,
-    double favouriteWeight = 0)
+    double favouriteWeight = 0,
+    int perishableWithinDays = AdvancedSettings.DefaultPerishableWithinDays)
 {
     private readonly Dictionary<Guid, Profile> _profiles = new();
 
@@ -104,7 +106,7 @@ internal sealed class WeekScorer(
 
         var profile = new Profile(
             score,
-            entries.Where(entry => entry.SpoilsWithin(options.PerishableWithinDays)).Select(entry => entry.Name).ToList(),
+            entries.Where(entry => entry.SpoilsWithin(perishableWithinDays)).Select(entry => entry.Name).ToList(),
             entries.Where(entry => entry.Group == IngredientGroup.Protein).Select(entry => entry.Name).ToList());
 
         _profiles[recipe.Id] = profile;

@@ -360,6 +360,46 @@ const VIEWS = [
   { name: 'settings: to-do apps', path: '/settings/todo-apps', answers: { 'GET /api/shopping/targets': data.shoppingTargets() } },
   { name: 'settings: no to-do apps yet', path: '/settings/todo-apps' },
   { name: 'settings: calendar feed off', path: '/settings/calendar' },
+  {
+    name: 'settings: calendar meal times, saved by itself', path: '/settings/calendar',
+    act: async (page) => {
+      await page.getByLabel('Each meal lasts (minutes)').fill('60');
+      await page.getByLabel('Each meal lasts (minutes)').blur();
+      await page.getByRole('status').filter({ hasText: 'Saved' }).waitFor();
+    },
+  },
+  { name: 'settings: planning', path: '/settings/planning' },
+  {
+    name: 'settings: planning, saved by itself', path: '/settings/planning',
+    act: async (page) => {
+      await page.getByLabel('People you usually cook for').fill('1');
+      await page.getByLabel('People you usually cook for').blur();
+      await page.getByRole('status').filter({ hasText: 'Saved' }).waitFor();
+    },
+  },
+  {
+    name: 'settings: planning with the weekly plan off', path: '/settings/planning',
+    answers: { 'GET /api/planning': { ...data.planning(), scheduleEnabled: false, nextStaging: null } },
+  },
+  {
+    name: 'settings: planning, a number that stops it saving', path: '/settings/planning',
+    act: async (page) => {
+      await page.getByLabel('People you usually cook for').fill('0');
+      await page.getByLabel('People you usually cook for').blur();
+      await page.getByText('Not saved yet').waitFor();
+    },
+  },
+  { name: 'settings: advanced', path: '/settings/advanced' },
+  {
+    name: 'settings: advanced, a course word added', path: '/settings/advanced',
+    act: async (page) => {
+      await page.getByLabel('New word for Sweet words').fill('Pudding');
+      await page.getByLabel('New word for Sweet words').press('Enter');
+      await page.getByRole('button', { name: 'Remove pudding from Sweet words' }).waitFor();
+      await page.getByRole('button', { name: 'Reset to defaults' }).waitFor();
+      await page.getByRole('status').filter({ hasText: 'Saved' }).waitFor();
+    },
+  },
   { name: 'settings: calendar feed on', path: '/settings/calendar', answers: { 'GET /api/calendar/feed': data.calendarFeed() } },
   {
     name: 'settings: asking before giving the calendar a new address', path: '/settings/calendar',
@@ -508,6 +548,8 @@ test('setup wizard, every step', async ({ page, api }) => {
   await page.getByRole('button', { name: 'Skip for now' }).click();
   await page.getByRole('heading', { name: 'How do you like to plan a week?' }).waitFor();
   await expectAccessible(page);
+  await page.getByLabel('How many people do you usually cook for?').fill('1');
+  await page.getByText('planned for 1 person').waitFor();
   await page.getByRole('radio', { name: 'Slow cooker week' }).check();
   await page.getByText('Change these styles, or make your own').click();
   await page.getByRole('button', { name: 'Edit Slow cooker week' }).click();
@@ -518,4 +560,6 @@ test('setup wizard, every step', async ({ page, api }) => {
   await expectAccessible(page);
   const saved = api.requests.filter((request) => request === 'PUT /api/plan-styles');
   if (saved.length !== 1) throw new Error(`Expected the plan styles to be saved once, not ${saved.length} times.`);
+  const people = api.requests.filter((request) => request === 'PUT /api/planning');
+  if (people.length !== 1) throw new Error(`Expected the number of people to be saved once, not ${people.length} times.`);
 });

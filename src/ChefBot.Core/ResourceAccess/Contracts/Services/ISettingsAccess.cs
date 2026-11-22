@@ -27,6 +27,21 @@ internal interface ISettingsAccess
     Task SaveCalendarFeedAsync(CalendarFeed feed, CancellationToken cancellationToken);
 
     /// <summary>The household's stores in their saved order. Empty when none are set up.</summary>
+    /// <summary>The people plans are for, the weekly schedule and how long leftovers keep, or the defaults when never saved.</summary>
+    Task<PlannerSettings> GetPlannerAsync(CancellationToken cancellationToken);
+
+    Task SavePlannerAsync(PlannerSettings settings, CancellationToken cancellationToken);
+
+    /// <summary>Repeats, expiring food, perishables and the course words, or the defaults when never saved.</summary>
+    Task<AdvancedSettings> GetAdvancedAsync(CancellationToken cancellationToken);
+
+    Task SaveAdvancedAsync(AdvancedSettings settings, CancellationToken cancellationToken);
+
+    /// <summary>When meals appear in the calendar feed, or the defaults when never saved.</summary>
+    Task<CalendarSettings> GetCalendarTimesAsync(CancellationToken cancellationToken);
+
+    Task SaveCalendarTimesAsync(CalendarSettings settings, CancellationToken cancellationToken);
+
     Task<List<GroceryStore>> ListStoresAsync(CancellationToken cancellationToken);
 
     /// <summary>Makes the saved stores exactly these, matched by id: others are removed.</summary>

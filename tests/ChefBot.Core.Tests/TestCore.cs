@@ -14,12 +14,11 @@ internal sealed class TestCore
 {
     private readonly Lazy<ServiceProvider> services;
 
-    public TestCore(WeeklyScheduleOptions? schedule = null, PlannerOptions? options = null)
+    public TestCore(PlannerOptions? options = null)
     {
         Plans = new FakePlans(Recipes);
         Favourites = new FakeFavourites(Accounts);
         Options = options ?? TestData.Options;
-        Schedule = schedule ?? new WeeklyScheduleOptions();
         services = new(Register);
     }
 
@@ -49,8 +48,6 @@ internal sealed class TestCore
 
     public FakeToDoLists ToDoLists { get; } = new();
 
-    public CalendarOptions Calendar { get; } = new();
-
     public FakeMessages Messages { get; } = new();
 
     public FakeKnownStores KnownStores { get; } = new();
@@ -58,8 +55,6 @@ internal sealed class TestCore
     public FakeKnownPlanStyles KnownStyles { get; } = new();
 
     public PlannerOptions Options { get; }
-
-    public WeeklyScheduleOptions Schedule { get; }
 
     public PlanManager PlanManager() => Make<PlanManager>();
 
@@ -99,8 +94,6 @@ internal sealed class TestCore
         // Settings, utilities and the real engines.
         services.AddSingleton<TimeProvider>(Clock);
         services.AddSingleton(Options);
-        services.AddSingleton(Schedule);
-        services.AddSingleton(Calendar);
         services.AddSingleton(TestData.Catalog);
         services.AddSingleton<IPasswordHasher>(new PlainHasher());
         services.AddTransient<PlanWriteLock>();

@@ -36,8 +36,9 @@
 <h2>Plan styles</h2>
 <p class="muted">
   A plan style says which days you cook dinner, what else to plan, and rules for the recipes it picks. The default is
-  used for the weekly schedule and preselected when you plan a week; you can choose another each time. With no
-  styles, weeks are planned as the Classic week.
+  preselected when you plan a week, and used when next week is planned automatically (see
+  <a href="/settings/planning">Planning</a>); you can choose another each time. With no styles, weeks are planned as
+  the Classic week.
 </p>
 <div class="card" bind:this={editor}><PlanStyleEditor bind:styles /></div>
 <div class="row status-row">

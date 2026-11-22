@@ -18,6 +18,8 @@ export const app = $state({
   storeDraft: null,    // the stores chosen in setup but not saved yet
   styles: null,        // PlanStylesResponse: { styles, known, tags, ingredients }
   styleDraft: null,    // the plan styles chosen in setup but not saved yet
+  planning: null,      // PlannerSettingsResponse: { people, scheduleEnabled, scheduleDay, scheduleTime, maxLeftoverDays, nextStaging, isSaved }
+  peopleDraft: null,   // the number of people chosen in setup but not saved yet
   fileFormats: [],     // RecipeFileFormatResponse[]: the kinds of recipe file that can be imported
   people: { users: [], links: [], newLink: null },
   tab: 'plan',         // the open tab; the address bar says which (see addresses.js)

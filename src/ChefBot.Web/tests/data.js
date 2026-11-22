@@ -248,6 +248,33 @@ export const notifications = () => ({
   expiringFood: true, shopping: false, dailyTime: '07:30', lastDailyRunOn: '2026-11-20',
 });
 
+/** PlannerSettingsResponse */
+export const planning = () => ({
+  people: 2, scheduleEnabled: true, scheduleDay: 'Saturday', scheduleTime: '09:00', maxLeftoverDays: 3,
+  nextStaging: '2026-11-21T15:00:00Z', isSaved: true,
+});
+
+/** CalendarTimesResponse */
+export const calendarTimes = () => ({
+  breakfastTime: '08:00', lunchTime: '12:30', dinnerTime: '18:30', mealMinutes: 45, slowCookerHours: 8, isSaved: false,
+});
+
+/** AdvancedSettingsValues */
+const advancedValues = () => ({
+  avoidRepeatDays: 28, expiringSoonDays: 3, perishableWithinDays: 21,
+  words: {
+    breakfast: ['breakfast', 'brunch'], snack: ['snack', 'snacks', 'appetizer', 'appetizers'],
+    sweet: ['dessert', 'desserts', 'sweet', 'sweets', 'treat', 'treats', 'cookies', 'cake'],
+    drink: ['drink', 'drinks', 'beverage', 'beverages', 'cocktail', 'cocktails', 'smoothie', 'lemonade'],
+    slowCooker: ['slow cooker', 'crockpot', 'crock pot'],
+    notAMeal: ['side', 'sides', 'side dish', 'sauce', 'condiment', 'bread', 'baking'],
+    main: [],
+  },
+});
+
+/** AdvancedSettingsResponse */
+export const advanced = () => ({ current: advancedValues(), defaults: advancedValues(), isSaved: false });
+
 /** BackupsResponse */
 export const backups = () => ({
   enabled: true, time: '03:00', keepCount: 14, keepDays: 0, lastResult: 'The last backup finished at 3:00 today.',

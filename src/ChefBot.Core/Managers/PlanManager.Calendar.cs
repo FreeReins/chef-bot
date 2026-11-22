@@ -35,7 +35,8 @@ internal sealed partial class PlanManager
         }
 
         var weeks = await plans.ListOpenAsync(clock.Today().AddDays(-7), cancellationToken);
-        return calendar.Write(weeks.Where(plan => plan.Status == PlanStatus.Confirmed), site, clock.GetUtcNow());
+        var times = await settings.GetCalendarTimesAsync(cancellationToken);
+        return calendar.Write(weeks.Where(plan => plan.Status == PlanStatus.Confirmed), site, clock.GetUtcNow(), times);
     }
 
     private static CalendarFeedResponse Describe(CalendarFeed feed, Uri site) => feed.Token.Length == 0

@@ -35,11 +35,15 @@ internal sealed class TransformationEngine(
     /// Reads the recipe on a downloaded page with the reader chosen for its address. The recipe's source is the
     /// address that was given, without any <c>#fragment</c>, and its photo addresses are made absolute.
     /// </summary>
+    /// <param name="reader">The reader chosen for the address.</param>
+    /// <param name="url">The address that was given.</param>
+    /// <param name="page">The downloaded page.</param>
+    /// <param name="words">The words that sort recipes into courses. The defaults when not given.</param>
     /// <exception cref="RuleViolationException">The reader found no recipe on the page.</exception>
-    public RecipeText ReadPage(IRecipePageReader reader, Uri url, WebPage page)
+    public RecipeText ReadPage(IRecipePageReader reader, Uri url, WebPage page, ClassifierWords? words = null)
     {
         var document = new HtmlParser().ParseDocument(page.Html);
-        var recipe = reader.Read(url, document)
+        var recipe = reader.Read(url, document, words ?? new ClassifierWords())
             ?? throw new RuleViolationException(
                 "ChefBot couldn't find a recipe on that page. Check the link goes to one recipe, not a list of them, or type the recipe in instead.");
 
@@ -56,8 +60,11 @@ internal sealed class TransformationEngine(
     public static string SourceAddress(Uri url) => url.GetLeftPart(UriPartial.Query);
 
     /// <summary>Reads an uploaded recipe file with the format its name ending belongs to.</summary>
+    /// <param name="fileName">The file's name, which decides the format.</param>
+    /// <param name="text">The file's text.</param>
+    /// <param name="words">The words that sort recipes into courses. The defaults when not given.</param>
     /// <exception cref="RuleViolationException">The file is of a kind ChefBot can't read, or its contents can't be read.</exception>
-    public RecipeFile ReadFile(string fileName, string text)
+    public RecipeFile ReadFile(string fileName, string text, ClassifierWords? words = null)
     {
         var extension = Extension(fileName);
         if (Formats.OfType<IRecipeArchiveFormat>().Any(f => f.ArchiveExtension == extension))
@@ -70,20 +77,21 @@ internal sealed class TransformationEngine(
         var format = candidates.FirstOrDefault(f => f.CanRead(text)) ?? candidates.LastOrDefault()
             ?? throw CannotImport(extension);
 
-        return format.Read(text);
+        return format.Read(text, words ?? new ClassifierWords());
     }
 
     /// <summary>Reads an uploaded archive, such as a Mealie backup .zip, with the format its name ending belongs to.</summary>
     /// <param name="fileName">The archive's name, which decides the format.</param>
     /// <param name="archive">The archive's bytes. It must allow seeking.</param>
+    /// <param name="words">The words that sort recipes into courses. The defaults when not given.</param>
     /// <exception cref="RuleViolationException">No format reads archives with that ending, or its contents can't be read.</exception>
-    public RecipeFile ReadArchive(string fileName, Stream archive)
+    public RecipeFile ReadArchive(string fileName, Stream archive, ClassifierWords? words = null)
     {
         var extension = Extension(fileName);
         var format = Formats.OfType<IRecipeArchiveFormat>().FirstOrDefault(f => f.ArchiveExtension == extension)
             ?? throw CannotImport(extension);
 
-        return format.ReadArchive(archive);
+        return format.ReadArchive(archive, words ?? new ClassifierWords());
     }
 
     /// <summary>The media type of schema.org JSON-LD files.</summary>

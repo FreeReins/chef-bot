@@ -32,7 +32,7 @@ internal sealed partial class PlanManager
         if (request.PlanId is Guid planId)
         {
             var plan = await validation.PlanAsync(planId, cancellationToken);
-            var overview = shopping.BuildOverview(plan, await pantry.ListAsync(cancellationToken), today, options.ExpiringSoonDays);
+            var overview = shopping.BuildOverview(plan, await pantry.ListAsync(cancellationToken), today, (await settings.GetAdvancedAsync(cancellationToken)).ExpiringSoonDays);
             toBuy.AddRange(overview.Ingredients.Where(line => line.Status == IngredientStatus.ToBuy));
         }
 

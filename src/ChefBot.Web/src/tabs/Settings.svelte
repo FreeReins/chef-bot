@@ -7,6 +7,8 @@
   import HttpsPanel from '../settings/HttpsPanel.svelte';
   import StoresPanel from '../settings/StoresPanel.svelte';
   import PlanStylesPanel from '../settings/PlanStylesPanel.svelte';
+  import PlanningPanel from '../settings/PlanningPanel.svelte';
+  import AdvancedPanel from '../settings/AdvancedPanel.svelte';
   import NotificationsPanel from '../settings/NotificationsPanel.svelte';
   import ToDoAppsPanel from '../settings/ToDoAppsPanel.svelte';
   import CalendarPanel from '../settings/CalendarPanel.svelte';
@@ -25,12 +27,15 @@
   import Bot from '@lucide/svelte/icons/bot';
   import Archive from '@lucide/svelte/icons/archive';
   import ScrollText from '@lucide/svelte/icons/scroll-text';
+  import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+  import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 
   /** The Settings sidebar: key, label, icon, who sees it, and what it shows. A wide section uses the full width. */
   const SECTIONS = [
     { key: 'login', label: 'Login', icon: KeyRound, visible: () => true, panel: LoginPanel },
     { key: 'appearance', label: 'Appearance', icon: Palette, visible: () => true, panel: AppearancePanel },
     { key: 'https', label: 'HTTPS', icon: Lock, visible: () => true, panel: HttpsPanel, heading: 'Secure connection (HTTPS)' },
+    { key: 'planning', label: 'Planning', icon: CalendarClock, visible: () => Boolean(app.planning), panel: PlanningPanel },
     { key: 'styles', label: 'Plan styles', icon: ListChecks, visible: () => Boolean(app.styles), panel: PlanStylesPanel },
     { key: 'stores', label: 'Stores', icon: Store, visible: () => isAdmin() && app.stores, panel: StoresPanel },
     { key: 'calendar', label: 'Calendar', icon: CalendarDays, visible: () => true, panel: CalendarPanel },
@@ -39,6 +44,7 @@
     { key: 'notifications', label: 'Notifications', icon: Bell, visible: () => isAdmin() && app.notifications, panel: NotificationsPanel },
     { key: 'backups', label: 'Backups', icon: Archive, visible: () => isAdmin() && app.backups, panel: BackupsPanel },
     { key: 'logs', label: 'Logs', icon: ScrollText, visible: () => isAdmin(), panel: LogsPanel, wide: true },
+    { key: 'advanced', label: 'Advanced', icon: SlidersHorizontal, visible: () => isAdmin(), panel: AdvancedPanel },
   ];
 
   const sections = $derived(SECTIONS.filter((section) => section.visible()));

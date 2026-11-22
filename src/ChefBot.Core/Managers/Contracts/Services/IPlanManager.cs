@@ -162,5 +162,20 @@ public interface IPlanManager
     Task CheckWeeklyScheduleAsync(CancellationToken cancellationToken);
 
     /// <summary>When the weekly schedule next stages a plan, or null when it is switched off.</summary>
-    DateTimeOffset? NextScheduledStaging();
+    Task<DateTimeOffset?> NextScheduledStagingAsync(CancellationToken cancellationToken);
+
+    /// <summary>How many people plans are for, when next week is planned by itself, and how long leftovers keep.</summary>
+    Task<PlannerSettingsResponse> GetPlannerSettingsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Saves how many people plans are for, the weekly schedule and how long leftovers keep. Weeks not yet confirmed
+    /// are resized for the new number of people, with their shopping lists; confirmed weeks keep theirs.
+    /// </summary>
+    Task<PlannerSettingsResponse> SavePlannerSettingsAsync(PlannerSettingsRequest request, CancellationToken cancellationToken);
+
+    /// <summary>When meals appear in the calendar feed.</summary>
+    Task<CalendarTimesResponse> GetCalendarTimesAsync(CancellationToken cancellationToken);
+
+    /// <summary>Saves when meals appear in the calendar feed. Subscribed calendars pick it up when they next refresh.</summary>
+    Task<CalendarTimesResponse> SaveCalendarTimesAsync(CalendarTimesRequest request, CancellationToken cancellationToken);
 }

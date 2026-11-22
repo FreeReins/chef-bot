@@ -42,21 +42,14 @@ internal static class TestData
 
     public static readonly PlannerOptions Options = new();
 
-    public static readonly RecipeClassifier Classifier = new(new ClassifierOptions
-    {
-        BreakfastWords = ["breakfast"],
-        SweetWords = ["dessert"],
-        SlowCookerWords = ["slow cooker"],
-    });
-
-    public static readonly SchemaRecipe Schema = new(Classifier);
+    public static readonly SchemaRecipe Schema = new();
 
     // Registered in the same order as CoreRegistration: the specific Mealie backup before general JSON, and site
     // readers before the one for any site.
     public static readonly TransformationEngine Transformation =
-        new(Catalog, [new MealieBackupFormat(Classifier), new JsonRecipeFormat(Schema)], [new SchemaOrgPage(Schema)]);
+        new(Catalog, [new MealieBackupFormat(), new JsonRecipeFormat(Schema)], [new SchemaOrgPage(Schema)]);
 
-    public static readonly PlanningEngine Planning = new(Catalog, Options, new WeeklyScheduleOptions());
+    public static readonly PlanningEngine Planning = new(Catalog, Options);
 
     public static readonly ShoppingEngine Shopping = new(Catalog);
 
@@ -110,7 +103,7 @@ internal static class TestData
     public static PantryItem Stocked(string name, decimal? quantity = null, string unit = "", DateOnly? expiresOn = null) =>
         Transformation.ToPantryItem(name, quantity, unit, Sunday, expiresOn);
 
-    public static PantrySnapshot PantryOf(params PantryItem[] items) => new(items, Sunday, Options.ExpiringSoonDays);
+    public static PantrySnapshot PantryOf(params PantryItem[] items) => new(items, Sunday, AdvancedSettings.DefaultExpiringSoonDays);
 
     public static List<PlannedMeal> Dinners(MealPlan plan) =>
         plan.Meals.Where(meal => meal.Slot == MealSlot.Dinner).OrderBy(meal => meal.Date).ToList();

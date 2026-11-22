@@ -120,13 +120,13 @@ internal sealed partial class PlanManager(
         {
             var recipe = await validation.RecipeAsync(recipeId, cancellationToken);
             ValidationEngine.CanBePlanned(recipe);
-            planning.UseRecipe(meal, recipe);
+            PlanningEngine.UseRecipe(meal, recipe, plan.People);
         }
         else
         {
             var ingredients = transformation.ToMealIngredients(request.Custom!.Ingredients);
             ValidationEngine.CustomMeal(request.Custom.Title, ingredients);
-            planning.UseCustom(meal, request.Custom.Title.Trim(), ingredients);
+            PlanningEngine.UseCustom(meal, request.Custom.Title.Trim(), ingredients, plan.People);
         }
 
         await ReconcileAsync(plan, await SnapshotAsync(cancellationToken), cancellationToken);
@@ -187,7 +187,7 @@ internal sealed partial class PlanManager(
 
         await RecordCookingAsync(meal, request.Status, cancellationToken);
         meal.Status = request.Status;
-        var stock = new PantrySnapshot(items, clock.Today(), options.ExpiringSoonDays);
+        var stock = new PantrySnapshot(items, clock.Today(), (await settings.GetAdvancedAsync(cancellationToken)).ExpiringSoonDays);
         await ReconcileAsync(plan, stock, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
@@ -196,7 +196,8 @@ internal sealed partial class PlanManager(
     public async Task CheckWeeklyScheduleAsync(CancellationToken cancellationToken)
     {
         var state = await settings.GetScheduleAsync(cancellationToken);
-        if (planning.ScheduledWeekDue(clock.GetLocalNow(), state.LastStagedWeek) is not DateOnly week)
+        var schedule = await settings.GetPlannerAsync(cancellationToken);
+        if (PlanningEngine.ScheduledWeekDue(schedule, clock.GetLocalNow(), state.LastStagedWeek) is not DateOnly week)
         {
             return;
         }
@@ -213,7 +214,8 @@ internal sealed partial class PlanManager(
         }
     }
 
-    public DateTimeOffset? NextScheduledStaging() => planning.NextScheduledStaging(clock.GetLocalNow());
+    public async Task<DateTimeOffset?> NextScheduledStagingAsync(CancellationToken cancellationToken) =>
+        PlanningEngine.NextScheduledStaging(await settings.GetPlannerAsync(cancellationToken), clock.GetLocalNow());
 
     private async Task<PlanResponse> StageAsync(
         DateOnly weekStart, bool replace, bool favorPantry, string trigger, PlanStyle style, IReadOnlyList<Guid> keep,
@@ -224,6 +226,8 @@ internal sealed partial class PlanManager(
         var stock = await SnapshotAsync(cancellationToken);
         var kept = existing?.Meals.Where(meal => keep.Contains(meal.Id) && !meal.IsLeftover).ToList() ?? [];
 
+        var planner = await settings.GetPlannerAsync(cancellationToken);
+        var advanced = await settings.GetAdvancedAsync(cancellationToken);
         var library = await recipes.ListActiveAsync(cancellationToken);
         var fans = (await favourites.ListForRecipesAsync(library.Select(recipe => recipe.Id).ToList(), cancellationToken))
             .GroupBy(favourite => favourite.RecipeId)
@@ -231,7 +235,7 @@ internal sealed partial class PlanManager(
         var draft = planning.Plan(new PlanRequest(
             weekStart,
             library,
-            await plans.RecipeIdsPlannedAsync(weekStart.AddDays(-options.AvoidRepeatDays), weekStart, cancellationToken),
+            await plans.RecipeIdsPlannedAsync(weekStart.AddDays(-advanced.AvoidRepeatDays), weekStart, cancellationToken),
             stock,
             clock.GetUtcNow(),
             // Staging the same week again should offer something different.
@@ -239,7 +243,10 @@ internal sealed partial class PlanManager(
             PantryBoost: favorPantry ? options.Weights.RegeneratePantryBoost : 1,
             Style: style,
             Kept: kept,
-            Fans: fans));
+            Fans: fans,
+            People: planner.People,
+            MaxLeftoverDays: planner.MaxLeftoverDays,
+            PerishableWithinDays: advanced.PerishableWithinDays));
 
         if (existing is not null)
         {
@@ -267,7 +274,7 @@ internal sealed partial class PlanManager(
         MealPlan plan, PantrySnapshot stock, CancellationToken cancellationToken, IReadOnlyList<GroceryStore>? stores = null)
     {
         stores ??= await settings.ListStoresAsync(cancellationToken);
-        planning.PlaceLeftovers(plan);
+        PlanningEngine.PlaceLeftovers(plan, (await settings.GetPlannerAsync(cancellationToken)).MaxLeftoverDays);
         var list = shopping.BuildList(plan, stock, stores);
         shopping.ApplyList(plan, list);
         await plans.SaveAsync(plan, cancellationToken);
@@ -331,5 +338,5 @@ internal sealed partial class PlanManager(
     }
 
     private async Task<PantrySnapshot> SnapshotAsync(CancellationToken cancellationToken) =>
-        new(await pantry.ListAsync(cancellationToken), clock.Today(), options.ExpiringSoonDays);
+        new(await pantry.ListAsync(cancellationToken), clock.Today(), (await settings.GetAdvancedAsync(cancellationToken)).ExpiringSoonDays);
 }

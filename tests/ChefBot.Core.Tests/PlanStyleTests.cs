@@ -134,7 +134,7 @@ public class PlanStyleTests
 
         await Assert.That(string.Join(",", dinners.Select(dinner => dinner.Date!.Value.DayOfWeek))).IsEqualTo("Monday,Wednesday,Friday");
         await Assert.That(plan.Meals.Any(meal => meal.Slot is MealSlot.Lunch or MealSlot.Breakfast or MealSlot.Snack or MealSlot.Sweet)).IsFalse();
-        await Assert.That(dinners.All(dinner => dinner.Portions == TestData.Options.DinnerPortions)).IsTrue();
+        await Assert.That(dinners.All(dinner => dinner.Portions == PlannerSettings.DefaultPeople)).IsTrue();
         await Assert.That(plan.LeftoverLunches).IsFalse();
         await Assert.That(plan.StyleName).IsEqualTo(style.Name);
     }

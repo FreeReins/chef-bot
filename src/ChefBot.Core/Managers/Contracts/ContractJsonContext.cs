@@ -33,6 +33,8 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(SendShoppingListResult))]
 // The calendar feed
 [JsonSerializable(typeof(CalendarFeedResponse))]
+[JsonSerializable(typeof(CalendarTimesRequest))]
+[JsonSerializable(typeof(CalendarTimesResponse))]
 [JsonSerializable(typeof(CheckWeeklySchedule))]
 [JsonSerializable(typeof(ShoppingStoreRequest))]
 [JsonSerializable(typeof(GroceryStoresResponse))]
@@ -45,6 +47,11 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(IReadOnlyList<PlanSummaryResponse>))]
 [JsonSerializable(typeof(PlanStylesResponse))]
 [JsonSerializable(typeof(SavePlanStylesRequest))]
+// Planning settings: people, the weekly schedule and leftovers; and the advanced ones
+[JsonSerializable(typeof(PlannerSettingsRequest))]
+[JsonSerializable(typeof(PlannerSettingsResponse))]
+[JsonSerializable(typeof(AdvancedSettingsRequest))]
+[JsonSerializable(typeof(AdvancedSettingsResponse))]
 [JsonSerializable(typeof(PlanStyleDetails))]
 [JsonSerializable(typeof(PlanRuleDetails))]
 [JsonSerializable(typeof(RuleLimit))]
@@ -55,6 +62,7 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(PantryItemResponse))]
 [JsonSerializable(typeof(IReadOnlyList<PantryItemResponse>))]
 [JsonSerializable(typeof(PantryChanged))]
+[JsonSerializable(typeof(PlanningSettingsChanged))]
 // Recipes
 [JsonSerializable(typeof(RecipeDraft))]
 [JsonSerializable(typeof(RecipeResponse))]

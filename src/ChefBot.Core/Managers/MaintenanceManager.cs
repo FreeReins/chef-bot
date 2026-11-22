@@ -19,7 +19,6 @@ internal sealed class MaintenanceManager(
     IMessageAccess messages,
     NotificationEngine notifications,
     ValidationEngine validation,
-    PlannerOptions options,
     TimeProvider clock) : IMaintenanceManager
 {
     // ---------- notifications ----------
@@ -45,18 +44,6 @@ internal sealed class MaintenanceManager(
         return current.ToResponse();
     }
 
-    public async Task UseDefaultWebhookAsync(string? webhookUrl, CancellationToken cancellationToken)
-    {
-        var current = await settings.GetNotificationsAsync(cancellationToken);
-        if (current.WebhookUrl.Length == 0 && !string.IsNullOrWhiteSpace(webhookUrl))
-        {
-            current.WebhookUrl = webhookUrl.Trim();
-            await settings.SaveNotificationsAsync(current, cancellationToken);
-        }
-
-        await messages.CommitAsync(cancellationToken);
-    }
-
     public async Task<DeliveryResult> SendTestNotificationAsync(CancellationToken cancellationToken)
     {
         var current = await settings.GetNotificationsAsync(cancellationToken);
@@ -66,6 +53,21 @@ internal sealed class MaintenanceManager(
         }
 
         return (await webhook.SendAsync(current.WebhookUrl, notifications.Test(), cancellationToken)).ToResponse();
+    }
+
+    // ---------- advanced settings ----------
+
+    public async Task<AdvancedSettingsResponse> GetAdvancedSettingsAsync(CancellationToken cancellationToken) =>
+        (await settings.GetAdvancedAsync(cancellationToken)).ToResponse();
+
+    public async Task<AdvancedSettingsResponse> SaveAdvancedSettingsAsync(AdvancedSettingsRequest request, CancellationToken cancellationToken)
+    {
+        var fresh = ValidationEngine.Advanced(request);
+        await settings.SaveAdvancedAsync(fresh, cancellationToken);
+        await messages.PublishAsync(new PlanningSettingsChanged());
+        await messages.CommitAsync(cancellationToken);
+        fresh.IsSaved = true;
+        return fresh.ToResponse();
     }
 
     public async Task<ReminderRun> SendPlanReadyAsync(PlanStaged staged, CancellationToken cancellationToken)
@@ -81,7 +83,7 @@ internal sealed class MaintenanceManager(
     {
         var today = clock.Today();
         var plan = await plans.FindCurrentAsync(today, cancellationToken);
-        var reminders = notifications.Daily(plan, await pantry.ListAsync(cancellationToken), today, options.ExpiringSoonDays);
+        var reminders = notifications.Daily(plan, await pantry.ListAsync(cancellationToken), today, (await settings.GetAdvancedAsync(cancellationToken)).ExpiringSoonDays);
         var run = await SendAsync(reminders, cancellationToken);
 
         var current = await settings.GetNotificationsAsync(cancellationToken);

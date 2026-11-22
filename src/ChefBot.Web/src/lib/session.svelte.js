@@ -4,7 +4,7 @@ import { forgetSnapshot, restoreSnapshot } from './offline.svelte.js';
 import { loadOutbox, report, sendOutbox } from './outbox.svelte.js';
 import { loadPantry, loadPlan } from './plan.svelte.js';
 import { loadRecipes } from './recipes.svelte.js';
-import { loadPeople, loadShoppingTargets, loadStores, loadStyles, loadSystem } from './settings.svelte.js';
+import { loadPeople, loadPlanning, loadShoppingTargets, loadStores, loadStyles, loadSystem } from './settings.svelte.js';
 import { loadManualItems } from './shopping.svelte.js';
 import { plural } from './format.js';
 import { app, ask, isAdmin, run, toast } from './state.svelte.js';
@@ -25,7 +25,7 @@ export async function enterApp() {
   app.offlineSince = null;
   loadOutbox(app.session.user.id);
   const sent = app.outbox.length ? await sendOutbox() : null;
-  await Promise.all([loadRecipes(), loadPlan(), loadManualItems(), loadPantry(), loadSystem(), loadStores(), loadShoppingTargets(), loadStyles(), isAdmin() ? loadPeople() : null]);
+  await Promise.all([loadRecipes(), loadPlan(), loadManualItems(), loadPantry(), loadSystem(), loadStores(), loadShoppingTargets(), loadStyles(), loadPlanning(), isAdmin() ? loadPeople() : null]);
   await showAddress();
   if (sent) report(sent);
 }

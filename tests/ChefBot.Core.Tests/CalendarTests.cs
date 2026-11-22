@@ -3,7 +3,6 @@ using ChefBot.Core.Engines;
 using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
-using ChefBot.Core.Utilities;
 
 namespace ChefBot.Core.Tests;
 
@@ -15,7 +14,9 @@ public class CalendarTests
 
     private static readonly Uri Site = new("https://chefbot.local:8443/");
 
-    private static readonly CalendarEngine Calendar = new(new CalendarOptions());
+    private static readonly CalendarEngine Calendar = new();
+
+    private static readonly CalendarSettings Times = new();
 
     private static readonly DateTimeOffset Now = new(2026, 11, 7, 9, 30, 0, TimeSpan.Zero);
 
@@ -35,7 +36,7 @@ public class CalendarTests
     {
         var dinner = TestData.Meal(TestData.Tacos, MealSlot.Dinner, TestData.Sunday, portions: 4);
 
-        var lines = Unfolded(Calendar.Write([PlanOf(dinner)], Site, Now));
+        var lines = Unfolded(Calendar.Write([PlanOf(dinner)], Site, Now, Times));
 
         await Assert.That(lines[0]).IsEqualTo("BEGIN:VCALENDAR");
         await Assert.That(lines[^1]).IsEqualTo("END:VCALENDAR");
@@ -51,12 +52,12 @@ public class CalendarTests
     [Test]
     public async Task Each_slot_has_its_own_time_and_the_times_can_be_changed()
     {
-        var engine = new CalendarEngine(new CalendarOptions { BreakfastTime = "07:15", LunchTime = "12:00", MealMinutes = 30 });
+        var times = new CalendarSettings { BreakfastTime = "07:15", LunchTime = "12:00", MealMinutes = 30 };
         var plan = PlanOf(
             TestData.Meal(TestData.Tacos, MealSlot.Breakfast, TestData.Sunday, portions: 2),
             TestData.Meal(TestData.Tacos, MealSlot.Lunch, TestData.Sunday, portions: 2));
 
-        var lines = Unfolded(engine.Write([plan], Site, Now));
+        var lines = Unfolded(Calendar.Write([plan], Site, Now, times));
 
         await Assert.That(lines).Contains("DTSTART:20261108T071500");
         await Assert.That(lines).Contains("DTEND:20261108T074500");
@@ -68,7 +69,7 @@ public class CalendarTests
     {
         var stew = TestData.Meal(TestData.Stew, MealSlot.Dinner, TestData.Sunday, portions: 4);
 
-        var lines = Unfolded(Calendar.Write([PlanOf(stew)], Site, Now));
+        var lines = Unfolded(Calendar.Write([PlanOf(stew)], Site, Now, Times));
 
         await Assert.That(lines).Contains("BEGIN:VALARM");
         await Assert.That(lines).Contains("TRIGGER:-PT8H");
@@ -82,7 +83,7 @@ public class CalendarTests
         skipped.Status = MealStatus.Skipped;
         var snack = TestData.Meal(TestData.Tacos, MealSlot.Snack, null, portions: 4);
 
-        var feed = Calendar.Write([PlanOf(skipped, snack)], Site, Now);
+        var feed = Calendar.Write([PlanOf(skipped, snack)], Site, Now, Times);
 
         await Assert.That(feed).DoesNotContain("BEGIN:VEVENT");
     }

@@ -1,5 +1,6 @@
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 
 namespace ChefBot.Core.Engines.Contracts.Services;
 
@@ -14,6 +15,7 @@ internal interface IRecipeArchiveFormat : IRecipeFileFormat
 
     /// <summary>Reads the archive's recipes and the photos that go with them.</summary>
     /// <param name="archive">The archive's bytes. It must allow seeking.</param>
+    /// <param name="words">The words that sort recipes into courses.</param>
     /// <exception cref="RuleViolationException">The archive can't be read as this kind of file.</exception>
-    RecipeFile ReadArchive(Stream archive);
+    RecipeFile ReadArchive(Stream archive, ClassifierWords words);
 }

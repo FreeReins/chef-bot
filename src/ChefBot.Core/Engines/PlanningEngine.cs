@@ -11,7 +11,7 @@ namespace ChefBot.Core.Engines;
 /// breakfasts, snacks, sweets and drinks, following the style's rules about recipes; keeps leftover lunches following
 /// the dinners; changes and moves single meals; and decides when the weekly schedule is due. Reads and saves nothing.
 /// </summary>
-internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions options, WeeklyScheduleOptions schedule)
+internal sealed partial class PlanningEngine(IngredientCatalog catalog, PlannerOptions options)
 {
     private const string RepeatsAllowed = "Few recipes haven't been made recently, so some repeats were allowed.";
 
@@ -22,7 +22,8 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
             request,
             style,
             new WeekScorer(
-                catalog, options, request.Pantry, request.WeekStart.Month, request.PantryBoost, request.Fans, FavouriteWeight(style.Favourites)),
+                catalog, options, request.Pantry, request.WeekStart.Month, request.PantryBoost, request.Fans, FavouriteWeight(style.Favourites),
+                request.PerishableWithinDays),
             new Random(request.Seed ?? request.WeekStart.DayNumber),
             new MealPlan
             {
@@ -30,6 +31,7 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
                 CreatedAt = request.CreatedAt,
                 StyleName = style.Name,
                 LeftoverLunches = style.LeftoverLunches,
+                People = request.People,
             },
             Chosen: [],
             Warnings: []);
@@ -43,67 +45,6 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         AddLeftoverLunches(run);
 
         return new PlanDraft(run.Plan, run.Warnings.Distinct().ToList());
-    }
-
-    /// <summary>
-    /// Rebuilds the weekday leftover lunches from the dinners as they stand, then sizes each
-    /// dinner to cover the lunches that depend on it. Lunches that were set by hand, cooked
-    /// or skipped are left alone. A plan made without leftover lunches gets none. Changes <paramref name="plan"/> in place.
-    /// </summary>
-    public void PlaceLeftovers(MealPlan plan)
-    {
-        plan.Meals.RemoveAll(meal => meal is { Slot: MealSlot.Lunch, IsLeftover: true, Status: MealStatus.Planned });
-
-        if (plan.LeftoverLunches)
-        {
-            var dinners = plan.Meals
-                .Where(meal => meal is { Slot: MealSlot.Dinner, Date: not null } && meal.Status != MealStatus.Skipped)
-                .OrderByDescending(meal => meal.Date)
-                .ToList();
-
-            foreach (var day in WeekLayout.Weekdays)
-            {
-                var date = WeekLayout.DateFor(plan.WeekStart, day);
-                if (plan.Meals.Any(meal => meal.Slot == MealSlot.Lunch && meal.Date == date))
-                {
-                    continue;
-                }
-
-                var earliest = date.AddDays(-options.MaxLeftoverDays);
-                var source = dinners.FirstOrDefault(dinner => dinner.Date < date && dinner.Date >= earliest);
-                if (source is not null)
-                {
-                    plan.Meals.Add(LeftoverOf(source, date));
-                }
-            }
-        }
-
-        foreach (var dinner in plan.Meals.Where(meal => meal is { Slot: MealSlot.Dinner, Status: MealStatus.Planned }))
-        {
-            var lunches = plan.Meals.Count(meal => meal.LeftoverOfMealId == dinner.Id);
-            dinner.Portions = options.DinnerPortions + options.LunchPortions * lunches;
-        }
-    }
-
-    /// <summary>Makes a meal a fresh cooking of <paramref name="recipe"/>.</summary>
-    public void UseRecipe(PlannedMeal meal, Recipe recipe)
-    {
-        meal.Recipe = recipe;
-        meal.RecipeId = recipe.Id;
-        meal.Title = recipe.Name;
-        meal.CustomIngredients.Clear();
-        ResetAsFreshMeal(meal);
-    }
-
-    /// <summary>Makes a meal a free-form one, such as a grain, protein and vegetable bowl.</summary>
-    public void UseCustom(PlannedMeal meal, string title, IEnumerable<PlannedMealIngredient> ingredients)
-    {
-        meal.Recipe = null;
-        meal.RecipeId = null;
-        meal.Title = title;
-        meal.CustomIngredients.Clear();
-        meal.CustomIngredients.AddRange(ingredients);
-        ResetAsFreshMeal(meal);
     }
 
     /// <summary>
@@ -123,36 +64,6 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         return other;
     }
 
-    /// <summary>
-    /// The week the weekly schedule should stage now, or null when it isn't due. The schedule is due from its day
-    /// and time until the week it plans for starts, once per week: <paramref name="lastStagedWeek"/> records that.
-    /// </summary>
-    public DateOnly? ScheduledWeekDue(DateTimeOffset localNow, DateOnly? lastStagedWeek)
-    {
-        if (!schedule.Enabled)
-        {
-            return null;
-        }
-
-        var lastFiring = schedule.NextOccurrence(localNow).AddDays(-7);
-        var week = WeekLayout.UpcomingWeekStart(DateOnly.FromDateTime(lastFiring.DateTime));
-        var today = DateOnly.FromDateTime(localNow.DateTime);
-
-        // A firing that was missed (say the app was off) still counts until its week starts, but never later.
-        return week == WeekLayout.UpcomingWeekStart(today) && week != lastStagedWeek ? week : null;
-    }
-
-    /// <summary>When the schedule next fires, or null when it is switched off.</summary>
-    public DateTimeOffset? NextScheduledStaging(DateTimeOffset localNow) =>
-        schedule.Enabled ? schedule.NextOccurrence(localNow) : null;
-
-    private void ResetAsFreshMeal(PlannedMeal meal)
-    {
-        meal.Portions = options.PortionsFor(meal.Slot);
-        meal.LeftoverOfMealId = null;
-        meal.Status = MealStatus.Planned;
-    }
-
     private static PlannedMeal ForRecipe(Recipe recipe, MealSlot slot, DateOnly? date, int portions) => new()
     {
         Slot = slot,
@@ -161,16 +72,6 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         RecipeId = recipe.Id,
         Title = recipe.Name,
         Portions = portions,
-    };
-
-    private static PlannedMeal LeftoverOf(PlannedMeal dinner, DateOnly date) => new()
-    {
-        Slot = MealSlot.Lunch,
-        Date = date,
-        RecipeId = dinner.RecipeId,
-        Recipe = dinner.Recipe,
-        Title = $"Leftovers: {dinner.Title}",
-        LeftoverOfMealId = dinner.Id,
     };
 
     /// <summary>Copies the meals kept from an earlier plan of the week into the new one, as fresh planned meals.</summary>
@@ -190,7 +91,7 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
                 Recipe = kept.Recipe,
                 RecipeId = kept.RecipeId,
                 Title = kept.Title,
-                Portions = options.PortionsFor(kept.Slot),
+                Portions = PortionsFor(kept.Slot, run.Request.People),
                 IsOptional = kept.IsOptional,
                 CustomIngredients = kept.CustomIngredients
                     .Select(ingredient => new PlannedMealIngredient
@@ -229,7 +130,7 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         foreach (var day in days)
         {
             var date = WeekLayout.DateFor(run.Request.WeekStart, day);
-            run.Plan.Meals.Add(ForRecipe(picks[day], MealSlot.Dinner, date, options.DinnerPortions));
+            run.Plan.Meals.Add(ForRecipe(picks[day], MealSlot.Dinner, date, run.Request.People));
             run.Chosen.Add(picks[day]);
         }
     }
@@ -277,7 +178,7 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
         {
             var recipe = breakfasts[index * breakfasts.Count / weekdays.Count];
             var date = WeekLayout.DateFor(run.Request.WeekStart, weekdays[index]);
-            var meal = ForRecipe(recipe, MealSlot.Breakfast, date, options.BreakfastPortions);
+            var meal = ForRecipe(recipe, MealSlot.Breakfast, date, run.Request.People);
             meal.IsOptional = true;
             run.Plan.Meals.Add(meal);
         }
@@ -301,13 +202,13 @@ internal sealed class PlanningEngine(IngredientCatalog catalog, PlannerOptions o
 
         foreach (var recipe in picks)
         {
-            run.Plan.Meals.Add(ForRecipe(recipe, slot, date: null, options.PortionsFor(slot)));
+            run.Plan.Meals.Add(ForRecipe(recipe, slot, date: null, PortionsFor(slot, run.Request.People)));
         }
     }
 
     private void AddLeftoverLunches(Run run)
     {
-        PlaceLeftovers(run.Plan);
+        PlaceLeftovers(run.Plan, run.Request.MaxLeftoverDays);
         if (!run.Style.LeftoverLunches || !run.Plan.Meals.Any(meal => meal.Slot == MealSlot.Dinner))
         {
             return;

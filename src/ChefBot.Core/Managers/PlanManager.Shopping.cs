@@ -12,8 +12,9 @@ internal sealed partial class PlanManager
     {
         var plan = await validation.PlanAsync(planId, cancellationToken);
         var today = clock.Today();
-        var overview = shopping.BuildOverview(plan, await pantry.ListAsync(cancellationToken), today, options.ExpiringSoonDays);
-        return overview.ToResponse(today, options.ExpiringSoonDays, catalog);
+        var expiringSoonDays = (await settings.GetAdvancedAsync(cancellationToken)).ExpiringSoonDays;
+        var overview = shopping.BuildOverview(plan, await pantry.ListAsync(cancellationToken), today, expiringSoonDays);
+        return overview.ToResponse(today, expiringSoonDays, catalog);
     }
 
     public async Task<PlanResponse> PurchaseAsync(Guid planId, Guid itemId, PurchaseDetails details, CancellationToken cancellationToken)

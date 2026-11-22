@@ -10,9 +10,6 @@ public interface IMaintenanceManager
     /// <summary>Saves the webhook address, which reminders are wanted and when the daily ones go out.</summary>
     Task<NotificationSettingsResponse> UpdateNotificationSettingsAsync(NotificationSettingsRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Uses a webhook from the configuration as the starting value, when none has been saved.</summary>
-    Task UseDefaultWebhookAsync(string? webhookUrl, CancellationToken cancellationToken);
-
     /// <summary>Sends a sample notification so the receiving side can be checked.</summary>
     Task<DeliveryResult> SendTestNotificationAsync(CancellationToken cancellationToken);
 
@@ -24,6 +21,15 @@ public interface IMaintenanceManager
 
     /// <summary>Sends today's reminders if their time has come and they haven't gone out yet today. Null when not due.</summary>
     Task<ReminderRun?> SendDueRemindersAsync(CancellationToken cancellationToken);
+
+    /// <summary>How plans weigh repeats, expiring food and perishables, and the words that sort imported recipes.</summary>
+    Task<AdvancedSettingsResponse> GetAdvancedSettingsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Saves the advanced settings; anything left out goes back to its default. New course words apply to recipes
+    /// imported afterwards. Publishes <see cref="PlanningSettingsChanged"/> so open plans follow.
+    /// </summary>
+    Task<AdvancedSettingsResponse> SaveAdvancedSettingsAsync(AdvancedSettingsRequest request, CancellationToken cancellationToken);
 
     Task<BackupsResponse> GetBackupsAsync(CancellationToken cancellationToken);
 

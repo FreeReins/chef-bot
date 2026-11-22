@@ -42,6 +42,18 @@ public static class CalendarEndpoints
     public static Task<CalendarFeedResponse> Stop([FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
         plans.StopCalendarFeedAsync(cancellationToken);
 
+    /// <summary>When meals appear in the feed: each meal's start time, how long it lasts, and the slow cooker reminder.</summary>
+    [WolverineGet("/api/calendar/times")]
+    public static Task<CalendarTimesResponse> GetTimes([FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.GetCalendarTimesAsync(cancellationToken);
+
+    /// <summary>Changes when meals appear in the feed. Subscribed calendars pick it up when they next refresh. Admins only.</summary>
+    [WolverinePut("/api/calendar/times")]
+    [Authorize(Policy = Sessions.AdminPolicy)]
+    public static Task<CalendarTimesResponse> SaveTimes(
+        CalendarTimesRequest request, [FromServices] IPlanManager plans, CancellationToken cancellationToken) =>
+        plans.SaveCalendarTimesAsync(request, cancellationToken);
+
     /// <summary>ChefBot's address as the request reached it (after a trusted proxy's forwarded headers), ending in a slash.</summary>
     private static Uri Site(HttpContext http) => new($"{http.Request.Scheme}://{http.Request.Host}{http.Request.PathBase}/");
 }

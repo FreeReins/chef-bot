@@ -1,5 +1,6 @@
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 
 namespace ChefBot.Core.Engines.Contracts.Services;
 
@@ -23,6 +24,8 @@ internal interface IRecipeFileFormat
     bool CanRead(string text);
 
     /// <summary>Reads the file's text. Entries that aren't usable recipes are counted as skipped.</summary>
+    /// <param name="text">The file's text.</param>
+    /// <param name="words">The words that sort recipes into courses.</param>
     /// <exception cref="RuleViolationException">The text can't be read as this kind of file.</exception>
-    RecipeFile Read(string text);
+    RecipeFile Read(string text, ClassifierWords words);
 }

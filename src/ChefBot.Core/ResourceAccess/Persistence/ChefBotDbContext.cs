@@ -111,6 +111,9 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
         modelBuilder.Entity<BackupSettingsEntity>().ToTable("BackupSettings");
         modelBuilder.Entity<ScheduleStateEntity>().ToTable("ScheduleState");
         modelBuilder.Entity<CalendarFeedEntity>().ToTable("CalendarFeed");
+        modelBuilder.Entity<PlannerSettingsEntity>().ToTable("PlannerSettings");
+        modelBuilder.Entity<AdvancedSettingsEntity>().ToTable("AdvancedSettings");
+        modelBuilder.Entity<CalendarSettingsEntity>().ToTable("CalendarSettings");
         modelBuilder.Entity<FoodMomentEntity>(moment =>
         {
             moment.ToTable("FoodMoments");

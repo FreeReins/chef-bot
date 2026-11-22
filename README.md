@@ -103,8 +103,10 @@ the certificate the first time (see [HTTPS](#https)). The first visit starts the
      list later from the Recipes tab.
 
    Or skip the step and add recipes later.
-4. **Choose a plan style.** Pick the starter style for most weeks; the others are kept so you can choose one
-   for any week. Change them, or make your own, here or later under **Settings → Plan styles**.
+4. **Choose a plan style.** Say how many people you usually cook for, which sets the portions of each breakfast,
+   lunch and dinner (change it later under **Settings → Planning**). Pick the starter style for most weeks; the
+   others are kept so you can choose one for any week. Change them, or make your own, here or later under
+   **Settings → Plan styles**.
 5. **Stores (optional).** Choose where you shop, so the shopping list is split between them.
 
 Then press **Plan** on the Plan tab.
@@ -373,6 +375,9 @@ try each call. Both need you to be signed in.
 | `GET` `POST /api/tokens`, `DELETE /api/tokens/{id}` | List, make (`{"name": "Claude Code"}`, answers with the `token` once) or revoke your own API tokens for AI assistants |
 | `GET /api/users`, `DELETE /api/users/{id}`, `POST /api/users/{id}/unlock` | See, remove and unlock accounts (admin) |
 | `GET` `PUT /api/system/security` | Lockout rules and "always use HTTPS" (admin) |
+| `GET` `PUT /api/planning` | How many people plans are for, the weekly schedule and how long leftovers keep. Saving a new number of people resizes weeks not yet confirmed |
+| `GET` `PUT /api/calendar/times` | When meals appear in the calendar feed, and the slow cooker reminder (changing them: admin) |
+| `GET` `PUT /api/system/advanced` | Repeat, expiring-soon and perishable days, and the course words for imports; a `null` value goes back to its default (admin) |
 | `GET /api/system/https`, `GET` `POST /api/system/https/certificate` | HTTPS status, download or recreate the certificate |
 | `POST /api/plans/{planId}/regenerate`, `DELETE /api/plans/{planId}` | Rebuild a plan around the pantry in the style it was made in, or clear it |
 | `GET` `PUT /api/system/notifications`, `POST .../test`, `POST .../send-today` | Reminder settings, and sending now (admin) |
@@ -404,20 +409,12 @@ curl -b cookies.txt -X POST localhost:8080/api/plans/stage -H 'Content-Type: app
 ## Configuration
 
 Settings live in `src/ChefBot.Api/appsettings.json`. Override any of them with environment variables,
-using `__` between levels (for example `Planner__DinnerPortions=4`). With the Podman setup, put them in
+using `__` between levels (for example `Https__PublicPort=443`). With the Podman setup, put them in
 `~/.config/chefbot/chefbot.env` and run `systemctl --user restart chefbot`.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `Planner:DinnerPortions`, `LunchPortions`, `BreakfastPortions` | `2` | People eating each meal |
-| `Planner:ExpiringSoonDays` | `3` | Pantry food expiring this soon is planned first |
-| `Planner:AvoidRepeatDays` | `28` | Don't repeat a recipe planned this recently |
 | `Planner:Weights` | see file | How strongly sharing, season, pantry use and variety count |
-| `Schedule:Enabled`, `Day`, `Time` | `true`, `Saturday`, `09:00` | When next week is staged automatically |
-| `Calendar:BreakfastTime`, `LunchTime`, `DinnerTime` | `08:00`, `12:30`, `18:30` | When meals appear in the calendar feed |
-| `Calendar:MealMinutes`, `SlowCookerHours` | `45`, `8` | How long each meal's event lasts, and how many hours before a slow cooker dinner its reminder goes off (`0` for none) |
-| `Classifier` | see file | Tag words that sort imported recipes into courses |
-| `Notifications:WebhookUrl` | empty | The starting webhook address, until one is saved on the Settings tab |
 | `Planner:Weights:RegeneratePantryBoost` | `4` | How much more pantry food counts in "Replan from pantry" |
 | `Data:Backups` | `backups` | The folder backups are written to |
 | `Https:Mode` | `Off` (`SelfSigned` in the container image) | `Off`, `SelfSigned` or `Certificate` |
@@ -426,6 +423,20 @@ using `__` between levels (for example `Planner__DinnerPortions=4`). With the Po
 | `Https:CertificatePath`, `KeyPath`, `CertificatePassword` | empty | Your own certificate, in `Certificate` mode |
 | `Https:TrustedProxies` | empty | Reverse proxies whose forwarded headers are believed |
 | `Accounts:RecoverUsername` | empty | Logs a password reset link for this account at startup |
+
+Everything else is changed in the app and kept in the database (and in backups):
+
+- **Settings → Planning**, for anyone signed in: how many people you cook for, when next week is planned
+  automatically, and how long leftovers keep. Weeks not yet confirmed are resized when the number of people
+  changes; confirmed weeks keep theirs.
+- **Settings → Calendar**, for admins: when meals appear in the calendar feed and the slow cooker reminder.
+- **Settings → Notifications**, for admins: the webhook address.
+- **Settings → Advanced**, for admins: how many days before a recipe repeats, when pantry food counts as expiring
+  soon, which ingredients are worth sharing between meals, and the words that sort imported recipes into courses.
+
+The `Planner:DinnerPortions`, `LunchPortions`, `BreakfastPortions`, `MaxLeftoverDays`, `AvoidRepeatDays`,
+`ExpiringSoonDays` and `PerishableWithinDays` settings, and the `Schedule`, `Calendar`, `Classifier` and
+`Notifications:WebhookUrl` settings, of earlier versions are no longer read.
 
 ### The ingredient catalog
 
@@ -481,13 +492,12 @@ copies it, so you can change it afterwards. To offer different starters, edit th
 over the built-in one (see the comments in [chefbot.container](deploy/podman/chefbot.container)).
 
 Drinks are a course like snacks and sweets: imported recipes labelled drink, beverage, cocktail, smoothie or
-lemonade are filed as drinks (`Classifier:DrinkWords`), and three drinks are among the sample recipes.
+lemonade are filed as drinks (the drink words under **Settings → Advanced**), and three drinks are among the sample recipes.
 
 ### Notifications and Home Assistant
 
 On the Settings tab an admin enters a webhook address, picks which reminders to send and when the daily ones
 go out, and can press **Send a test** or **Send today's reminders now** to check the other end.
-(`Notifications__WebhookUrl` in `chefbot.env` sets the starting address.)
 
 Every notification is a JSON POST:
 

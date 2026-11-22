@@ -156,16 +156,15 @@ if ChefBot uses its own.
 
 ## Changing the mealtimes
 
-The times and reminder are ChefBot settings, which whoever runs ChefBot can change in `chefbot.env` (or
-`appsettings.json`), followed by a restart:
+An admin changes the times under **Settings → Calendar → Meal times**. Everyone else can see them there.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `Calendar__BreakfastTime` | `08:00` | When breakfasts start, as local HH:mm |
-| `Calendar__LunchTime` | `12:30` | When lunches start |
-| `Calendar__DinnerTime` | `18:30` | When dinners start |
-| `Calendar__MealMinutes` | `45` | How long each meal's event lasts |
-| `Calendar__SlowCookerHours` | `8` | How many hours before a slow cooker dinner the reminder goes off; `0` for none |
+| Breakfast, Lunch, Dinner | `08:00`, `12:30`, `18:30` | When each meal starts, as local time |
+| Each meal lasts | 45 minutes | How long each meal's event lasts |
+| Slow cooker reminder | 8 hours | How many hours before a slow cooker dinner the reminder goes off; `0` for none |
+
+The `Calendar__*` settings in `chefbot.env` of earlier versions are no longer read.
 
 Subscribed calendars show the new times the next time they check the feed.
 

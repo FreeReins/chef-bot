@@ -22,6 +22,7 @@ internal static partial class EntityMapping
             CreatedAt = entity.CreatedAt,
             StyleName = entity.StyleName,
             LeftoverLunches = entity.LeftoverLunches,
+            People = entity.People,
             Meals = entity.Meals.Select(meal => new PlannedMeal
             {
                 Id = meal.Id,
@@ -66,6 +67,7 @@ internal static partial class EntityMapping
         CreatedAt = plan.CreatedAt,
         StyleName = plan.StyleName,
         LeftoverLunches = plan.LeftoverLunches,
+        People = plan.People,
         Meals = plan.Meals.Select(meal => new PlannedMealEntity
         {
             Id = meal.Id,

@@ -13,6 +13,9 @@ namespace ChefBot.Core.Engines.Contracts.Messages;
 /// <param name="Style">How the week is laid out and the rules for its recipes. Defaults to <see cref="PlanStyle.Classic"/>.</param>
 /// <param name="Kept">Meals to carry into the new plan unchanged, such as the ones kept when shuffling a week.</param>
 /// <param name="Fans">How many people have each recipe as a favourite. Recipes nobody favours are left out.</param>
+/// <param name="People">How many people each breakfast, lunch and dinner is for.</param>
+/// <param name="MaxLeftoverDays">A lunch only uses a dinner cooked within this many days.</param>
+/// <param name="PerishableWithinDays">Ingredients that keep no longer than this are worth sharing between meals.</param>
 internal sealed record PlanRequest(
     DateOnly WeekStart,
     IReadOnlyList<Recipe> Recipes,
@@ -23,4 +26,7 @@ internal sealed record PlanRequest(
     double PantryBoost = 1,
     PlanStyle? Style = null,
     IReadOnlyList<PlannedMeal>? Kept = null,
-    IReadOnlyDictionary<Guid, int>? Fans = null);
+    IReadOnlyDictionary<Guid, int>? Fans = null,
+    int People = PlannerSettings.DefaultPeople,
+    int MaxLeftoverDays = PlannerSettings.DefaultMaxLeftoverDays,
+    int PerishableWithinDays = AdvancedSettings.DefaultPerishableWithinDays);

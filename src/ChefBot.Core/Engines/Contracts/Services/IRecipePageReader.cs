@@ -25,6 +25,9 @@ internal interface IRecipePageReader
     Uri PageToFetch(Uri url) => url;
 
     /// <summary>Reads the recipe from the page found at <paramref name="url"/>.</summary>
+    /// <param name="url">The address that was given.</param>
+    /// <param name="page">The downloaded page.</param>
+    /// <param name="words">The words that sort recipes into courses.</param>
     /// <returns>Null when the page has no recipe this reader can find.</returns>
-    RecipeText? Read(Uri url, IDocument page);
+    RecipeText? Read(Uri url, IDocument page, ClassifierWords words);
 }

@@ -10,21 +10,22 @@ namespace ChefBot.Core.Managers;
 /// <inheritdoc cref="IPantryManager"/>
 internal sealed class PantryManager(
     IPantryAccess pantry,
+    ISettingsAccess settings,
     IMessageAccess messages,
     TransformationEngine transformation,
     ValidationEngine validation,
     IngredientCatalog catalog,
-    PlannerOptions options,
     TimeProvider clock) : IPantryManager
 {
     public async Task<IReadOnlyList<PantryItemResponse>> ListAsync(CancellationToken cancellationToken)
     {
         var today = clock.Today();
+        var expiringSoonDays = await ExpiringSoonDaysAsync(cancellationToken);
         var items = await pantry.ListAsync(cancellationToken);
         return items
             .OrderBy(item => item.ExpiresOn ?? DateOnly.MaxValue)
             .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .Select(item => item.ToResponse(today, options.ExpiringSoonDays, catalog))
+            .Select(item => item.ToResponse(today, expiringSoonDays, catalog))
             .ToList();
     }
 
@@ -38,7 +39,7 @@ internal sealed class PantryManager(
         await pantry.SaveAsync(item, cancellationToken);
         await messages.PublishAsync(new PantryChanged());
         await messages.CommitAsync(cancellationToken);
-        return item.ToResponse(clock.Today(), options.ExpiringSoonDays, catalog);
+        return item.ToResponse(clock.Today(), await ExpiringSoonDaysAsync(cancellationToken), catalog);
     }
 
     public async Task<PantryItemResponse> UpdateAsync(Guid id, UpdatePantryItemRequest request, CancellationToken cancellationToken)
@@ -51,7 +52,7 @@ internal sealed class PantryManager(
         await pantry.SaveAsync(item, cancellationToken);
         await messages.PublishAsync(new PantryChanged());
         await messages.CommitAsync(cancellationToken);
-        return item.ToResponse(clock.Today(), options.ExpiringSoonDays, catalog);
+        return item.ToResponse(clock.Today(), await ExpiringSoonDaysAsync(cancellationToken), catalog);
     }
 
     public async Task RemoveAsync(Guid id, CancellationToken cancellationToken)
@@ -61,4 +62,7 @@ internal sealed class PantryManager(
         await messages.PublishAsync(new PantryChanged());
         await messages.CommitAsync(cancellationToken);
     }
+
+    private async Task<int> ExpiringSoonDaysAsync(CancellationToken cancellationToken) =>
+        (await settings.GetAdvancedAsync(cancellationToken)).ExpiringSoonDays;
 }

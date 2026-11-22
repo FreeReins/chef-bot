@@ -14,5 +14,5 @@ internal sealed class SchemaOrgPage(SchemaRecipe schema) : IRecipePageReader
 
     public bool Handles(Uri url) => true;
 
-    public RecipeText? Read(Uri url, IDocument page) => schema.FromPage(page);
+    public RecipeText? Read(Uri url, IDocument page, ClassifierWords words) => schema.FromPage(page, words);
 }

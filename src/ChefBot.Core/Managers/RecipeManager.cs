@@ -19,6 +19,7 @@ internal sealed partial class RecipeManager(
     IFavouriteAccess favourites,
     IReviewAccess reviews,
     IPlanAccess plans,
+    ISettingsAccess settings,
     IMessageAccess messages,
     TransformationEngine transformation,
     HistoryEngine storyteller,
@@ -202,14 +203,14 @@ internal sealed partial class RecipeManager(
 
     public async Task<FileImportResult> ImportFileAsync(ImportFileRequest request, CancellationToken cancellationToken)
     {
-        var file = transformation.ReadFile(request.FileName ?? string.Empty, request.Content ?? string.Empty);
+        var file = transformation.ReadFile(request.FileName ?? string.Empty, request.Content ?? string.Empty, await WordsAsync(cancellationToken));
         var added = await AddNewAsync(file.Recipes, cancellationToken);
         return new FileImportResult(added, file.Recipes.Count - added, file.Skipped);
     }
 
     public async Task<FileImportResult> ImportArchiveAsync(string fileName, Stream archive, CancellationToken cancellationToken)
     {
-        var file = transformation.ReadArchive(fileName ?? string.Empty, archive);
+        var file = transformation.ReadArchive(fileName ?? string.Empty, archive, await WordsAsync(cancellationToken));
         var photos = file.Photos ?? new Dictionary<string, byte[]>();
 
         // Recipes already in the library, such as ones imported before from database.json, get a photo only when
@@ -230,6 +231,10 @@ internal sealed partial class RecipeManager(
         return new FileImportResult(added, file.Recipes.Count - added, file.Skipped, photosAdded + newPhotos);
     }
 
+    /// <summary>The household's words for sorting imported recipes into courses.</summary>
+    private async Task<ClassifierWords> WordsAsync(CancellationToken cancellationToken) =>
+        (await settings.GetAdvancedAsync(cancellationToken)).Words;
+
     public async Task<WebImportResponse> ImportFromWebAsync(WebRecipeRequest request, CancellationToken cancellationToken)
     {
         var url = ValidationEngine.RecipePageAddress(request.Url);
@@ -238,7 +243,7 @@ internal sealed partial class RecipeManager(
 
         var reader = transformation.PageReader(url);
         var page = await web.FetchAsync(reader.PageToFetch(url), cancellationToken);
-        var text = transformation.ReadPage(reader, url, page);
+        var text = transformation.ReadPage(reader, url, page, await WordsAsync(cancellationToken));
         ValidationEngine.Recipe(text);
         ValidationEngine.NameNotInLibrary(text, library);
 

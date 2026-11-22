@@ -95,6 +95,88 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
     public Task SaveCalendarFeedAsync(CalendarFeed feed, CancellationToken cancellationToken) =>
         SaveRowAsync(new CalendarFeedEntity { Token = feed.Token, CreatedAt = feed.CreatedAt }, cancellationToken);
 
+    public async Task<PlannerSettings> GetPlannerAsync(CancellationToken cancellationToken) =>
+        await RowAsync<PlannerSettingsEntity>(cancellationToken) is { } row
+            ? new PlannerSettings
+            {
+                People = row.People,
+                ScheduleEnabled = row.ScheduleEnabled,
+                ScheduleDay = row.ScheduleDay,
+                ScheduleTime = row.ScheduleTime,
+                MaxLeftoverDays = row.MaxLeftoverDays,
+                IsSaved = true,
+            }
+            : new PlannerSettings();
+
+    public Task SavePlannerAsync(PlannerSettings settings, CancellationToken cancellationToken) =>
+        SaveRowAsync(new PlannerSettingsEntity
+        {
+            People = settings.People,
+            ScheduleEnabled = settings.ScheduleEnabled,
+            ScheduleDay = settings.ScheduleDay,
+            ScheduleTime = settings.ScheduleTime,
+            MaxLeftoverDays = settings.MaxLeftoverDays,
+        }, cancellationToken);
+
+    public async Task<AdvancedSettings> GetAdvancedAsync(CancellationToken cancellationToken) =>
+        await RowAsync<AdvancedSettingsEntity>(cancellationToken) is { } row
+            ? new AdvancedSettings
+            {
+                AvoidRepeatDays = row.AvoidRepeatDays,
+                ExpiringSoonDays = row.ExpiringSoonDays,
+                PerishableWithinDays = row.PerishableWithinDays,
+                Words = new ClassifierWords
+                {
+                    BreakfastWords = [.. row.BreakfastWords],
+                    SnackWords = [.. row.SnackWords],
+                    SweetWords = [.. row.SweetWords],
+                    DrinkWords = [.. row.DrinkWords],
+                    SlowCookerWords = [.. row.SlowCookerWords],
+                    NotAMealWords = [.. row.NotAMealWords],
+                    MainWords = [.. row.MainWords],
+                },
+                IsSaved = true,
+            }
+            : new AdvancedSettings();
+
+    public Task SaveAdvancedAsync(AdvancedSettings settings, CancellationToken cancellationToken) =>
+        SaveRowAsync(new AdvancedSettingsEntity
+        {
+            AvoidRepeatDays = settings.AvoidRepeatDays,
+            ExpiringSoonDays = settings.ExpiringSoonDays,
+            PerishableWithinDays = settings.PerishableWithinDays,
+            BreakfastWords = [.. settings.Words.BreakfastWords],
+            SnackWords = [.. settings.Words.SnackWords],
+            SweetWords = [.. settings.Words.SweetWords],
+            DrinkWords = [.. settings.Words.DrinkWords],
+            SlowCookerWords = [.. settings.Words.SlowCookerWords],
+            NotAMealWords = [.. settings.Words.NotAMealWords],
+            MainWords = [.. settings.Words.MainWords],
+        }, cancellationToken);
+
+    public async Task<CalendarSettings> GetCalendarTimesAsync(CancellationToken cancellationToken) =>
+        await RowAsync<CalendarSettingsEntity>(cancellationToken) is { } row
+            ? new CalendarSettings
+            {
+                BreakfastTime = row.BreakfastTime,
+                LunchTime = row.LunchTime,
+                DinnerTime = row.DinnerTime,
+                MealMinutes = row.MealMinutes,
+                SlowCookerHours = row.SlowCookerHours,
+                IsSaved = true,
+            }
+            : new CalendarSettings();
+
+    public Task SaveCalendarTimesAsync(CalendarSettings settings, CancellationToken cancellationToken) =>
+        SaveRowAsync(new CalendarSettingsEntity
+        {
+            BreakfastTime = settings.BreakfastTime,
+            LunchTime = settings.LunchTime,
+            DinnerTime = settings.DinnerTime,
+            MealMinutes = settings.MealMinutes,
+            SlowCookerHours = settings.SlowCookerHours,
+        }, cancellationToken);
+
     public async Task<List<GroceryStore>> ListStoresAsync(CancellationToken cancellationToken) =>
         (await db.GroceryStores.ToListAsync(cancellationToken))
             .OrderBy(store => store.Position)
