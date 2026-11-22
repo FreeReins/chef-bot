@@ -16,6 +16,7 @@ namespace ChefBot.Core.Engines.Contracts.Messages;
 /// <param name="People">How many people each breakfast, lunch and dinner is for.</param>
 /// <param name="MaxLeftoverDays">A lunch only uses a dinner cooked within this many days.</param>
 /// <param name="PerishableWithinDays">Ingredients that keep no longer than this are worth sharing between meals.</param>
+/// <param name="CookbookNames">Every cookbook's name, by id, to describe cookbook rules in the plan's notes.</param>
 internal sealed record PlanRequest(
     DateOnly WeekStart,
     IReadOnlyList<Recipe> Recipes,
@@ -29,4 +30,5 @@ internal sealed record PlanRequest(
     IReadOnlyDictionary<Guid, int>? Fans = null,
     int People = PlannerSettings.DefaultPeople,
     int MaxLeftoverDays = PlannerSettings.DefaultMaxLeftoverDays,
-    int PerishableWithinDays = AdvancedSettings.DefaultPerishableWithinDays);
+    int PerishableWithinDays = AdvancedSettings.DefaultPerishableWithinDays,
+    IReadOnlyDictionary<Guid, string>? CookbookNames = null);

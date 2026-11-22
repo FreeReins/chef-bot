@@ -91,7 +91,7 @@ public class MealieArchiveTests
     {
         var core = new TestCore();
 
-        var result = await core.RecipeManager().ImportArchiveAsync("backup.zip", Backup(), CancellationToken.None);
+        var result = await core.RecipeManager().ImportArchiveAsync("backup.zip", Backup(), null, CancellationToken.None);
 
         await Assert.That(result).IsEqualTo(new FileImportResult(3, 0, 0, 2));
         var chili = core.Recipes.Rows.Single(recipe => recipe.Name == "Chili");
@@ -112,8 +112,8 @@ public class MealieArchiveTests
         var bundt = core.Recipes.Rows.Single(recipe => recipe.Name == "Lemon Bundt");
         var own = (await recipes.AddImageAsync(bundt.Id, new AddRecipeImageRequest(SmallWebp), CancellationToken.None)).Images.Single();
 
-        var first = await recipes.ImportArchiveAsync("backup.zip", Backup(), CancellationToken.None);
-        var again = await recipes.ImportArchiveAsync("backup.zip", Backup(), CancellationToken.None);
+        var first = await recipes.ImportArchiveAsync("backup.zip", Backup(), null, CancellationToken.None);
+        var again = await recipes.ImportArchiveAsync("backup.zip", Backup(), null, CancellationToken.None);
 
         await Assert.That(first).IsEqualTo(new FileImportResult(0, 3, 0, 1));
         await Assert.That(again).IsEqualTo(new FileImportResult(0, 3, 0, 0));

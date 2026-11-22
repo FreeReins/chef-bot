@@ -16,6 +16,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="YieldText">What it makes, in words: "one 9-inch pie".</param>
 /// <param name="Notes">The cook's own notes.</param>
 /// <param name="Tags">Tags such as "vegetarian" or "quick".</param>
+/// <param name="CookbookIds">The cookbooks it is in. Null leaves them as they are; empty takes it out of every cookbook.</param>
 public sealed record RecipeDraft(
     string Name,
     RecipeCourse Course,
@@ -31,4 +32,5 @@ public sealed record RecipeDraft(
     string? Author = null,
     string? YieldText = null,
     string? Notes = null,
-    IReadOnlyList<string>? Tags = null);
+    IReadOnlyList<string>? Tags = null,
+    IReadOnlyList<Guid>? CookbookIds = null);

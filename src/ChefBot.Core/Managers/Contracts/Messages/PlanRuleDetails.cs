@@ -10,7 +10,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Count">How many meals the limit means. Ignored for <see cref="RuleLimit.None"/>.</param>
 /// <param name="Slot">The kind of meal the rule counts. Null means every kind, and is only allowed with <see cref="RuleLimit.None"/>.</param>
 /// <param name="Match">What the rule looks for in a recipe.</param>
-/// <param name="Values">The tags or ingredient names for <see cref="RecipeMatchKind.Tag"/> and <see cref="RecipeMatchKind.Ingredient"/>; any one matches.</param>
+/// <param name="Values">The tags or ingredient names for <see cref="RecipeMatchKind.Tag"/> and <see cref="RecipeMatchKind.Ingredient"/>, or the cookbook ids for <see cref="RecipeMatchKind.Cookbook"/>; any one matches.</param>
 /// <param name="Minutes">The time limit for <see cref="RecipeMatchKind.ReadyWithin"/>.</param>
 /// <param name="Day">The day matching dinners go on first, such as Tuesday for the slow cooker. Dinners only.</param>
 public sealed record PlanRuleDetails(

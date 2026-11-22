@@ -42,9 +42,12 @@ Each rule is a limit (**at least**, **at most**, **exactly**, or **none**), a nu
 | An ingredient | "No meals made with beef or pork", "At least 2 dinners made with chicken" |
 | Ready within some minutes | "At least 4 dinners ready within 30 minutes" |
 | Someone's favourite | "At least 1 dinner that's someone's favourite" |
+| A [cookbook](recipes.md#cookbooks) | "At least 2 dinners in the Weeknight cookbook" |
 
 - A rule can put matching dinners on a particular day.
 - Ingredient rules match whole words, so "chicken" also matches chicken thighs and chicken broth.
+- **In the cookbook** is offered only once the household has a cookbook. Renaming the cookbook doesn't change the
+  rule. Deleting the cookbook takes it out of the rule, and a rule left without a cookbook is removed.
 - **When your recipes can't meet a rule**, say three slow cooker dinners with only one slow cooker recipe, the
   rule is relaxed for that week and the plan's notes say so. Add more recipes that match, or lower the number.
 

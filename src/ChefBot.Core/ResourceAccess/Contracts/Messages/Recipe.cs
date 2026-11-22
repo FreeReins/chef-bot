@@ -46,6 +46,9 @@ internal sealed class Recipe
 
     public List<string> Tags { get; set; } = [];
 
+    /// <summary>The cookbooks the recipe is in, if any.</summary>
+    public List<Guid> CookbookIds { get; set; } = [];
+
     public List<RecipeIngredient> Ingredients { get; set; } = [];
 
     /// <summary>Photos, the cover first. Their bytes are kept apart, in <see cref="RecipeImageFile"/>.</summary>

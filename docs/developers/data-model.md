@@ -7,7 +7,7 @@ is made, and how backups relate to it.
 
 | Area | Tables (entities in `ResourceAccess/Persistence/`) |
 |---|---|
-| Recipes | `Recipe`, `RecipeIngredient`, `RecipeImage`, `RecipeImageData`, `RecipeFavourite`, `RecipeReview`, `RecipeSuggestion` (an AI model's suggestions, one per recipe, with its changes as `jsonb`) |
+| Recipes | `Recipe`, `RecipeIngredient`, `RecipeImage`, `RecipeImageData`, `RecipeFavourite`, `RecipeReview`, `RecipeSuggestion` (an AI model's suggestions, one per recipe, with its changes as `jsonb`), `Cookbook` (a named group of recipes; each recipe lists the cookbooks it is in as a `uuid[]` column, `CookbookIds`, so removing a cookbook takes its id off those recipes and leaves them in the library) |
 | Plans | `MealPlan`, `PlannedMeal`, `PlannedMealIngredient`, `ShoppingItem`, `PlanStyle` |
 | Shopping and pantry | `PantryItem`, `ManualShoppingItem`, `GroceryStore`, `ShoppingTarget` |
 | People | `User`, `AccessLink` (invites and resets), `ApiToken` |

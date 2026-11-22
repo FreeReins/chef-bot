@@ -6,9 +6,11 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Checks">Every check, in a fixed order, each with the recipes that fail it.</param>
 /// <param name="Duplicates">Groups of recipes that share a name.</param>
 /// <param name="RareTags">Tags only one recipe uses, often a near copy of another tag.</param>
+/// <param name="Cookbook">The cookbook the report covers, or null for the whole library.</param>
 public sealed record RecipeHealthResponse(
     int Recipes,
     int Complete,
     IReadOnlyList<RecipeHealthCheck> Checks,
     IReadOnlyList<RecipeDuplicateGroup> Duplicates,
-    IReadOnlyList<RecipeRareTag> RareTags);
+    IReadOnlyList<RecipeRareTag> RareTags,
+    RecipeCookbookResponse? Cookbook = null);

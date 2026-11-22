@@ -28,12 +28,39 @@ internal sealed partial class PlanManager
     public async Task<PlanStylesResponse> SaveStylesAsync(SavePlanStylesRequest request, CancellationToken cancellationToken)
     {
         var details = ValidationEngine.PlanStyles(request.Styles);
+        await validation.CookbookRulesAsync(details, cancellationToken);
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var styles = details.ToStyles(await settings.ListPlanStylesAsync(cancellationToken));
 
         await settings.SavePlanStylesAsync(styles, cancellationToken);
         await messages.CommitAsync(cancellationToken);
         return await DescribeStylesAsync(styles, cancellationToken);
+    }
+
+    public async Task<int> ForgetCookbookAsync(Guid cookbookId, CancellationToken cancellationToken)
+    {
+        using var _ = await writeLock.AcquireAsync(cancellationToken);
+        var styles = await settings.ListPlanStylesAsync(cancellationToken);
+        var id = cookbookId.ToString();
+        var changed = 0;
+        var dropped = 0;
+        foreach (var style in styles)
+        {
+            foreach (var rule in style.Rules.Where(rule => rule.Match == RecipeMatchKind.Cookbook))
+            {
+                changed += rule.Values.RemoveAll(value => string.Equals(value, id, StringComparison.OrdinalIgnoreCase));
+            }
+
+            dropped += style.Rules.RemoveAll(rule => rule.Match == RecipeMatchKind.Cookbook && rule.Values.Count == 0);
+        }
+
+        if (changed > 0)
+        {
+            await settings.SavePlanStylesAsync(styles, cancellationToken);
+            await messages.CommitAsync(cancellationToken);
+        }
+
+        return dropped;
     }
 
     /// <summary>The style with this id, or else the household's default: its default style, then the first starter style.</summary>
@@ -66,7 +93,8 @@ internal sealed partial class PlanManager
             styles.Select(style => style.ToResponse()).ToList(),
             knownStyles.All().Select(style => style.ToResponse(saved: false)).ToList(),
             tags,
-            catalog.Entries.Where(entry => !entry.PantryStaple).Select(entry => entry.Name).Order(StringComparer.Ordinal).ToList());
+            catalog.Entries.Where(entry => !entry.PantryStaple).Select(entry => entry.Name).Order(StringComparer.Ordinal).ToList(),
+            (await cookbooks.ListAsync(cancellationToken)).Select(cookbook => new RecipeCookbookResponse(cookbook.Id, cookbook.Name)).ToList());
     }
 
     private GroceryStoresResponse DescribeStores(IReadOnlyList<GroceryStore> stores) => new(

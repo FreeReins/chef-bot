@@ -11,14 +11,18 @@ export const reply = (status, body = null, contentType = 'application/json') => 
 const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
 
 /** RecipeSummaryResponse, from a RecipeResponse. */
-const summary = ({ id, name, course, isSlowCooker, ingredients, tags, images, favouredBy, rating, hasSuggestion = false }) =>
-  ({ id, name, course, isSlowCooker, ingredients, tags, coverUrl: images[0]?.url ?? null, favouredBy, rating, hasSuggestion });
+const summary = ({ id, name, course, isSlowCooker, ingredients, tags, images, favouredBy, rating, hasSuggestion = false, cookbooks = [] }) =>
+  ({ id, name, course, isSlowCooker, ingredients, tags, coverUrl: images[0]?.url ?? null, favouredBy, rating, hasSuggestion, cookbooks });
+
+/** CookbookResponse[]: the cookbooks given, each with how many of the recipes are in it. */
+const counted = (cookbooks, recipes) => cookbooks.map((cookbook) =>
+  ({ ...cookbook, recipes: recipes.filter((recipe) => (recipe.cookbooks ?? []).some((own) => own.id === cookbook.id)).length }));
 
 /**
  * Answers for a recipe library, as the server gives them: the whole list, one recipe by id (404 when it isn't there),
- * and a search a page at a time.
+ * a search a page at a time, and the cookbooks (none unless given, as in a library where nobody has made one).
  */
-export const library = (recipes) => ({
+export const library = (recipes, cookbooks = []) => ({
   'GET /api/recipes': recipes,
   'GET /api/recipes/*': (request) => recipes.find((recipe) => new URL(request.url()).pathname.endsWith(`/${recipe.id}`))
     ?? reply(404, { detail: 'There is no recipe with that id.' }),
@@ -28,7 +32,9 @@ export const library = (recipes) => ({
       .map(([name, uses]) => ({ name, recipes: uses.length }))
       .sort((a, b) => b.recipes - a.recipes || a.name.localeCompare(b.name)),
     people: [...new Map(recipes.flatMap((recipe) => recipe.favouredBy).map((fan) => [fan.userId, fan])).values()],
+    cookbooks: counted(cookbooks, recipes),
   },
+  'GET /api/cookbooks': counted(cookbooks, recipes),
   // Favouriting answers as the signed-in admin would get it: the recipe with them added or taken off.
   'PUT /api/recipes/*/favourite': (request) => favourite(recipes, request, true),
   'DELETE /api/recipes/*/favourite': (request) => favourite(recipes, request, false),
@@ -53,6 +59,7 @@ export const library = (recipes) => ({
       .filter((recipe) => params.get('slowCooker') !== 'true' || recipe.isSlowCooker)
       .filter((recipe) => params.get('withSuggestions') !== 'true' || recipe.hasSuggestion)
       .filter((recipe) => !params.get('readyWithin') || (recipe.totalMinutes ?? Infinity) <= Number(params.get('readyWithin')))
+      .filter((recipe) => !params.get('cookbook') || (recipe.cookbooks ?? []).some((own) => own.id === params.get('cookbook')))
       .sort((a, b) => COURSES.indexOf(a.course) - COURSES.indexOf(b.course) || a.name.localeCompare(b.name));
     return {
       recipes: matches.slice((page - 1) * pageSize, page * pageSize)
@@ -139,7 +146,7 @@ function defaults() {
     'GET /api/links': data.links(),
     'GET /api/setup/samples': data.samples(),
     'GET /api/recipes/import/formats': data.fileFormats(),
-    'GET /api/recipes/health': data.recipeHealth(),
+    'GET /api/recipes/health': (request) => (new URL(request.url()).searchParams.get('cookbook') ? data.weeknightHealth() : data.recipeHealth()),
     'GET /api/account/link': (request) =>
       data.linkDetails(new URL(request.url()).searchParams.get('token') === 'reset-token' ? 'PasswordReset' : 'Invite'),
     'GET /api/test-images/*': reply(200, data.png, 'image/png'),

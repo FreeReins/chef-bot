@@ -12,8 +12,8 @@
   import X from '@lucide/svelte/icons/x';
   import ScanText from '@lucide/svelte/icons/scan-text';
 
-  /** close(): leave the dialog. */
-  let { close } = $props();
+  /** close(): leave the dialog. cookbookId: a cookbook to put the recipe in, or null. */
+  let { close, cookbookId = null } = $props();
 
   const MAX_PAGES = 4;
 
@@ -49,7 +49,7 @@
   async function save(draft) {
     let saved = false;
     await run(async () => {
-      const recipe = await api('POST', '/api/recipes', draft);
+      const recipe = await api('POST', '/api/recipes', { ...draft, cookbookIds: cookbookId ? [cookbookId] : null });
       saved = true;
       let note = `Added ${recipe.name}.`;
       if (keepPhoto && photos.length) {

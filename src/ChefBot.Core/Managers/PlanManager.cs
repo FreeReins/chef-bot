@@ -25,6 +25,7 @@ internal sealed partial class PlanManager(
     IKnownPlanStyleAccess knownStyles,
     IToDoListAccess toDoLists,
     IFavouriteAccess favourites,
+    ICookbookAccess cookbooks,
     IMessageAccess messages,
     PlanningEngine planning,
     ShoppingEngine shopping,
@@ -226,7 +227,8 @@ internal sealed partial class PlanManager(
             Fans: fans,
             People: planner.People,
             MaxLeftoverDays: planner.MaxLeftoverDays,
-            PerishableWithinDays: advanced.PerishableWithinDays));
+            PerishableWithinDays: advanced.PerishableWithinDays,
+            CookbookNames: (await cookbooks.ListAsync(cancellationToken)).ToDictionary(cookbook => cookbook.Id, cookbook => cookbook.Name)));
 
         if (existing is not null)
         {

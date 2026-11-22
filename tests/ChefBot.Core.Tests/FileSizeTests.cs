@@ -22,7 +22,7 @@ public class FileSizeTests
 
         // Screens with their markup and styles; their logic could move to src/lib/.
         ["src/ChefBot.Web/src/tabs/RecipeCook.svelte"] = 499,
-        ["src/ChefBot.Web/src/tabs/Recipes.svelte"] = 422,
+        ["src/ChefBot.Web/src/tabs/Recipes.svelte"] = 417,
     };
 
     private static readonly string Root = FindRoot();

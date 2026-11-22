@@ -4,6 +4,7 @@ export * from './state.svelte.js';
 export * from './plan.svelte.js';
 export * from './shopping.svelte.js';
 export * from './recipes.svelte.js';
+export * from './cookbooks.svelte.js';
 export * from './setup.svelte.js';
 export * from './settings.svelte.js';
 export * from './session.svelte.js';

@@ -11,7 +11,8 @@ namespace ChefBot.Core.Engines;
 /// the resource accessors; this is the only engine that does.
 /// </summary>
 internal sealed partial class ValidationEngine(
-    IPlanAccess plans, IRecipeAccess recipes, IPantryAccess pantry, IShoppingListAccess shoppingList, IAccountAccess accounts, IBackupAccess backups)
+    IPlanAccess plans, IRecipeAccess recipes, IPantryAccess pantry, IShoppingListAccess shoppingList, IAccountAccess accounts, IBackupAccess backups,
+    ICookbookAccess cookbooks)
 {
     public const int MinimumPasswordLength = 8;
 

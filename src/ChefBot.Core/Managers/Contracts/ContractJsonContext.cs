@@ -101,6 +101,8 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(ManualShoppingChanged))]
 [JsonSerializable(typeof(MemberJoined))]
 [JsonSerializable(typeof(PlanningSettingsChanged))]
+[JsonSerializable(typeof(CookbooksChanged))]
+[JsonSerializable(typeof(CookbookRemoved))]
 // Recipes
 [JsonSerializable(typeof(RecipeDraft))]
 [JsonSerializable(typeof(RecipeResponse))]
@@ -109,6 +111,11 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(RecipePageResponse))]
 [JsonSerializable(typeof(RecipeFiltersResponse))]
 [JsonSerializable(typeof(RecipeHealthResponse))]
+// Cookbooks
+[JsonSerializable(typeof(CookbookDraft))]
+[JsonSerializable(typeof(CookbookResponse))]
+[JsonSerializable(typeof(IReadOnlyList<CookbookResponse>))]
+[JsonSerializable(typeof(CookbookRecipesRequest))]
 [JsonSerializable(typeof(RecipeSummaryResponse))]
 [JsonSerializable(typeof(FavouriteLean))]
 [JsonSerializable(typeof(ImportFileRequest))]

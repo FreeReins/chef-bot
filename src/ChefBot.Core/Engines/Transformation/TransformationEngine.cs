@@ -115,12 +115,19 @@ internal sealed partial class TransformationEngine(
     }
 
     /// <summary>Several recipes, in name order, as one file of the given format named after the day.</summary>
-    public static RecipeExportFile ExportFile(IEnumerable<Recipe> recipes, DateOnly today, RecipeExportFormat format)
+    public static RecipeExportFile ExportFile(IEnumerable<Recipe> recipes, DateOnly today, RecipeExportFormat format) =>
+        ExportFile(recipes, $"chefbot-recipes-{today:yyyy-MM-dd}", format);
+
+    /// <summary>A cookbook's recipes, in name order, as one file of the given format named after the cookbook.</summary>
+    public static RecipeExportFile ExportFile(IEnumerable<Recipe> recipes, Cookbook cookbook, RecipeExportFormat format) =>
+        ExportFile(recipes, FileSlug(cookbook.Name) is { Length: > 0 } slug ? slug : "cookbook", format);
+
+    private static RecipeExportFile ExportFile(IEnumerable<Recipe> recipes, string fileName, RecipeExportFormat format)
     {
         var (extension, type) = FileType(format);
         var ordered = recipes.OrderBy(recipe => recipe.Name, StringComparer.OrdinalIgnoreCase).ToList();
         var data = format == RecipeExportFormat.Json ? SchemaRecipeWriter.Write(ordered) : Readable(ordered, format);
-        return new RecipeExportFile($"chefbot-recipes-{today:yyyy-MM-dd}.{extension}", type, data);
+        return new RecipeExportFile($"{fileName}.{extension}", type, data);
     }
 
     private static (string Extension, string Type) FileType(RecipeExportFormat format) => format switch

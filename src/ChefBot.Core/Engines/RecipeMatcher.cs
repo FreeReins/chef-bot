@@ -20,6 +20,7 @@ internal static class RecipeMatcher
         RecipeMatchKind.Tag => recipe.Tags.Any(tag => rule.Values.Any(value => SameWords(tag, value))),
         RecipeMatchKind.Ingredient => recipe.Ingredients.Any(ingredient => rule.Values.Any(value => Uses(ingredient, value))),
         RecipeMatchKind.ReadyWithin => MinutesOf(recipe) is int minutes && minutes <= (rule.Minutes ?? 0),
+        RecipeMatchKind.Cookbook => recipe.CookbookIds.Any(id => rule.Values.Contains(id.ToString(), StringComparer.OrdinalIgnoreCase)),
         _ => false,
     };
 
@@ -30,8 +31,11 @@ internal static class RecipeMatcher
             : recipe.PrepMinutes is null && recipe.CookMinutes is null ? null : (recipe.PrepMinutes ?? 0) + (recipe.CookMinutes ?? 0);
 
     /// <summary>What the rule looks for, to follow "are": "slow cooker", "made with chicken or beef".</summary>
-    public static string Describe(PlanRule rule) => rule.Match switch
+    /// <param name="rule">The rule.</param>
+    /// <param name="cookbookNames">Every cookbook's name, by id, for <see cref="RecipeMatchKind.Cookbook"/>.</param>
+    public static string Describe(PlanRule rule, IReadOnlyDictionary<Guid, string>? cookbookNames = null) => rule.Match switch
     {
+        RecipeMatchKind.Cookbook => InCookbooks(rule.Values, cookbookNames),
         RecipeMatchKind.SlowCooker => "slow cooker",
         RecipeMatchKind.Tag => $"tagged {Either(rule.Values)}",
         RecipeMatchKind.Ingredient => $"made with {Either(rule.Values)}",
@@ -62,6 +66,21 @@ internal static class RecipeMatcher
     {
         var words = TextNormalizer.Normalize(value);
         return words.Length > 0 && $" {TextNormalizer.Normalize(text)} ".Contains($" {words} ", StringComparison.Ordinal);
+    }
+
+    /// <summary>"in the Weeknight cookbook", "in the Weeknight or Grandma's cookbooks".</summary>
+    private static string InCookbooks(IReadOnlyList<string> ids, IReadOnlyDictionary<Guid, string>? names)
+    {
+        var named = ids
+            .Select(id => Guid.TryParse(id, out var guid) && names?.GetValueOrDefault(guid) is { } name ? name : null)
+            .OfType<string>()
+            .ToList();
+        return named.Count switch
+        {
+            0 => "in a cookbook that has been removed",
+            1 => $"in the {named[0]} cookbook",
+            _ => $"in the {Either(named)} cookbooks",
+        };
     }
 
     /// <summary>"chicken", "chicken or beef", or "chicken, beef or 4 more".</summary>

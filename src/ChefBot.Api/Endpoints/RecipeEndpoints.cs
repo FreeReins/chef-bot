@@ -23,7 +23,8 @@ public static class RecipeEndpoints
     /// Every parameter is optional: no query matches every recipe, and the page size defaults to 25 (100 at most).
     /// <c>tag</c> may be given several times, and a recipe needs every one; <c>favourites=true</c> keeps anyone's
     /// favourites and <c>favouredBy</c> one person's; <c>slowCooker=true</c> and <c>readyWithin</c> (minutes) narrow further,
-    /// and <c>withSuggestions=true</c> keeps recipes with AI suggestions waiting.
+    /// <c>withSuggestions=true</c> keeps recipes with AI suggestions waiting, and <c>cookbook</c> (an id) keeps one
+    /// cookbook's recipes.
     /// </summary>
     [WolverineGet("/api/recipes/search")]
     public static Task<RecipePageResponse> Search(
@@ -36,6 +37,7 @@ public static class RecipeEndpoints
         bool? slowCooker,
         int? readyWithin,
         bool? withSuggestions,
+        Guid? cookbook,
         HttpContext http,
         [FromServices] IRecipeManager recipes,
         CancellationToken cancellationToken) =>
@@ -50,7 +52,8 @@ public static class RecipeEndpoints
                 favouredBy,
                 slowCooker ?? false,
                 readyWithin,
-                withSuggestions ?? false),
+                withSuggestions ?? false,
+                cookbook),
             cancellationToken);
 
     /// <summary>What the library can be filtered by: every tag, and the people who have favourites.</summary>
@@ -58,10 +61,13 @@ public static class RecipeEndpoints
     public static Task<RecipeFiltersResponse> Filters([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.GetFiltersAsync(cancellationToken);
 
-    /// <summary>How complete the library is: what recipes are missing, recipes that share a name, and tags only one recipe uses.</summary>
+    /// <summary>
+    /// How complete the library is: what recipes are missing, recipes that share a name, and tags only one recipe
+    /// uses. <c>cookbook</c> (an id) looks at that cookbook's recipes only.
+    /// </summary>
     [WolverineGet("/api/recipes/health")]
-    public static Task<RecipeHealthResponse> Health([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
-        recipes.GetHealthAsync(cancellationToken);
+    public static Task<RecipeHealthResponse> Health(Guid? cookbook, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.GetHealthAsync(cookbook, cancellationToken);
 
     /// <summary>
     /// Every recipe that can be planned, as one file to download: schema.org JSON-LD unless <c>format</c> asks for
@@ -163,7 +169,11 @@ public static class RecipeEndpoints
     /// </summary>
     [WolverinePost("/api/recipes/import/archive")]
     public static async Task<FileImportResult> ImportArchive(
-        [FromQuery] string? fileName, HttpContext http, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken)
+        [FromQuery] string? fileName,
+        [FromQuery] Guid? cookbook,
+        HttpContext http,
+        [FromServices] IRecipeManager recipes,
+        CancellationToken cancellationToken)
     {
         if (http.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
         {
@@ -175,7 +185,7 @@ public static class RecipeEndpoints
             Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose);
         await http.Request.Body.CopyToAsync(copy, cancellationToken);
         copy.Position = 0;
-        return await recipes.ImportArchiveAsync(fileName ?? string.Empty, copy, cancellationToken);
+        return await recipes.ImportArchiveAsync(fileName ?? string.Empty, copy, cookbook, cancellationToken);
     }
 
     /// <summary>
@@ -213,9 +223,9 @@ public static class RecipeEndpoints
         AddSamplesRequest request, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.AddSamplesAsync(request, cancellationToken);
 
-    private static IResult Download(RecipeExportFile file) => Results.File(file.Data, file.ContentType, file.FileName);
+    internal static IResult Download(RecipeExportFile file) => Results.File(file.Data, file.ContentType, file.FileName);
 
     /// <summary>The format asked for; JSON-LD when none was, or when it is a number that names no format.</summary>
-    private static RecipeExportFormat Format(RecipeExportFormat? format) =>
+    internal static RecipeExportFormat Format(RecipeExportFormat? format) =>
         format is { } asked && Enum.IsDefined(asked) ? asked : RecipeExportFormat.Json;
 }

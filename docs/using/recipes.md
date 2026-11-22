@@ -1,11 +1,14 @@
 # Recipes
 
 ChefBot keeps its own recipe library: ingredients, steps, prep and cook times, description, tags, notes, source link
-and photos. Everyone in the household shares it. This page covers adding, finding, scaling, planning, rating and downloading recipes.
+and photos. Everyone in the household shares it. This page covers adding, finding, grouping into cookbooks, scaling,
+planning, rating and downloading recipes.
 
 ## Add a recipe
 
-On the **Recipes** tab, press **Add recipe** and choose how:
+On the **Recipes** tab, press **Add recipe** and choose how. Once the household has a [cookbook](#cookbooks), the
+dialog also has **Add to cookbook**: choose one, and every recipe added from the dialog goes in it, whichever way you
+add them.
 
 ### From a link
 
@@ -64,8 +67,47 @@ recipe itself at any time. An admin can change the words used for sorting under
 
 ## Find a recipe
 
-Search by name, ingredient or tag. Filter by course, tags, **My favourites**, **Anyone's favourites**, **Slow cooker
-only**, how long a recipe takes, or **Has suggestions** (when an AI model is set up). Show them as **Cards** or a **List**.
+Search by name, ingredient or tag. Filter by course, **Cookbook** (once there are any), tags, **My favourites**,
+**Anyone's favourites**, **Slow cooker only**, how long a recipe takes, or **Has suggestions** (when an AI model is set
+up). Show them as **Cards** or a **List**.
+
+## Cookbooks
+
+A cookbook is a named group of recipes, such as weeknight dinners or a family's recipes. A recipe can be in several
+cookbooks, or in none: recipes don't need a cookbook, and nothing about cookbooks shows on the **Recipes** tab until
+someone makes one.
+
+### Make a cookbook and add recipes to it
+
+1. Open a recipe, open the **⋯** menu and choose **Add to cookbook**.
+2. Type a name under **New cookbook**, such as `Weeknight dinners`, and press **Make and add**. The recipe goes in it.
+3. To put the recipe in cookbooks that already exist, tick them under **Keep … in**. Unticking takes it out again.
+   Changes save as you tick them.
+4. Press **Done**.
+
+Once a recipe is in a cookbook, the **⋯** menu says **Cookbooks** with how many it's in, and the recipe's page lists
+its cookbooks under its tags. Press one to see that cookbook's recipes. Names must be different from each other,
+ignoring case.
+
+### See one cookbook
+
+On the **Recipes** tab, open **Filters** and choose a **Cookbook**. The search and the other filters still work
+within it. Above the recipes, the cookbook shows its name, description and how many recipes it has, with:
+
+- **Rename:** change its name, or add a **Description**.
+- **Download:** the cookbook's recipes in one file named after it, in the formats under
+  [Download recipes](#download-recipes).
+- **Delete cookbook:** removes the cookbook. Its recipes stay in the library and in any other cookbooks they're in.
+
+Archived recipes stay in their cookbooks but aren't counted or shown, as everywhere else in the library.
+
+Cookbooks also work elsewhere:
+
+- **Plan styles:** a rule can count dinners **in the cookbook**, such as at least two from Weeknight. See
+  [Plan styles](plan-styles.md#rules).
+- **Recipe health:** the report can look at one cookbook. See [Recipe health](#recipe-health).
+- **Adding recipes:** links, typed recipes, photos and files can go straight into a cookbook. See
+  [Add a recipe](#add-a-recipe).
 
 ## On a recipe
 
@@ -74,8 +116,9 @@ only**, how long a recipe takes, or **Has suggestions** (when an AI model is set
 - **Add to plan:** put it on a day of this week or a later one. See [Add a recipe to your plan](#add-a-recipe-to-your-plan).
 - **Favourite** (the heart): plan styles can prefer favourites. See [Plan styles](plan-styles.md#favourites).
 - **Reviews:** give it 1 to 5 stars and a note each time it's cooked. The average shows next to its name.
-- The **⋯** menu has **Edit recipe**, **Photos**, **Improve with AI** (when an AI model is set up), **Share recipe** (or **Copy as text**), **Print recipe**, the
-  downloads, and **Archive recipe**.
+- The **⋯** menu has **Edit recipe**, **Photos**, **Add to cookbook** (see [Cookbooks](#cookbooks)), **Improve with
+  AI** (when an AI model is set up), **Share recipe** (or **Copy as text**), **Print recipe**, the downloads, and
+  **Archive recipe**.
 - **Photos:** JPEG, PNG, WebP or GIF, up to 5 MB, at most 10 per recipe. The first photo is the one shown in the
   recipe list. A recipe without a photo shows **Add a photo** where the photo goes.
 - **Archive recipe:** takes it out of the library and future plans. Its history is kept.
@@ -120,6 +163,10 @@ have everything, then lists each check that some recipes fail. Open a check to s
 
 Checks every recipe passes share one line at the end. Under **Tidy up**, the report also lists **Recipes with the same
 name** (ignoring case and punctuation) and **Tags only one recipe uses**, which are often a near copy of another tag.
+
+Once the household has [cookbooks](#cookbooks), **Look at** chooses between **The whole library** and one cookbook.
+For a cookbook, every count, check, shared name and rare tag is worked out from its recipes alone. Being in a cookbook,
+or in none, is never counted against a recipe.
 
 A recipe's own page says what it is missing under its buttons, such as "Missing a description and times", with a
 link to **Edit** it and, when an AI model is set up, to **Improve with AI** (see
@@ -167,7 +214,8 @@ resize it.
 
 ## Download recipes
 
-From a recipe, or with **Download all** on the Recipes tab, download recipes as:
+From a recipe, with **Download all** on the Recipes tab, or with **Download** on a [cookbook](#see-one-cookbook),
+download recipes as:
 
 | Format | Good for |
 |---|---|

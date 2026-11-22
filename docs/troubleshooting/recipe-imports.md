@@ -57,10 +57,26 @@ appear, the site refused them, and **Settings → Logs** says so. Add your own w
 Recipes whose names are already in your library are skipped, so nothing is duplicated. Rename the one in ChefBot first
 to import the other as well.
 
+A skipped recipe isn't put in the cookbook chosen under **Add to cookbook** either, since it wasn't added. Open it and
+use **Add to cookbook** in its **⋯** menu. See [Cookbooks](../using/recipes.md#cookbooks).
+
 ## A Mealie backup won't import
 
 - Import the `.zip` exactly as Mealie made it, from the **Recipes** tab.
 - The file can be up to 200 MB. Behind a reverse proxy, allow uploads that large (nginx: `client_max_body_size 200m;`).
+- Mealie's cookbooks don't come across. In Mealie a cookbook is a saved search rather than a list of recipes, so there
+  is nothing to copy. Make the [cookbooks](../using/recipes.md#cookbooks) again in ChefBot, or choose one under **Add
+  to cookbook** before importing to put every recipe from the backup in it.
+
+## "There's already a cookbook called …"
+
+Cookbook names must differ, ignoring case. Pick another name, or add the recipe to the cookbook that already has
+that name by ticking it. See [Cookbooks](../using/recipes.md#cookbooks).
+
+## "That cookbook no longer exists"
+
+Someone deleted the cookbook while you had it open, perhaps on another device. Reload the page and choose another.
+Its recipes are still in the library.
 
 ## Recipes went into the wrong course
 

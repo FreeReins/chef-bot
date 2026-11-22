@@ -47,6 +47,8 @@ public static class LiveTopicsHandler
 
     public static void Handle(RecipeUnfavourited message, LiveUpdates live) => live.Broadcast(LiveTopics.Recipes);
 
+    public static void Handle(CookbooksChanged message, LiveUpdates live) => live.Broadcast(LiveTopics.Recipes);
+
     public static void Handle(RecipeReviewed message, LiveUpdates live) => Broadcast(live, LiveTopics.Recipes, LiveTopics.History);
 
     public static void Handle(RecipeReviewRemoved message, LiveUpdates live) => Broadcast(live, LiveTopics.Recipes, LiveTopics.History);

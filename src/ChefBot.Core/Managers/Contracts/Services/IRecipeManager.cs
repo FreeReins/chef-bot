@@ -18,14 +18,15 @@ public interface IRecipeManager
     /// </summary>
     Task<RecipePageResponse> SearchAsync(RecipeSearchRequest request, CancellationToken cancellationToken);
 
-    /// <summary>What the library can be filtered by: its tags, and the people who have favourites.</summary>
+    /// <summary>What the library can be filtered by: its tags, the people who have favourites, and the cookbooks.</summary>
     Task<RecipeFiltersResponse> GetFiltersAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// How complete the recipes that can be planned are: each check with the recipes that fail it, recipes that share
-    /// a name, and tags only one recipe uses.
+    /// a name, and tags only one recipe uses. With a cookbook, only the recipes in it are looked at.
     /// </summary>
-    Task<RecipeHealthResponse> GetHealthAsync(CancellationToken cancellationToken);
+    /// <exception cref="NotFoundException">The cookbook doesn't exist.</exception>
+    Task<RecipeHealthResponse> GetHealthAsync(Guid? cookbookId, CancellationToken cancellationToken);
 
     /// <summary>One recipe that can be planned, in full.</summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
@@ -40,6 +41,36 @@ public interface IRecipeManager
 
     /// <summary>Every recipe that can be planned, in name order, in one file of the given format.</summary>
     Task<RecipeExportFile> ExportAllAsync(RecipeExportFormat format, CancellationToken cancellationToken);
+
+    /// <summary>Every cookbook, by name, with how many recipes that can be planned are in each.</summary>
+    Task<IReadOnlyList<CookbookResponse>> ListCookbooksAsync(CancellationToken cancellationToken);
+
+    /// <summary>Makes a new, empty cookbook.</summary>
+    /// <exception cref="RuleViolationException">The name is missing, too long, or another cookbook has it.</exception>
+    Task<CookbookResponse> CreateCookbookAsync(CookbookDraft draft, CancellationToken cancellationToken);
+
+    /// <summary>Renames a cookbook, or changes its description. Its recipes stay in it.</summary>
+    /// <exception cref="NotFoundException">There is no such cookbook.</exception>
+    /// <exception cref="RuleViolationException">The name is missing, too long, or another cookbook has it.</exception>
+    Task<CookbookResponse> UpdateCookbookAsync(Guid id, CookbookDraft draft, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes a cookbook. Its recipes stay in the library and in any other cookbooks; plan style rules stop naming it.
+    /// Removing one that has gone already changes nothing.
+    /// </summary>
+    Task RemoveCookbookAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Puts recipes in a cookbook. Ones already in it stay as they are.</summary>
+    /// <exception cref="NotFoundException">There is no such cookbook, or a recipe isn't in the library.</exception>
+    Task<CookbookResponse> AddToCookbookAsync(Guid id, CookbookRecipesRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Takes a recipe out of a cookbook; it stays in the library. Doing it twice changes nothing.</summary>
+    /// <exception cref="NotFoundException">There is no such cookbook or recipe.</exception>
+    Task<CookbookResponse> RemoveFromCookbookAsync(Guid id, Guid recipeId, CancellationToken cancellationToken);
+
+    /// <summary>The recipes in a cookbook that can be planned, in name order, in one file named after the cookbook.</summary>
+    /// <exception cref="NotFoundException">There is no such cookbook.</exception>
+    Task<RecipeExportFile> ExportCookbookAsync(Guid id, RecipeExportFormat format, CancellationToken cancellationToken);
 
     Task<RecipeResponse> CreateAsync(RecipeDraft draft, CancellationToken cancellationToken);
 
@@ -70,7 +101,10 @@ public interface IRecipeManager
     /// <summary>The kinds of recipe file that can be imported.</summary>
     IReadOnlyList<RecipeFileFormatResponse> GetFileFormats();
 
-    /// <summary>Adds the recipes in an uploaded file. Importing the same file again adds nothing new.</summary>
+    /// <summary>
+    /// Adds the recipes in an uploaded file, and puts them in the request's cookbook when it names one. Importing the
+    /// same file again adds nothing new.
+    /// </summary>
     Task<FileImportResult> ImportFileAsync(ImportFileRequest request, CancellationToken cancellationToken);
 
     /// <summary>
@@ -80,9 +114,11 @@ public interface IRecipeManager
     /// </summary>
     /// <param name="fileName">The archive's name, which decides the format.</param>
     /// <param name="archive">The archive's bytes. It must allow seeking.</param>
+    /// <param name="cookbookId">A cookbook to put the recipes added in; null for none.</param>
     /// <param name="cancellationToken">Stops the import.</param>
     /// <exception cref="RuleViolationException">The file isn't an archive ChefBot can read.</exception>
-    Task<FileImportResult> ImportArchiveAsync(string fileName, Stream archive, CancellationToken cancellationToken);
+    /// <exception cref="NotFoundException">The cookbook doesn't exist.</exception>
+    Task<FileImportResult> ImportArchiveAsync(string fileName, Stream archive, Guid? cookbookId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Adds the recipe on a web page, read with the reader for its site (<see cref="WebImportResponse.ReadWith"/>

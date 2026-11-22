@@ -20,6 +20,13 @@ const holding = () => new Promise(() => {});
 const searchHeld = (request) => (new URL(request.url()).searchParams.get('pageSize') === '1'
   ? library(data.recipes())['GET /api/recipes/search'](request) : holding());
 
+/** A library with two cookbooks, the tacos and the curry in Weeknight and the crumble in Grandma's. */
+const withCookbooks = library(data.recipesInCookbooks(), data.cookbooks());
+/** Plan styles once the household has cookbooks, so a style can have a cookbook rule. */
+const stylesWithCookbooks = {
+  ...data.planStyles(), cookbooks: data.cookbooks().map(({ id, name }) => ({ id, name })),
+};
+
 /** Reloads the page with no connection, once the browser has saved what it shows offline. */
 async function goOffline(page, api) {
   await page.waitForFunction(() => localStorage.getItem('chefbot-offline'));
@@ -209,6 +216,41 @@ const VIEWS = [
   },
   { name: 'recipes, an empty library', path: '/recipes', answers: library([]) },
   {
+    name: 'recipes, filters open with no cookbooks, so none to choose', path: '/recipes',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Filters' }).click();
+      await page.getByRole('combobox', { name: 'Course' }).waitFor();
+      await expect(page.getByRole('combobox', { name: 'Cookbook' })).toHaveCount(0);
+    },
+  },
+  {
+    name: 'recipes, filters open with a cookbook chosen', path: '/recipes', answers: withCookbooks,
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Filters' }).click();
+      await page.getByRole('combobox', { name: 'Cookbook' }).selectOption({ label: 'Weeknight (2)' });
+      await page.getByText('2 recipes match').waitFor();
+      await page.getByRole('heading', { name: 'Weeknight' }).waitFor();
+    },
+  },
+  {
+    name: 'recipes, one cookbook opened from its link', path: `/recipes?cookbook=${data.ids.weeknight}`, answers: withCookbooks,
+    act: (page) => page.getByRole('button', { name: 'Remove filter Weeknight' }).waitFor(),
+  },
+  {
+    name: 'recipes, a cookbook being renamed', path: `/recipes?cookbook=${data.ids.weeknight}`, answers: withCookbooks,
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Rename' }).click();
+      await page.getByRole('textbox', { name: 'Name' }).waitFor();
+    },
+  },
+  {
+    name: 'recipes, a cookbook\'s downloads open', path: `/recipes?cookbook=${data.ids.weeknight}`, answers: withCookbooks,
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Download', exact: true }).click();
+      await page.locator('#cookbook-downloads').getByRole('link', { name: 'Download as PDF' }).waitFor();
+    },
+  },
+  {
     name: 'recipes, one just made a favourite', path: '/recipes',
     act: (page) => page.getByRole('button', { name: 'Favourite Chickpea Curry' }).click()
       .then(() => page.getByRole('button', { name: 'Favourite Chickpea Curry', pressed: true }).waitFor()),
@@ -216,6 +258,10 @@ const VIEWS = [
   { name: 'add a recipe from a link', path: '/recipes/new/link' },
   { name: 'add a recipe by typing it in', path: '/recipes/new/write' },
   { name: 'add recipes from files', path: '/recipes/new/files' },
+  {
+    name: 'add a recipe from a link, with cookbooks to put it in', path: '/recipes/new/link', answers: withCookbooks,
+    act: (page) => page.getByRole('combobox', { name: 'Add to cookbook' }).selectOption({ label: 'Weeknight' }),
+  },
   { name: 'add a recipe from a photo, no AI model', path: '/recipes/new/photo' },
   { name: 'add a recipe from a photo', path: '/recipes/new/photo', answers: { 'GET /api/ai/features': data.aiFeatures() },
     act: (page) => page.getByLabel(/Photos of one recipe/).setInputFiles({ name: 'card.png', mimeType: 'image/png', buffer: data.png })
@@ -277,6 +323,18 @@ const VIEWS = [
     act: (page) => page.getByRole('button', { name: /^Change your review/ }).click(),
   },
   { name: 'editing a recipe', path: `/recipes/${data.ids.tacos}/edit` },
+  {
+    name: 'a recipe in cookbooks', path: `/recipes/${data.ids.tacos}`, answers: withCookbooks,
+    act: (page) => page.getByRole('link', { name: 'Weeknight' }).waitFor(),
+  },
+  {
+    name: 'a recipe\'s cookbooks, before any exist', path: `/recipes/${data.ids.tacos}/cookbooks`,
+    act: (page) => page.getByText('Make the first one here').waitFor(),
+  },
+  {
+    name: 'a recipe\'s cookbooks, choosing which', path: `/recipes/${data.ids.tacos}/cookbooks`, answers: withCookbooks,
+    act: (page) => page.getByRole('checkbox', { name: 'Weeknight' }).waitFor(),
+  },
   { name: 'a recipe\'s photos', path: `/recipes/${data.ids.tacos}/photos` },
   { name: 'cooking mode, gathering the ingredients', path: `/recipes/${data.ids.tacos}/cook` },
   {
@@ -381,6 +439,13 @@ const VIEWS = [
     },
   },
   { name: 'settings: recipe health, every recipe complete', path: '/settings/recipe-health', answers: { 'GET /api/recipes/health': data.recipeHealth(true) } },
+  {
+    name: 'settings: recipe health for one cookbook', path: '/settings/recipe-health', answers: withCookbooks,
+    act: async (page) => {
+      await page.getByRole('combobox', { name: 'Look at' }).selectOption({ label: 'The Weeknight cookbook' });
+      await page.getByText('1 of 2 recipes').waitFor();
+    },
+  },
   { name: 'settings: recipe health, no recipes', path: '/settings/recipe-health',
     answers: { 'GET /api/recipes/health': { recipes: 0, complete: 0, checks: [], duplicates: [], rareTags: [] } } },
   { name: 'settings: plan styles', path: '/settings/styles' },
@@ -392,6 +457,16 @@ const VIEWS = [
         await page.getByRole('button', { name: 'Add a rule' }).click();
         await page.getByRole('combobox', { name: 'what it looks for' }).last().selectOption(match);
       }
+    },
+  },
+  {
+    name: 'settings: a plan style with a cookbook rule', path: '/settings/styles',
+    answers: { 'GET /api/plan-styles': stylesWithCookbooks, 'PUT /api/plan-styles': stylesWithCookbooks },
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Edit Classic week' }).click();
+      await page.getByRole('button', { name: 'Add a rule' }).click();
+      await page.getByRole('combobox', { name: 'what it looks for' }).last().selectOption('Cookbook');
+      await page.getByRole('combobox', { name: 'cookbook' }).last().selectOption({ label: "Grandma's" });
     },
   },
   {

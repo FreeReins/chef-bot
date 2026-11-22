@@ -92,8 +92,13 @@ internal static partial class Mapping
     /// <param name="favouredBy">Who has it as a favourite.</param>
     /// <param name="rating">The average of its reviews, or null when it has none.</param>
     /// <param name="hasSuggestion">True when AI suggestions for it are waiting.</param>
+    /// <param name="cookbookNames">Every cookbook's name, by id, to name the ones it is in.</param>
     public static RecipeResponse ToResponse(
-        this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy, RecipeRating? rating, bool hasSuggestion = false)
+        this Recipe recipe,
+        IReadOnlyList<FavouriteResponse> favouredBy,
+        RecipeRating? rating,
+        bool hasSuggestion = false,
+        IReadOnlyDictionary<Guid, string>? cookbookNames = null)
     {
         var ingredients = recipe.Ingredients.OrderBy(ingredient => ingredient.Position).ToList();
         return new(
@@ -126,15 +131,21 @@ internal static partial class Mapping
             favouredBy,
             rating,
             hasSuggestion,
-            RecipeHealth.Issues(recipe));
+            RecipeHealth.Issues(recipe),
+            CookbooksOf(recipe, cookbookNames));
     }
 
     /// <param name="recipe">The recipe.</param>
     /// <param name="favouredBy">Who has it as a favourite.</param>
     /// <param name="rating">The average of its reviews, or null when it has none.</param>
     /// <param name="hasSuggestion">True when AI suggestions for it are waiting.</param>
+    /// <param name="cookbookNames">Every cookbook's name, by id, to name the ones it is in.</param>
     public static RecipeSummaryResponse ToSummary(
-        this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy, RecipeRating? rating, bool hasSuggestion = false) => new(
+        this Recipe recipe,
+        IReadOnlyList<FavouriteResponse> favouredBy,
+        RecipeRating? rating,
+        bool hasSuggestion = false,
+        IReadOnlyDictionary<Guid, string>? cookbookNames = null) => new(
         recipe.Id,
         recipe.Name,
         recipe.Course,
@@ -144,7 +155,22 @@ internal static partial class Mapping
         recipe.Images.Where(image => image.IsStored).OrderBy(image => image.Position).Select(image => ImageUrl(recipe, image)).FirstOrDefault(),
         favouredBy,
         rating,
-        hasSuggestion);
+        hasSuggestion,
+        CookbooksOf(recipe, cookbookNames));
+
+    /// <summary>The cookbooks a recipe is in, by name, leaving out any that have gone.</summary>
+    public static IReadOnlyList<RecipeCookbookResponse> CookbooksOf(Recipe recipe, IReadOnlyDictionary<Guid, string>? names) =>
+        names is null
+            ? []
+            : recipe.CookbookIds
+                .Where(names.ContainsKey)
+                .Distinct()
+                .Select(id => new RecipeCookbookResponse(id, names[id]))
+                .OrderBy(cookbook => cookbook.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+    public static CookbookResponse ToResponse(this Cookbook cookbook, int recipes) =>
+        new(cookbook.Id, cookbook.Name, cookbook.Description, recipes);
 
     /// <summary>A recipe's reviews as a rating: their average, to one decimal place.</summary>
     public static RecipeRating ToRating(this ReviewTally tally) =>
@@ -306,9 +332,13 @@ internal static partial class Mapping
                     Count = rule.Limit == RuleLimit.None ? 0 : rule.Count,
                     Slot = rule.Slot,
                     Match = rule.Match,
-                    Values = rule.Match is RecipeMatchKind.Tag or RecipeMatchKind.Ingredient
-                        ? (rule.Values ?? []).Select(value => value.Trim()).Where(value => value.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-                        : [],
+                    Values = rule.Match switch
+                    {
+                        RecipeMatchKind.Tag or RecipeMatchKind.Ingredient =>
+                            (rule.Values ?? []).Select(value => value.Trim()).Where(value => value.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                        RecipeMatchKind.Cookbook => (rule.Values ?? []).Select(value => Guid.Parse(value).ToString()).Distinct().ToList(),
+                        _ => [],
+                    },
                     Minutes = rule.Match == RecipeMatchKind.ReadyWithin ? rule.Minutes : null,
                     Day = rule.Day,
                 }).ToList(),

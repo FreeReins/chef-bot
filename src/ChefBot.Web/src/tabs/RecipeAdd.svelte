@@ -1,9 +1,10 @@
 <!-- The Add a recipe dialog over the Recipes tab, with a tab for each way in: from a link, typed in, from a photo, or
      from files. Each tab has its own address, /recipes/new/{link|write|photo|files}; switching tabs replaces it, so closing the dialog
-     and pressing Back returns to wherever it was opened from. -->
+     and pressing Back returns to wherever it was opened from. Once the household has cookbooks, the recipes added can go
+     straight into one. -->
 <script>
   import { tick } from 'svelte';
-  import { app, run, toast, loadRecipes } from '../lib/app.svelte.js';
+  import { app, run, toast, loadRecipes, loadCookbooks } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { go, closeDialog } from '../lib/addresses.js';
   import Modal from '../components/Modal.svelte';
@@ -38,12 +39,16 @@
 
   let link = $state('');
   let reading = $state(false);
+  let cookbooks = $state([]); // CookbookResponse[]; the cookbook choice shows only when there are some
+  let cookbookId = $state(''); // '' for none
+
+  run(async () => { cookbooks = await loadCookbooks(); });
 
   async function addFromLink(event) {
     event.preventDefault();
     reading = true;
     await run(async () => {
-      const { recipe, readWith } = await api('POST', '/api/recipes/import/web', { url: link });
+      const { recipe, readWith } = await api('POST', '/api/recipes/import/web', { url: link, cookbookId: cookbookId || null });
       await loadRecipes();
       link = '';
       toast(`Added ${recipe.name} (read with: ${readWith}). Its photos will appear once they have downloaded.`);
@@ -55,7 +60,7 @@
   async function add(draft) {
     let saved = false;
     await run(async () => {
-      const recipe = await api('POST', '/api/recipes', draft);
+      const recipe = await api('POST', '/api/recipes', { ...draft, cookbookIds: cookbookId ? [cookbookId] : null });
       await loadRecipes();
       saved = true;
       toast(`Added ${recipe.name}.`);
@@ -77,6 +82,14 @@
   {/snippet}
 
   <div bind:this={panel}>
+    {#if cookbooks.length}
+      <label class="into">Add to cookbook
+        <select id="recipe-add-cookbook" bind:value={cookbookId}>
+          <option value="">No cookbook</option>
+          {#each cookbooks as cookbook (cookbook.id)}<option value={cookbook.id}>{cookbook.name}</option>{/each}
+        </select>
+      </label>
+    {/if}
     {#if current === 'link'}
       <form class="link" onsubmit={addFromLink}>
         <label for="recipe-link">Address of a recipe page</label>
@@ -90,10 +103,10 @@
     {:else if current === 'write'}
       <RecipeForm button="Save recipe" save={add} cancel={close} plain />
     {:else if current === 'photo'}
-      <RecipeFromPhoto {close} />
+      <RecipeFromPhoto {close} cookbookId={cookbookId || null} />
     {:else}
       <div class="import">
-        <FileImport />
+        <FileImport cookbookId={cookbookId || null} />
         <div class="row-actions"><button type="button" onclick={close}>Done</button></div>
       </div>
     {/if}
@@ -113,4 +126,5 @@
   .link-row { display: flex; gap: .5rem; }
   .link-row input { flex: 1; min-width: 0; }
   .import .row-actions { justify-content: flex-end; }
+  .into { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
 </style>

@@ -65,7 +65,7 @@ public class RecipeHealthTests
         archived.Tags = ["spicy"];
         core.Recipes.Rows.AddRange([rice, chili, chiliAgain, archived]);
 
-        var health = await core.RecipeManager().GetHealthAsync(default);
+        var health = await core.RecipeManager().GetHealthAsync(null, default);
 
         await Assert.That(health.Recipes).IsEqualTo(3);
         await Assert.That(health.Complete).IsEqualTo(2);

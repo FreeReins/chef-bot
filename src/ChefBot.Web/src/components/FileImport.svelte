@@ -11,8 +11,8 @@
   import Clock from '@lucide/svelte/icons/clock';
   import FileUp from '@lucide/svelte/icons/file-up';
 
-  /** added: how many recipes the files chosen here have added, for the parent to show. */
-  let { added = $bindable(0) } = $props();
+  /** added: how many recipes the files chosen here have added, for the parent to show. cookbookId: a cookbook to put them in. */
+  let { added = $bindable(0), cookbookId = null } = $props();
 
   let files = $state([]); // one row per file chosen: { name, status: 'waiting' | 'importing' | 'done' | 'failed', result?, error? }
   let dragging = $state(false);
@@ -53,7 +53,7 @@
       const [row, file] = queue.shift();
       row.status = 'importing';
       try {
-        row.result = await importFile(file);
+        row.result = await importFile(file, cookbookId);
         added += row.result.added;
         row.status = 'done';
       } catch (error) {

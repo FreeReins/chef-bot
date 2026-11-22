@@ -60,6 +60,8 @@ tables needs a fresh database, with your data brought across in a backup:
   number of servings. Backups from before it restore as they are.
 - **AI models, recipes from photos and recipe suggestions:** added the `AiModels`, `AiRoutes` and
   `RecipeSuggestions` tables. Backups from before it restore as they are, with no AI models set up.
+- **Cookbooks:** added the `Cookbooks` table, and a column on recipes for the cookbooks each one is in. Backups from
+  before it restore as they are, with no cookbooks.
 
 ## Go back to an older version
 

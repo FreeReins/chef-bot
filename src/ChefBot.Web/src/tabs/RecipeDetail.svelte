@@ -2,8 +2,8 @@
      things to do with it, then its ingredients (RecipeIngredients.svelte, scaled to the servings chosen there; ?serves=6
      keeps the choice in the address), steps, notes and reviews (RecipeReviews.svelte). Cooking mode (/recipes/{id}/cook,
      RecipeCook.svelte) opens over the whole screen, and adding it to the plan (/recipes/{id}/plan, RecipeAddToPlan.svelte),
-     editing it (/edit), its photos (/photos, RecipePhotos.svelte) and AI suggestions (/improve, RecipeSuggestions.svelte)
-     in dialogs. The ⋯ menu (RecipeMenu.svelte) has the rest. -->
+     editing it (/edit), its photos (/photos, RecipePhotos.svelte), AI suggestions (/improve, RecipeSuggestions.svelte) and
+     its cookbooks (/cookbooks, RecipeCookbooks.svelte) in dialogs. The ⋯ menu (RecipeMenu.svelte) has the rest. -->
 <script>
   import { onMount, tick } from 'svelte';
   import { app, run, loadRecipes, toast, loadRecipePage, watchRecipe } from '../lib/app.svelte.js';
@@ -23,6 +23,8 @@
   import RecipePhotos from './RecipePhotos.svelte';
   import RecipeAddToPlan from './RecipeAddToPlan.svelte';
   import RecipeSuggestions from './RecipeSuggestions.svelte';
+  import RecipeCookbooks from './RecipeCookbooks.svelte';
+  import BookMarked from '@lucide/svelte/icons/book-marked';
   import Sparkles from '@lucide/svelte/icons/sparkles';
   import CookingPot from '@lucide/svelte/icons/cooking-pot';
   import CalendarPlus from '@lucide/svelte/icons/calendar-plus';
@@ -201,6 +203,11 @@
         {#if recipe.tags.length}
           <ul class="chips tags" aria-label="Tags">{#each recipe.tags as tag (tag)}<li class="chip">#{tag}</li>{/each}</ul>
         {/if}
+        {#if recipe.cookbooks?.length}
+          <ul class="chips tags" aria-label="Cookbooks">
+            {#each recipe.cookbooks as cookbook (cookbook.id)}<li><a class="chip book" href="/recipes?cookbook={cookbook.id}"><BookMarked size={13} aria-hidden="true" />{cookbook.name}</a></li>{/each}
+          </ul>
+        {/if}
       </div>
     </header>
 
@@ -255,6 +262,8 @@
     <RecipePhotos {recipe} onclose={close} onsaved={(saved, photoId) => { show(saved); shownId = photoId; }} />
   {:else if app.recipeDialog === 'improve'}
     <RecipeSuggestions {recipe} onclose={close} onsaved={show} />
+  {:else if app.recipeDialog === 'cookbooks'}
+    <RecipeCookbooks {recipe} onclose={close} onsaved={show} />
   {/if}
 {/if}
 
@@ -294,6 +303,10 @@
   .facts li.scaled { border-color: var(--area-recipes); background: color-mix(in srgb, var(--area-recipes) 9%, var(--panel)); }
   .row-actions { align-items: stretch; }
   .tags { list-style: none; margin: 0; padding: 0; }
+  .tags + .tags { margin-top: .4rem; }
+  /* Links to the library filtered to that cookbook; tall enough to tap. */
+  .book { display: inline-flex; align-items: center; gap: .3rem; min-height: 1.75rem; color: var(--ink); text-decoration: none; }
+  .book:hover { text-decoration: underline; }
 
   /* The jump links only help on narrow screens, where the parts stack; they stay at the top while scrolling. */
   .sections { display: none; }

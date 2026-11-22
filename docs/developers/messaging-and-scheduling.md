@@ -22,6 +22,7 @@ gets a `.v2` identity.
 | `PlanningSettingsChangedHandler` | `PlanningSettingsChanged` | Rebuilds open shopping lists after the advanced settings change |
 | `SecuritySettingsChangedHandler` | `SecuritySettingsChanged` | Applies a changed "Always use HTTPS" to the running server |
 | `GroceryStoresChangedHandler` | `GroceryStoresChanged` | Re-splits open shopping lists between stores |
+| `CookbookRemovedHandler` | `CookbookRemoved` | Takes a deleted cookbook out of the plan styles' cookbook rules, dropping a rule left with none (`IPlanManager.ForgetCookbookAsync`) |
 | `HistoryProjectionHandler` | kitchen events | Writes the food history |
 | `AchievementProgressHandler` | kitchen events | Works out newly earned achievements |
 | `AchievementsUnlockedNotificationHandler` | `AchievementsUnlocked` | Sends the achievement notification |

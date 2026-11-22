@@ -7,7 +7,11 @@ export const LIMITS = [['AtLeast', 'At least'], ['AtMost', 'At most'], ['Exactly
 /** The kinds of meal a rule can count, plural as they read in a rule. '' stands for every kind of meal. */
 export const RULE_SLOTS = [['Dinner', 'dinners'], ['Breakfast', 'breakfasts'], ['Snack', 'snacks'], ['Sweet', 'sweets'], ['Drink', 'drinks'], ['', 'meals of any kind']];
 
-export const MATCHES = [['SlowCooker', 'slow cooker'], ['Tag', 'tagged'], ['Ingredient', 'made with'], ['ReadyWithin', 'ready within'], ['Favourite', "someone's favourite"]];
+export const MATCHES = [['SlowCooker', 'slow cooker'], ['Tag', 'tagged'], ['Ingredient', 'made with'], ['ReadyWithin', 'ready within'], ['Favourite', "someone's favourite"],
+  ['Cookbook', 'in the cookbook']];
+
+/** The kinds of rule to offer: a cookbook rule only once the household has a cookbook, or when the rule is one already. */
+export const matchesFor = (rule, cookbooks) => MATCHES.filter(([key]) => key !== 'Cookbook' || cookbooks?.length || rule.match === 'Cookbook');
 
 /** How much a style leans on favourite recipes, with what each choice means. */
 export const FAVOURITE_LEANS = [
@@ -39,9 +43,17 @@ function either(values) {
   return `${values[0]}, ${values[1]} or ${values.length - 2} more`;
 }
 
-/** What a rule looks for: "slow cooker", "tagged quick", "made with chicken", "ready within 30 minutes". */
-export function matchText(rule) {
+/**
+ * What a rule looks for: "slow cooker", "tagged quick", "made with chicken", "ready within 30 minutes", "in the
+ * Weeknight cookbook". `cookbooks` (RecipeCookbookResponse[]) names the cookbooks a cookbook rule holds by id.
+ */
+export function matchText(rule, cookbooks = []) {
   switch (rule.match) {
+    case 'Cookbook': {
+      const names = (rule.values ?? []).map((id) => (Array.isArray(cookbooks) ? cookbooks : []).find((cookbook) => cookbook.id === id)?.name).filter(Boolean);
+      if (names.length === 0) return 'in a cookbook';
+      return names.length === 1 ? `in the ${names[0]} cookbook` : `in the ${either(names)} cookbooks`;
+    }
     case 'SlowCooker': return 'slow cooker';
     case 'Tag': return `tagged ${either(rule.values ?? [])}`;
     case 'Ingredient': return `made with ${either(rule.values ?? [])}`;
@@ -51,9 +63,9 @@ export function matchText(rule) {
 }
 
 /** A rule as a sentence: "At least 1 dinner slow cooker, on Tuesday", "No meals made with beef". */
-export function ruleText(rule) {
+export function ruleText(rule, cookbooks = []) {
   const slot = RULE_SLOTS.find(([key]) => key === (rule.slot ?? ''))?.[1] ?? 'meals';
-  const what = matchText(rule);
+  const what = matchText(rule, cookbooks);
   if (rule.limit === 'None') return `No ${rule.slot ? slot : 'meals'} ${what}`;
   const limit = LIMITS.find(([key]) => key === rule.limit)?.[1] ?? '';
   const noun = rule.count === 1 ? slot.replace(/s$/, '') : slot;

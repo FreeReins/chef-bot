@@ -24,6 +24,7 @@ internal static partial class EntityMapping
         YieldText = entity.YieldText,
         Notes = entity.Notes,
         Tags = [.. entity.Tags],
+        CookbookIds = [.. entity.CookbookIds],
         Ingredients = entity.Ingredients.OrderBy(i => i.Position).Select(i => new RecipeIngredient
         {
             Id = i.Id,
@@ -64,6 +65,7 @@ internal static partial class EntityMapping
         YieldText = recipe.YieldText,
         Notes = recipe.Notes,
         Tags = [.. recipe.Tags],
+        CookbookIds = [.. recipe.CookbookIds],
         Ingredients = recipe.Ingredients.Select(i => new RecipeIngredientEntity
         {
             Id = i.Id,

@@ -5,8 +5,10 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Known">Starter styles that can be added at any time. Adding one copies it, so it can be changed.</param>
 /// <param name="Tags">The tags used by the household's recipes, for tag rules.</param>
 /// <param name="Ingredients">The catalog's ingredient names, for ingredient rules.</param>
+/// <param name="Cookbooks">The household's cookbooks, for cookbook rules. Empty until someone makes one.</param>
 public sealed record PlanStylesResponse(
     IReadOnlyList<PlanStyleDetails> Styles,
     IReadOnlyList<PlanStyleDetails> Known,
     IReadOnlyList<string> Tags,
-    IReadOnlyList<string> Ingredients);
+    IReadOnlyList<string> Ingredients,
+    IReadOnlyList<RecipeCookbookResponse>? Cookbooks = null);

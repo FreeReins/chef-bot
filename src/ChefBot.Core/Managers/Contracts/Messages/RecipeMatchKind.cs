@@ -20,4 +20,7 @@ public enum RecipeMatchKind
 
     /// <summary>The recipe is at least one person's favourite.</summary>
     Favourite,
+
+    /// <summary>The recipe is in any of the rule's cookbooks, named by id.</summary>
+    Cookbook,
 }

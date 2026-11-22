@@ -38,6 +38,8 @@ internal sealed class RecipeEntity
 
     public List<string> Tags { get; set; } = [];
 
+    public List<Guid> CookbookIds { get; set; } = [];
+
     public List<RecipeIngredientEntity> Ingredients { get; set; } = [];
 
     public List<RecipeImageEntity> Images { get; set; } = [];

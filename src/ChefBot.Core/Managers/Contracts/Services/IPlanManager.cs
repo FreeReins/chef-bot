@@ -41,6 +41,13 @@ public interface IPlanManager
     /// <summary>Refreshes every plan whose week hasn't ended. Run after <see cref="PantryChanged"/>.</summary>
     Task RefreshOpenPlansAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Takes a removed cookbook out of the plan styles' cookbook rules, dropping any rule left without a cookbook.
+    /// Run after <see cref="CookbookRemoved"/>; running it again changes nothing.
+    /// </summary>
+    /// <returns>How many rules were dropped.</returns>
+    Task<int> ForgetCookbookAsync(Guid cookbookId, CancellationToken cancellationToken);
+
     /// <summary>What the plan needs, where each ingredient comes from, and what the pantry holds.</summary>
     Task<IngredientsResponse> GetIngredientsAsync(Guid planId, CancellationToken cancellationToken);
 

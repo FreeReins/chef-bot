@@ -21,6 +21,9 @@ Add more recipes that match, or lower the number in the rule.
 - Ingredient rules match whole words, so "chicken" matches "chicken thighs" but not "chickpeas".
 - Tag rules need the tag on the recipe exactly.
 - "Ready within" rules need the recipe's times filled in.
+- Cookbook rules need enough recipes in that cookbook. See [Cookbooks](../using/recipes.md#cookbooks).
+- A note about recipes "in a cookbook that has been removed" means the rule's cookbook was deleted before the plan
+  was made. ChefBot takes a deleted cookbook out of every rule, so planning the week again clears it.
 
 ## "Some repeats were allowed"
 

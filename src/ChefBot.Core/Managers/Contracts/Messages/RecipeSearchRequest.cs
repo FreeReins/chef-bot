@@ -1,6 +1,6 @@
 namespace ChefBot.Core.Managers.Contracts.Messages;
 
-/// <summary>One page of the recipe library, narrowed by words, course, tags, favourites and time.</summary>
+/// <summary>One page of the recipe library, narrowed by words, course, tags, favourites, time and cookbook.</summary>
 /// <param name="Query">Words that must each appear in a recipe's name, ingredients or tags, in any case. Empty matches every recipe.</param>
 /// <param name="Course">Only recipes of this course; null for all.</param>
 /// <param name="Page">The page wanted, from 1.</param>
@@ -11,6 +11,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="SlowCooker">True for only slow cooker recipes.</param>
 /// <param name="ReadyWithin">Only recipes that say they are ready within this many minutes; null for any time.</param>
 /// <param name="WithSuggestions">True for only recipes with AI suggestions waiting to be looked at.</param>
+/// <param name="Cookbook">Only recipes in this cookbook; null for any.</param>
 public sealed record RecipeSearchRequest(
     string? Query,
     RecipeCourse? Course,
@@ -21,4 +22,5 @@ public sealed record RecipeSearchRequest(
     Guid? FavouredBy = null,
     bool SlowCooker = false,
     int? ReadyWithin = null,
-    bool WithSuggestions = false);
+    bool WithSuggestions = false,
+    Guid? Cookbook = null);

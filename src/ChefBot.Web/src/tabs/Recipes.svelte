@@ -1,8 +1,8 @@
 <!-- The Recipes tab: the library across the full width, as photo cards or a compact list, found a page at a time by
-     words, and under "Filters" by course, favourites, tags, slow cooker, time and waiting AI suggestions. Each recipe has a heart to make it a favourite, and shows its rating and whose favourite it is (RecipeBadges.svelte). Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
+     words, and under "Filters" by course, cookbook (once there are any), favourites, tags, slow cooker, time and waiting AI suggestions. Each recipe has a heart to make it a favourite, and shows its rating and whose favourite it is (RecipeBadges.svelte). Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
 <script>
   import { untrack } from 'svelte';
-  import { app, run, isAdmin, searchParams } from '../lib/app.svelte.js';
+  import { app, run, isAdmin, searchParams, rememberedLayout, rememberLayout } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import Chip from '../components/Chip.svelte';
   import RecipeDetail from './RecipeDetail.svelte';
@@ -16,6 +16,8 @@
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import RecipeDownloads from '../components/RecipeDownloads.svelte';
   import TagFilter from '../components/TagFilter.svelte';
+  import CookbookFilter from '../components/CookbookFilter.svelte';
+  import CookbookHeader from '../components/CookbookHeader.svelte';
   import FavouriteButton from '../components/FavouriteButton.svelte';
   import RecipeBadges from '../components/RecipeBadges.svelte';
   import { possessive } from '../lib/format.js';
@@ -28,34 +30,24 @@
   const TIMES = [15, 30, 45, 60, 90];
   /** How long typing pauses before the search runs, in milliseconds. */
   const TYPING_PAUSE = 250;
-  /** Where this browser remembers whether the library is shown as cards or a list. */
-  const LAYOUT_KEY = 'chefbot.recipes.layout';
 
   let typed = $state('');   // what is in the search box
   let query = $state('');   // what was searched for, once typing paused
   let course = $state('');  // '' for every course
+  let cookbook = $state(''); // '' for any recipe, or a cookbook's id
   let favourites = $state(''); // '' for all recipes, 'mine', 'any', or another person's id
   let tags = $state([]);       // tags a recipe must all have
   let slowCooker = $state(false);
   let withSuggestions = $state(false); // only recipes with AI suggestions waiting
   let readyWithin = $state(''); // minutes as text, '' for any time
   let filtersOpen = $state(false); // whether the filters panel shows
-  let filterChoices = $state({ tags: [], people: [] }); // RecipeFiltersResponse
+  let filterChoices = $state({ tags: [], people: [], cookbooks: [] }); // RecipeFiltersResponse
   let page = $state(1);
   let result = $state(null); // RecipePageResponse for the page shown
   let loading = $state(false); // a newer page is on its way; the one shown stays, dimmed, until it arrives
   let listTop = $state();
-  let layout = $state(remembered());
+  let layout = $state(rememberedLayout());
   let downloadsOpen = $state(false); // whether the "Download all" choices show
-
-  function remembered() {
-    try { return localStorage.getItem(LAYOUT_KEY) === 'list' ? 'list' : 'grid'; } catch { return 'grid'; }
-  }
-
-  function showAs(next) {
-    layout = next;
-    try { localStorage.setItem(LAYOUT_KEY, next); } catch { /* kept for this visit only */ }
-  }
 
   let typingTimer;
   function onType() {
@@ -70,7 +62,7 @@
     if (app.recipeId) return;
     void app.recipesChanged;
     const params = searchParams({ page, pageSize: PAGE_SIZE, query, course, favourites, tags, slowCooker, readyWithin, withSuggestions,
-      me: app.session?.user?.id });
+      cookbook, me: app.session?.user?.id });
     const ticket = ++latest;
     loading = true;
     // run() clears old messages as it starts; untracked, so that doesn't make this effect run again.
@@ -91,9 +83,10 @@
 
   const librarySize = $derived(result?.librarySize ?? app.recipeCount);
   /** How many filters are on, for the Filters button. Each tag counts as one. */
-  const filterCount = $derived((course ? 1 : 0) + (favourites ? 1 : 0) + tags.length + [slowCooker, readyWithin, withSuggestions].filter(Boolean).length);
+  const filterCount = $derived((course ? 1 : 0) + (favourites ? 1 : 0) + tags.length + [slowCooker, readyWithin, withSuggestions, cookbook].filter(Boolean).length);
   const filtering = $derived(query !== '' || filterCount > 0);
   const otherPeople = $derived(filterChoices.people.filter((person) => person.userId !== app.session?.user?.id));
+  const chosenCookbook = $derived(cookbook ? filterChoices.cookbooks?.find((book) => book.id === cookbook) : null);
 
   /** Starts again from the first page after any filter changes. */
   const refilter = () => (page = 1);
@@ -101,13 +94,14 @@
   /** Turns every filter off. The search words stay unless `everything` is true. */
   function clearFilters(everything = false) {
     if (everything) { typed = ''; query = ''; }
-    course = ''; favourites = ''; tags = []; slowCooker = false; readyWithin = ''; withSuggestions = false;
+    course = ''; cookbook = ''; favourites = ''; tags = []; slowCooker = false; readyWithin = ''; withSuggestions = false;
     refilter();
   }
 
   /** The filters that are on, as removable labels under the search while the panel is closed. */
   const activeFilters = $derived([
     ...(course ? [{ key: 'course', label: course, remove: () => { course = ''; refilter(); } }] : []),
+    ...(cookbook ? [{ key: 'cookbook', label: chosenCookbook?.name ?? 'Cookbook', remove: () => { cookbook = ''; refilter(); } }] : []),
     ...(favourites ? [{
       key: 'favourites',
       label: favourites === 'mine' ? 'My favourites' : favourites === 'any' ? "Anyone's favourites"
@@ -187,8 +181,8 @@
             <ChevronDown size={16} class="chevron" />
           </button>
           <div class="segmented layout" role="group" aria-label="Show recipes as">
-            <button type="button" aria-pressed={layout === 'grid'} onclick={() => showAs('grid')}><LayoutGrid size={16} /><span class="label">Cards</span></button>
-            <button type="button" aria-pressed={layout === 'list'} onclick={() => showAs('list')}><List size={16} /><span class="label">List</span></button>
+            <button type="button" aria-pressed={layout === 'grid'} onclick={() => (layout = rememberLayout('grid'))}><LayoutGrid size={16} /><span class="label">Cards</span></button>
+            <button type="button" aria-pressed={layout === 'list'} onclick={() => (layout = rememberLayout('list'))}><List size={16} /><span class="label">List</span></button>
           </div>
         </div>
 
@@ -200,6 +194,7 @@
                 {#each COURSES as name (name)}<option value={name}>{name}</option>{/each}
               </select>
             </label>
+            <CookbookFilter bind:value={cookbook} cookbooks={filterChoices.cookbooks ?? []} onchange={refilter} />
             <label>Favourites
               <select id="recipe-favourites" bind:value={favourites} onchange={refilter}>
                 <option value="">All recipes</option>
@@ -235,6 +230,7 @@
         </p>
       </div>
     {/if}
+    {#if chosenCookbook}<CookbookHeader cookbook={chosenCookbook} onremoved={() => { cookbook = ''; refilter(); }} />{/if}
 
     {#if !result}
       <!-- Until the first page arrives, empty tiles stand where the recipes will go, in the layout chosen. -->

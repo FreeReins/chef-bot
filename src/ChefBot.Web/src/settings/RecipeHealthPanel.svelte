@@ -1,7 +1,8 @@
-<!-- Recipe health: how complete the library is. Checks with recipes to fix open to list them; passing checks share one line. -->
+<!-- Recipe health: how complete the library is. Checks with recipes to fix open to list them; passing checks share one line.
+     Once the household has cookbooks, the report can look at one cookbook's recipes instead of the whole library. -->
 <script>
   import { onMount } from 'svelte';
-  import { app, run, isAdmin, onLive, loadRecipeHealth } from '../lib/app.svelte.js';
+  import { app, run, isAdmin, onLive, loadRecipeHealth, loadCookbooks } from '../lib/app.svelte.js';
   import { RECIPE_ISSUES, listWords, plural } from '../lib/format.js';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import CircleCheck from '@lucide/svelte/icons/circle-check';
@@ -14,12 +15,15 @@
 
   let health = $state(null);
   let showAll = $state({});
+  let cookbooks = $state([]);  // CookbookResponse[]; the cookbook choice shows only when there are some
+  let cookbookId = $state(''); // '' for the whole library
 
-  const load = () => run(async () => { health = await loadRecipeHealth(); });
+  const fetchAll = async () => { [health, cookbooks] = await Promise.all([loadRecipeHealth(cookbookId || null), loadCookbooks()]); };
+  const load = () => run(fetchAll);
   onMount(() => {
     load();
     // A recipe was changed here or on another device: the report follows.
-    return onLive('recipes', async () => { try { health = await loadRecipeHealth(); } catch { /* keep what is shown */ } });
+    return onLive('recipes', async () => { try { await fetchAll(); } catch { /* keep what is shown */ } });
   });
 
   const known = $derived(health?.checks.filter((check) => RECIPE_ISSUES[check.issue]) ?? []);
@@ -31,8 +35,19 @@
 
 <h2>Recipe health</h2>
 
+{#if cookbooks.length || cookbookId}
+  <label class="scope">Look at
+    <select id="health-cookbook" bind:value={cookbookId} onchange={load}>
+      <option value="">The whole library</option>
+      {#each cookbooks as cookbook (cookbook.id)}<option value={cookbook.id}>The {cookbook.name} cookbook</option>{/each}
+    </select>
+  </label>
+{/if}
+
 {#if !health}
   <p class="muted" aria-busy="true">Checking the recipes…</p>
+{:else if health.recipes === 0 && health.cookbook}
+  <p class="muted">The {health.cookbook.name} cookbook has no recipes yet. Add some from a recipe's ⋯ menu.</p>
 {:else if health.recipes === 0}
   <p class="muted">No recipes yet. Once there are some, this shows what each one is missing.</p>
 {:else}
@@ -101,6 +116,7 @@
 {/if}
 
 <style>
+  .scope { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .75rem; }
   h2 { margin-top: 0; }
   h3 { margin: 1.5rem 0 .5rem; font-size: 1.05rem; }
   h4 { margin: .9rem 0 .35rem; font-size: .95rem; }

@@ -42,6 +42,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     public DbSet<RecipeSuggestionEntity> RecipeSuggestions => Set<RecipeSuggestionEntity>();
 
+    public DbSet<CookbookEntity> Cookbooks => Set<CookbookEntity>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<decimal>().HavePrecision(12, 3);
@@ -57,6 +59,7 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
             recipe.HasMany(r => r.Images).WithOne().HasForeignKey(i => i.RecipeId).OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.Entity<RecipeIngredientEntity>().ToTable("RecipeIngredients");
+        modelBuilder.Entity<CookbookEntity>().ToTable("Cookbooks");
         modelBuilder.Entity<RecipeImageEntity>().ToTable("RecipeImages");
         modelBuilder.Entity<RecipeImageDataEntity>(data =>
         {

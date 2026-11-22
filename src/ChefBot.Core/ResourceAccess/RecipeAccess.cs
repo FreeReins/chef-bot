@@ -51,6 +51,11 @@ internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
                 suggestion.RecipeId == recipe.Id && suggestion.Status == RecipeSuggestionStatus.Waiting));
         }
 
+        if (query.CookbookId is Guid cookbookId)
+        {
+            matching = matching.Where(recipe => recipe.CookbookIds.Contains(cookbookId));
+        }
+
         if (query.SlowCooker)
         {
             matching = matching.Where(recipe => recipe.IsSlowCooker);
@@ -97,6 +102,17 @@ internal sealed class RecipeAccess(ChefBotDbContext db) : IRecipeAccess
         (await db.Recipes.AsNoTracking().Where(recipe => !recipe.IsArchived).Select(recipe => recipe.Tags).ToListAsync(cancellationToken))
         .SelectMany(tags => tags)
         .ToList();
+
+    public async Task<Dictionary<Guid, int>> CountActiveByCookbookAsync(CancellationToken cancellationToken) =>
+        (await db.Recipes.AsNoTracking().Where(recipe => !recipe.IsArchived && recipe.CookbookIds.Count > 0)
+            .Select(recipe => recipe.CookbookIds).ToListAsync(cancellationToken))
+        .SelectMany(ids => ids.Distinct())
+        .GroupBy(id => id)
+        .ToDictionary(group => group.Key, group => group.Count());
+
+    public async Task<List<Recipe>> ListInCookbookAsync(Guid cookbookId, CancellationToken cancellationToken) =>
+        (await WithIngredients.Where(recipe => recipe.CookbookIds.Contains(cookbookId)).OrderBy(recipe => recipe.Name).ToListAsync(cancellationToken))
+            .Select(recipe => recipe.ToContract()).ToList();
 
     public Task<int> CountActiveAsync(CancellationToken cancellationToken) =>
         db.Recipes.CountAsync(recipe => !recipe.IsArchived, cancellationToken);

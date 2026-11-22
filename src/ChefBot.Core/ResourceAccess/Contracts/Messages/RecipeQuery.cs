@@ -13,6 +13,7 @@ namespace ChefBot.Core.ResourceAccess.Contracts.Messages;
 /// <param name="SlowCooker">True for only slow cooker recipes.</param>
 /// <param name="ReadyWithin">Only recipes whose total time, or else prep plus cook time, is at most this many minutes.</param>
 /// <param name="WithSuggestions">True for only recipes with AI suggestions waiting to be looked at.</param>
+/// <param name="CookbookId">Only recipes in this cookbook; null for any.</param>
 internal sealed record RecipeQuery(
     IReadOnlyList<string> Words,
     RecipeCourse? Course,
@@ -23,4 +24,5 @@ internal sealed record RecipeQuery(
     Guid? FavouredBy = null,
     bool SlowCooker = false,
     int? ReadyWithin = null,
-    bool WithSuggestions = false);
+    bool WithSuggestions = false,
+    Guid? CookbookId = null);

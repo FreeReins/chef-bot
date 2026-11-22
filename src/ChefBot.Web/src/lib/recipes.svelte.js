@@ -34,13 +34,15 @@ export const watchRecipe = (id, base, show) => onLive('recipes', async () => {
   try { show(await api('GET', `/api/recipes/${id}`)); } catch { /* gone or offline: keep what is shown */ }
 });
 /**
- * Imports one recipe file. A .zip, such as a Mealie backup, is sent as it is so its photos come too; other files are
- * sent as text. Returns what happened: { added, alreadyInLibrary, skipped, photosAdded }.
+ * Imports one recipe file, putting what it adds in the cookbook with id `cookbookId` when one is given. A .zip, such
+ * as a Mealie backup, is sent as it is so its photos come too; other files are sent as text. Returns what happened:
+ * { added, alreadyInLibrary, skipped, photosAdded }.
  */
-export async function importFile(file) {
+export async function importFile(file, cookbookId = null) {
+  const into = cookbookId ? `&cookbook=${encodeURIComponent(cookbookId)}` : '';
   const result = file.name.toLowerCase().endsWith('.zip')
-    ? await upload(`/api/recipes/import/archive?fileName=${encodeURIComponent(file.name)}`, file, 'application/zip')
-    : await api('POST', '/api/recipes/import/file', { fileName: file.name, content: await file.text() });
+    ? await upload(`/api/recipes/import/archive?fileName=${encodeURIComponent(file.name)}${into}`, file, 'application/zip')
+    : await api('POST', '/api/recipes/import/file', { fileName: file.name, content: await file.text(), cookbookId: cookbookId || null });
   await loadRecipes();
   return result;
 }
@@ -52,9 +54,10 @@ export async function loadFileFormats() {
 
 /**
  * The query for one page of the library search (GET /api/recipes/search), from the Recipes tab's search and filters.
- * favourites is '' for all recipes, 'mine' (the signed-in person, `me`), 'any', or another person's id.
+ * favourites is '' for all recipes, 'mine' (the signed-in person, `me`), 'any', or another person's id; cookbook is
+ * '' for any recipe or a cookbook's id.
  */
-export function searchParams({ page, pageSize, query, course, favourites, tags, slowCooker, readyWithin, withSuggestions, me }) {
+export function searchParams({ page, pageSize, query, course, favourites, tags, slowCooker, readyWithin, withSuggestions, cookbook, me }) {
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (query) params.set('query', query);
   if (course) params.set('course', course);
@@ -64,8 +67,27 @@ export function searchParams({ page, pageSize, query, course, favourites, tags, 
   if (slowCooker) params.set('slowCooker', 'true');
   if (withSuggestions) params.set('withSuggestions', 'true');
   if (readyWithin) params.set('readyWithin', readyWithin);
+  if (cookbook) params.set('cookbook', cookbook);
   return params;
 }
 
-/** The Recipe health report: what recipes are missing, recipes that share a name, and tags only one recipe uses. */
-export const loadRecipeHealth = () => api('GET', '/api/recipes/health');
+/**
+ * The Recipe health report: what recipes are missing, recipes that share a name, and tags only one recipe uses. With
+ * a cookbook's id, only the recipes in that cookbook.
+ */
+export const loadRecipeHealth = (cookbookId = null) =>
+  api('GET', cookbookId ? `/api/recipes/health?cookbook=${encodeURIComponent(cookbookId)}` : '/api/recipes/health');
+
+/** Where this browser remembers whether the library is shown as cards or a list. */
+const LAYOUT_KEY = 'chefbot.recipes.layout';
+
+/** How this browser last showed the library: 'grid' (cards) or 'list'. */
+export function rememberedLayout() {
+  try { return localStorage.getItem(LAYOUT_KEY) === 'list' ? 'list' : 'grid'; } catch { return 'grid'; }
+}
+
+/** Remembers how the library is shown, and returns it. */
+export function rememberLayout(layout) {
+  try { localStorage.setItem(LAYOUT_KEY, layout); } catch { /* kept for this visit only */ }
+  return layout;
+}

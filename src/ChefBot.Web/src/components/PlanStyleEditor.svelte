@@ -4,7 +4,7 @@
 <script>
   import { app } from '../lib/app.svelte.js';
   import { DAYS } from '../lib/format.js';
-  import { LIMITS, RULE_SLOTS, MATCHES, FAVOURITE_LEANS, newRule, newStyle, copyStyle, ruleText, styleSummary } from '../lib/styles.js';
+  import { LIMITS, RULE_SLOTS, matchesFor, FAVOURITE_LEANS, newRule, newStyle, copyStyle, ruleText, styleSummary } from '../lib/styles.js';
   import Chip from './Chip.svelte';
   import Trash2 from '@lucide/svelte/icons/trash-2';
   import Plus from '@lucide/svelte/icons/plus';
@@ -62,7 +62,11 @@
     if (slot !== 'Dinner') rule.day = null;
   }
 
+  const cookbooks = $derived(app.styles?.cookbooks ?? []);
+
   function setMatch(rule, match) {
+    // Tags and ingredients are words; a cookbook rule holds a cookbook's id. Neither carries over to the other.
+    if ((match === 'Cookbook') !== (rule.match === 'Cookbook')) rule.values = match === 'Cookbook' && cookbooks.length ? [cookbooks[0].id] : [];
     rule.match = match;
     if (match === 'ReadyWithin' && !rule.minutes) rule.minutes = 30;
   }
@@ -88,7 +92,7 @@
           <div>
             <strong>{style.name || 'New style'}</strong>
             {#if style.isDefault}<Chip tone="good">Default</Chip>{/if}
-            <p class="muted summary">{[styleSummary(style), ...style.rules.map(ruleText)].join(' · ')}</p>
+            <p class="muted summary">{[styleSummary(style), ...style.rules.map((rule) => ruleText(rule, cookbooks))].join(' · ')}</p>
           </div>
           <div class="row-actions">
             {#if !style.isDefault}
@@ -161,13 +165,18 @@
                     {#each RULE_SLOTS as [key, label] (key)}<option value={key}>{label}</option>{/each}
                   </select>
                   <select aria-label="Rule {ruleIndex + 1}: what it looks for" value={rule.match} onchange={(event) => setMatch(rule, event.currentTarget.value)}>
-                    {#each MATCHES as [key, label] (key)}<option value={key}>{label}</option>{/each}
+                    {#each matchesFor(rule, cookbooks) as [key, label] (key)}<option value={key}>{label}</option>{/each}
                   </select>
                   {#if rule.match === 'Tag' || rule.match === 'Ingredient'}
                     <input class="values" list={rule.match === 'Tag' ? 'style-tags' : 'style-ingredients'}
                            aria-label="Rule {ruleIndex + 1}: {rule.match === 'Tag' ? 'tags' : 'ingredients'}, separated by commas"
                            placeholder={rule.match === 'Tag' ? 'quick, family favorite' : 'chicken, beef'}
                            value={(rule.values ?? []).join(', ')} onchange={(event) => setValues(rule, event.currentTarget.value)}>
+                  {:else if rule.match === 'Cookbook'}
+                    <select aria-label="Rule {ruleIndex + 1}: cookbook" value={rule.values?.[0] ?? ''} onchange={(event) => (rule.values = [event.currentTarget.value])}>
+                      {#if !cookbooks.some((cookbook) => cookbook.id === rule.values?.[0])}<option value="" disabled>Choose a cookbook</option>{/if}
+                      {#each cookbooks as cookbook (cookbook.id)}<option value={cookbook.id}>{cookbook.name}</option>{/each}
+                    </select>
                   {:else if rule.match === 'ReadyWithin'}
                     <span class="minutes">
                       <input type="number" min="1" max="600" step="5" aria-label="Rule {ruleIndex + 1}: minutes" bind:value={rule.minutes}> minutes

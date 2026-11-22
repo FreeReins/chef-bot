@@ -20,6 +20,7 @@ internal sealed partial class RecipeManager(
     IFavouriteAccess favourites,
     IReviewAccess reviews,
     IRecipeSuggestionAccess suggestions,
+    ICookbookAccess cookbooks,
     IAchievementAccess unlocks,
     IAccountAccess accounts,
     IPlanAccess plans,
@@ -42,7 +43,8 @@ internal sealed partial class RecipeManager(
         var favoured = await FavouredByAsync(library, cancellationToken);
         var rated = await RatedAsync(library, cancellationToken);
         var suggested = await SuggestedAsync(library, cancellationToken);
-        return library.Select(recipe => recipe.ToResponse(favoured(recipe), rated(recipe), suggested(recipe))).ToList();
+        var names = await CookbookNamesAsync(cancellationToken);
+        return library.Select(recipe => recipe.ToResponse(favoured(recipe), rated(recipe), suggested(recipe), names)).ToList();
     }
 
     public async Task<RecipePageResponse> SearchAsync(RecipeSearchRequest request, CancellationToken cancellationToken)
@@ -60,15 +62,17 @@ internal sealed partial class RecipeManager(
             request.FavouredBy,
             request.SlowCooker,
             request.ReadyWithin is > 0 ? request.ReadyWithin : null,
-            request.WithSuggestions);
+            request.WithSuggestions,
+            request.Cookbook);
 
         var found = await recipes.SearchActiveAsync(query, cancellationToken);
         var librarySize = await recipes.CountActiveAsync(cancellationToken);
         var favoured = await FavouredByAsync(found.Recipes, cancellationToken);
         var rated = await RatedAsync(found.Recipes, cancellationToken);
         var suggested = await SuggestedAsync(found.Recipes, cancellationToken);
+        var names = await CookbookNamesAsync(cancellationToken);
         return new RecipePageResponse(
-            found.Recipes.Select(recipe => recipe.ToSummary(favoured(recipe), rated(recipe), suggested(recipe))).ToList(),
+            found.Recipes.Select(recipe => recipe.ToSummary(favoured(recipe), rated(recipe), suggested(recipe), names)).ToList(),
             found.Total,
             page,
             pageSize,
@@ -90,7 +94,7 @@ internal sealed partial class RecipeManager(
         var people = (await favourites.ListPeopleAsync(cancellationToken))
             .Select(person => new FavouriteResponse(person.UserId, person.Name))
             .ToList();
-        return new RecipeFiltersResponse(tags, people);
+        return new RecipeFiltersResponse(tags, people, await ListCookbooksAsync(cancellationToken));
     }
 
     public async Task<RecipeResponse> GetAsync(Guid id, CancellationToken cancellationToken) =>
@@ -110,10 +114,11 @@ internal sealed partial class RecipeManager(
 
         var recipe = new Recipe();
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
+        recipe.CookbookIds = draft.CookbookIds is null ? [] : await validation.CookbookIdsAsync(draft.CookbookIds, cancellationToken);
         await recipes.SaveAsync(recipe, cancellationToken);
         await messages.PublishAsync(Added([recipe.Id]));
         await messages.CommitAsync(cancellationToken);
-        return recipe.ToResponse([], null);
+        return recipe.ToResponse([], null, cookbookNames: await CookbookNamesAsync(cancellationToken));
     }
 
     public async Task<RecipeResponse> UpdateAsync(Guid id, RecipeDraft draft, CancellationToken cancellationToken)
@@ -123,6 +128,7 @@ internal sealed partial class RecipeManager(
         ValidationEngine.Recipe(text);
 
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
+        recipe.CookbookIds = draft.CookbookIds is null ? recipe.CookbookIds : await validation.CookbookIdsAsync(draft.CookbookIds, cancellationToken);
         await recipes.SaveAsync(recipe, cancellationToken);
         await messages.PublishAsync(new RecipeChanged(recipe.Id));
         await messages.CommitAsync(cancellationToken);
@@ -210,13 +216,15 @@ internal sealed partial class RecipeManager(
 
     public async Task<FileImportResult> ImportFileAsync(ImportFileRequest request, CancellationToken cancellationToken)
     {
+        var cookbookIds = await ImportCookbookAsync(request.CookbookId, cancellationToken);
         var file = transformation.ReadFile(request.FileName ?? string.Empty, request.Content ?? string.Empty, await WordsAsync(cancellationToken));
-        var added = await AddNewAsync(file.Recipes, cancellationToken);
+        var added = (await AddNewAsync(file.Recipes, new Dictionary<string, byte[]>(), cookbookIds, cancellationToken)).Added;
         return new FileImportResult(added, file.Recipes.Count - added, file.Skipped);
     }
 
-    public async Task<FileImportResult> ImportArchiveAsync(string fileName, Stream archive, CancellationToken cancellationToken)
+    public async Task<FileImportResult> ImportArchiveAsync(string fileName, Stream archive, Guid? cookbookId, CancellationToken cancellationToken)
     {
+        var cookbookIds = await ImportCookbookAsync(cookbookId, cancellationToken);
         var file = transformation.ReadArchive(fileName ?? string.Empty, archive, await WordsAsync(cancellationToken));
         var photos = file.Photos ?? new Dictionary<string, byte[]>();
 
@@ -234,7 +242,7 @@ internal sealed partial class RecipeManager(
             }
         }
 
-        var (added, newPhotos) = await AddNewAsync(file.Recipes, photos, cancellationToken);
+        var (added, newPhotos) = await AddNewAsync(file.Recipes, photos, cookbookIds, cancellationToken);
         return new FileImportResult(added, file.Recipes.Count - added, file.Skipped, photosAdded + newPhotos);
     }
 
@@ -245,6 +253,7 @@ internal sealed partial class RecipeManager(
     public async Task<WebImportResponse> ImportFromWebAsync(WebRecipeRequest request, CancellationToken cancellationToken)
     {
         var url = ValidationEngine.RecipePageAddress(request.Url);
+        var cookbookIds = await ImportCookbookAsync(request.CookbookId, cancellationToken);
         var library = await recipes.ListAllPlainAsync(cancellationToken);
         ValidationEngine.PageNotInLibrary(TransformationEngine.SourceAddress(url), library);
 
@@ -254,13 +263,13 @@ internal sealed partial class RecipeManager(
         ValidationEngine.Recipe(text);
         ValidationEngine.NameNotInLibrary(text, library);
 
-        var recipe = new Recipe();
+        var recipe = new Recipe { CookbookIds = cookbookIds };
         transformation.ApplyText(text, recipe, clock.GetUtcNow());
         await recipes.SaveAsync(recipe, cancellationToken);
         await RequestImagesAsync(recipe);
         await messages.PublishAsync(Added([recipe.Id]));
         await messages.CommitAsync(cancellationToken);
-        return new WebImportResponse(recipe.ToResponse([], null), reader.Name);
+        return new WebImportResponse(recipe.ToResponse([], null, cookbookNames: await CookbookNamesAsync(cancellationToken)), reader.Name);
     }
 
     public async Task<IReadOnlyList<SampleRecipeResponse>> GetSamplesAsync(CancellationToken cancellationToken)
@@ -292,14 +301,17 @@ internal sealed partial class RecipeManager(
     /// <summary>Adds the recipes whose names aren't in the library yet.</summary>
     /// <returns>How many were added.</returns>
     private async Task<int> AddNewAsync(IReadOnlyList<RecipeText> candidates, CancellationToken cancellationToken) =>
-        (await AddNewAsync(candidates, new Dictionary<string, byte[]>(), cancellationToken)).Added;
+        (await AddNewAsync(candidates, new Dictionary<string, byte[]>(), [], cancellationToken)).Added;
 
     /// <summary>
     /// Adds the recipes not in the library yet, with their photo from <paramref name="photos"/> (by recipe name) when
-    /// it is one ChefBot can show, and commits. Returns how many recipes and photos were added.
+    /// it is one ChefBot can show, in the cookbooks given, and commits. Returns how many recipes and photos were added.
     /// </summary>
     private async Task<(int Added, int Photos)> AddNewAsync(
-        IReadOnlyList<RecipeText> candidates, IReadOnlyDictionary<string, byte[]> photos, CancellationToken cancellationToken)
+        IReadOnlyList<RecipeText> candidates,
+        IReadOnlyDictionary<string, byte[]> photos,
+        IReadOnlyList<Guid> cookbookIds,
+        CancellationToken cancellationToken)
     {
         var fresh = transformation.NotYetInLibrary(candidates, await recipes.ListAllPlainAsync(cancellationToken));
         var photosAdded = 0;
@@ -307,7 +319,7 @@ internal sealed partial class RecipeManager(
         foreach (var text in fresh)
         {
             ValidationEngine.Recipe(text);
-            var recipe = new Recipe();
+            var recipe = new Recipe { CookbookIds = [.. cookbookIds] };
             transformation.ApplyText(text, recipe, clock.GetUtcNow());
             var photo = photos.TryGetValue(recipe.Name, out var data) ? PhotoFile(recipe, data) : null;
             await recipes.SaveAsync(recipe, cancellationToken);
@@ -367,7 +379,8 @@ internal sealed partial class RecipeManager(
     private async Task<RecipeResponse> ResponseAsync(Recipe recipe, CancellationToken cancellationToken) => recipe.ToResponse(
         (await FavouredByAsync([recipe], cancellationToken))(recipe),
         (await RatedAsync([recipe], cancellationToken))(recipe),
-        (await SuggestedAsync([recipe], cancellationToken))(recipe));
+        (await SuggestedAsync([recipe], cancellationToken))(recipe),
+        await CookbookNamesAsync(cancellationToken));
 
     /// <summary>A recipe that can be planned.</summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>

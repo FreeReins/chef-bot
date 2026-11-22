@@ -79,6 +79,9 @@ internal sealed partial class BackupAccess
 
         // What AI models suggested recipes are missing. Empty in backups made before ChefBot could suggest them.
         new BackupTable<RecipeSuggestionEntity>("recipeSuggestions", BackupJson.Default.ListRecipeSuggestionEntity),
+
+        // The cookbooks; each recipe lists the ones it is in. Empty in backups made before cookbooks.
+        new BackupTable<CookbookEntity>("cookbooks", BackupJson.Default.ListCookbookEntity),
     ];
 
     /// <summary>A planned meal points at its recipe by id; the recipe itself is written once, under recipes.

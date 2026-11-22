@@ -1,5 +1,5 @@
-// What a recipe's page does that axe can't see: scaling its amounts, and adding it to the plan.
-import { test, expect, open } from './fixtures.js';
+// What a recipe's page does that axe can't see: scaling its amounts, adding it to the plan, and its cookbooks.
+import { test, expect, open, library } from './fixtures.js';
 import * as data from './data.js';
 
 const tacos = `/recipes/${data.ids.tacos}`;
@@ -65,4 +65,30 @@ test('replacing a meal from a recipe page names the meal it replaces', async ({ 
 
   await expect(dialog).toBeHidden();
   expect(sent).toMatchObject({ servings: null, replaces: week.meals[2].id });
+});
+
+test('the first cookbook is made from a recipe, and ticking cookbooks puts it in or takes it out', async ({ page, api }) => {
+  const made = { id: data.ids.weeknight, name: 'Weeknight', description: null, recipes: 0 };
+  const sent = [];
+  api.set({
+    'POST /api/cookbooks': (request) => { sent.push(['made', request.postDataJSON().name]); return made; },
+    'POST /api/cookbooks/*/recipes': (request) => { sent.push(['added', request.postDataJSON().recipeIds]); return { ...made, recipes: 1 }; },
+    'DELETE /api/cookbooks/*/recipes/*': () => { sent.push(['removed']); return made; },
+  });
+  await open(page, tacos);
+  await page.getByRole('button', { name: 'More actions for Slaw Fish Tacos' }).click();
+  await page.getByRole('link', { name: 'Add to cookbook' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Cookbooks for Slaw Fish Tacos' });
+  await expect(dialog).toContainText('Make the first one here');
+
+  // Once it exists, the cookbook list answers with it.
+  api.set({ ...library(data.recipes(), [made]) });
+  await dialog.getByRole('textbox', { name: 'New cookbook' }).fill('Weeknight');
+  await dialog.getByRole('button', { name: 'Make and add' }).click();
+  const box = dialog.getByRole('checkbox', { name: 'Weeknight' });
+  await expect(box).toBeChecked();
+  await box.uncheck();
+  await expect(box).not.toBeChecked();
+
+  expect(sent).toEqual([['made', 'Weeknight'], ['added', [data.ids.tacos]], ['removed']]);
 });

@@ -37,6 +37,7 @@ internal sealed class FakeRecipes : IRecipeAccess
                 || Favourites().Any(favourite => favourite.RecipeId == r.Id && (query.FavouredBy is null || favourite.UserId == query.FavouredBy)))
             .Where(r => !query.WithSuggestions
                 || Suggestions().Any(suggestion => suggestion.RecipeId == r.Id && suggestion.Status == RecipeSuggestionStatus.Waiting))
+            .Where(r => query.CookbookId is not Guid cookbookId || r.CookbookIds.Contains(cookbookId))
             .Where(r => !query.SlowCooker || r.IsSlowCooker)
             .Where(r => query.ReadyWithin is not int within || RecipeMatcher.MinutesOf(r) is int minutes && minutes <= within)
             .OrderBy(r => r.Course)
@@ -49,6 +50,12 @@ internal sealed class FakeRecipes : IRecipeAccess
 
     public Task<List<string>> ListActiveTagsAsync(CancellationToken cancellationToken) =>
         Task.FromResult(Rows.Where(r => !r.IsArchived).SelectMany(r => r.Tags).ToList());
+
+    public Task<Dictionary<Guid, int>> CountActiveByCookbookAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(Rows.Where(r => !r.IsArchived).SelectMany(r => r.CookbookIds.Distinct()).GroupBy(id => id).ToDictionary(group => group.Key, group => group.Count()));
+
+    public Task<List<Recipe>> ListInCookbookAsync(Guid cookbookId, CancellationToken cancellationToken) =>
+        Task.FromResult(Rows.Where(r => r.CookbookIds.Contains(cookbookId)).OrderBy(r => r.Name).Select(Copies.Of).ToList());
 
     public Task<int> CountActiveAsync(CancellationToken cancellationToken) => Task.FromResult(Rows.Count(r => !r.IsArchived));
 

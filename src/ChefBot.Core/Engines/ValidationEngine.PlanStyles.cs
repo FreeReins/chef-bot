@@ -114,6 +114,11 @@ internal sealed partial class ValidationEngine
             throw new RuleViolationException($"{name} has a rule that needs at least one {what}. Type one, or remove the rule.");
         }
 
+        if (rule.Match == RecipeMatchKind.Cookbook && ((rule.Values ?? []).Count == 0 || !(rule.Values ?? []).All(value => Guid.TryParse(value, out _))))
+        {
+            throw new RuleViolationException($"{name} has a cookbook rule without a cookbook. Choose one, or remove the rule.");
+        }
+
         if (rule.Match == RecipeMatchKind.ReadyWithin && rule.Minutes is not (> 0 and <= MaxRuleMinutes))
         {
             throw new RuleViolationException($"{name} has a time rule without a sensible number of minutes. Use a number from 1 to {MaxRuleMinutes}.");

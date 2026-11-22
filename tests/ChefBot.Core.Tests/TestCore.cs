@@ -62,6 +62,8 @@ internal sealed class TestCore
 
     public FakeRecipeSuggestions Suggestions { get; } = new();
 
+    public FakeCookbooks Cookbooks { get; } = new();
+
     public FakeMessages Messages { get; } = new();
 
     public FakeKnownStores KnownStores { get; } = new();
@@ -82,8 +84,8 @@ internal sealed class TestCore
 
     /// <summary>
     /// Does what the background handlers do in the app with the events published since the last call: writes the
-    /// food history, brings the open plans in line after a pantry, store or settings change, and a plan's shopping list
-    /// in line after a recipe is added to it.
+    /// food history, brings the open plans in line after a pantry, store or settings change, a plan's shopping list
+    /// in line after a recipe is added to it, and the plan styles in line after a cookbook is removed.
     /// </summary>
     public async Task HandleEventsAsync()
     {
@@ -99,6 +101,9 @@ internal sealed class TestCore
                     break;
                 case MealAdded added:
                     await PlanManager().CatchUpAsync(added.PlanId, default);
+                    break;
+                case CookbookRemoved removed:
+                    await PlanManager().ForgetCookbookAsync(removed.CookbookId, default);
                     break;
             }
         }
@@ -129,6 +134,7 @@ internal sealed class TestCore
         services.AddSingleton<IToDoListAccess>(ToDoLists);
         services.AddSingleton<IAiAccess>(Ai);
         services.AddSingleton<IRecipeSuggestionAccess>(Suggestions);
+        services.AddSingleton<ICookbookAccess>(Cookbooks);
         services.AddSingleton<IMessageAccess>(Messages);
         services.AddSingleton<IKnownStoreAccess>(KnownStores);
         services.AddSingleton<IKnownPlanStyleAccess>(KnownStyles);

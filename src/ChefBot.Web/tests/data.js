@@ -13,6 +13,8 @@ const ids = {
   granola: '00000000-0000-4000-8000-0000000000b4',
   crumble: '00000000-0000-4000-8000-0000000000b5',
   curry: '00000000-0000-4000-8000-0000000000b6',
+  weeknight: '00000000-0000-4000-8000-0000000000d1',
+  grandmas: '00000000-0000-4000-8000-0000000000d2',
 };
 export { ids };
 
@@ -124,6 +126,7 @@ export const planStyles = () => {
     ],
     tags: ['fish', 'quick'],
     ingredients: ['beef', 'cabbage', 'chicken', 'eggs', 'pork'],
+    cookbooks: [],
   };
 };
 
@@ -186,7 +189,8 @@ export const ingredients = () => {
 const recipe = (id, name, course, extra = {}) => ({
   id, name, course, isSlowCooker: false, servings: 4, ingredients: ['oats', 'milk'],
   description: null, instructions: [], prepMinutes: null, cookMinutes: null, totalMinutes: null, sourceUrl: null,
-  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], stepDetails: [], favouredBy: [], rating: null, issues: [], ...extra,
+  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], stepDetails: [], favouredBy: [], rating: null, issues: [],
+  cookbooks: [], ...extra,
 });
 
 /** RecipeResponse[]: the first has everything filled in, for the recipe page. */
@@ -232,6 +236,19 @@ export const recipes = () => [
   recipe(ids.granola, 'Maple Granola', 'Snack', { ingredients: ['oats', 'maple syrup'] }),
   recipe(ids.crumble, 'Pear and Ginger Crumble', 'Sweet', { ingredients: ['pears', 'ginger', 'butter'] }),
 ];
+
+/** CookbookResponse[] without their counts, which library() works out: the household's two cookbooks. */
+export const cookbooks = () => [
+  { id: ids.weeknight, name: 'Weeknight', description: 'Quick dinners for busy evenings.' },
+  { id: ids.grandmas, name: "Grandma's", description: null },
+];
+
+/** RecipeResponse[]: the usual recipes, with the tacos and the curry in the Weeknight cookbook and the crumble in Grandma's. */
+export const recipesInCookbooks = () => {
+  const [weeknight, grandmas] = cookbooks().map(({ id, name }) => ({ id, name }));
+  const into = { [ids.tacos]: [weeknight], [ids.curry]: [weeknight], [ids.crumble]: [grandmas] };
+  return recipes().map((recipe) => ({ ...recipe, cookbooks: into[recipe.id] ?? [] }));
+};
 
 /** RecipeResponse[]: the usual recipes, then numbered ones up to `count` in all, so the library runs to several pages. */
 export const manyRecipes = (count) => {
@@ -560,8 +577,9 @@ const HEALTH_ISSUES = ['NoPhoto', 'NoDescription', 'NoTimes', 'NoTags', 'ThinSte
 
 /** RecipeHealthResponse: a library with gaps, a pair of recipes that share a name and a tag only one recipe uses; or all complete. */
 export const recipeHealth = (complete = false) => (complete ? {
-  recipes: 6, complete: 6, checks: HEALTH_ISSUES.map((issue) => ({ issue, recipes: [] })), duplicates: [], rareTags: [],
+  recipes: 6, complete: 6, checks: HEALTH_ISSUES.map((issue) => ({ issue, recipes: [] })), duplicates: [], rareTags: [], cookbook: null,
 } : {
+  cookbook: null,
   recipes: 26, complete: 1,
   checks: HEALTH_ISSUES.map((issue) => ({
     issue,
@@ -575,4 +593,13 @@ export const recipeHealth = (complete = false) => (complete ? {
   })),
   duplicates: [{ recipes: [ref(ids.oats, 'Overnight Oats'), ref('00000000-0000-4000-8000-0000000000c1', 'overnight oats!')] }],
   rareTags: [{ tag: 'veggie', recipe: ref(ids.curry, 'Chickpea Curry') }],
+});
+
+/** RecipeHealthResponse for the Weeknight cookbook's two recipes: the curry is missing things, the tacos are complete. */
+export const weeknightHealth = () => ({
+  recipes: 2, complete: 1, cookbook: ref(ids.weeknight, 'Weeknight'),
+  checks: HEALTH_ISSUES.map((issue) => ({
+    issue, recipes: ['NoPhoto', 'NoDescription', 'ThinSteps', 'MissingAmounts'].includes(issue) ? [ref(ids.curry, 'Chickpea Curry')] : [],
+  })),
+  duplicates: [], rareTags: [],
 });

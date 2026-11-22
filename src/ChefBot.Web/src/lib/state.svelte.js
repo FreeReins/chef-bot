@@ -24,7 +24,8 @@ export const app = $state({
   people: { users: [], links: [], newLink: null },
   tab: 'plan',         // the open tab; the address bar says which (see addresses.js)
   recipeId: null,      // the recipe shown on its own page, from /recipes/{id}
-  recipeDialog: null,  // the Recipes dialog open: new-link | new-write | new-photo | new-files (/recipes/new/...) or edit | photos | cook | plan | improve (/recipes/{id}/...)
+  recipeDialog: null,  // the Recipes dialog open: new-link | new-write | new-photo | new-files (/recipes/new/...) or edit | photos | cook | plan | improve | cookbooks (/recipes/{id}/...)
+  recipeCookbook: null, // a cookbook's id from /recipes?cookbook={id}, until the Recipes tab filters by it
   settingsSection: 'login', // which Settings sidebar item is open
   plans: [],           // PlanSummaryResponse[]: the weeks with a plan that haven't ended, earliest first
   plan: null,          // PlanResponse for the week being looked at (one of plans), or null when nothing is planned

@@ -280,15 +280,15 @@ internal sealed partial class PlanningEngine(IngredientCatalog catalog, PlannerO
             else if (matching.Count < wantMatching)
             {
                 run.Warnings.Add(matching.Count + Math.Min(keptMatching, count) == 0
-                    ? $"No {RecipeMatcher.Plural(slot)} could be {RecipeMatcher.Describe(rule)}, as there are no such recipes yet. Add some, or change the plan style."
-                    : $"Only {matching.Count + keptMatching} of {count} {RecipeMatcher.Plural(slot)} could be {RecipeMatcher.Describe(rule)}, as there aren't enough such recipes. Add some, or change the plan style.");
+                    ? $"No {RecipeMatcher.Plural(slot)} could be {RecipeMatcher.Describe(rule, run.Request.CookbookNames)}, as there are no such recipes yet. Add some, or change the plan style."
+                    : $"Only {matching.Count + keptMatching} of {count} {RecipeMatcher.Plural(slot)} could be {RecipeMatcher.Describe(rule, run.Request.CookbookNames)}, as there aren't enough such recipes. Add some, or change the plan style.");
             }
 
             var rest = open.Where(key => !matching.Contains(key)).ToList();
             var other = Reserve(run, rest, filters, pool, rule, matches: false, rule.Limit == RuleLimit.Exactly ? rest.Count : wantOther, dayOf);
             if (other.Count < Math.Min(wantOther, rest.Count))
             {
-                run.Warnings.Add($"There weren't enough recipes that aren't {RecipeMatcher.Describe(rule)}, so some {RecipeMatcher.Plural(slot)} are. Add some, or change the plan style.");
+                run.Warnings.Add($"There weren't enough recipes that aren't {RecipeMatcher.Describe(rule, run.Request.CookbookNames)}, so some {RecipeMatcher.Plural(slot)} are. Add some, or change the plan style.");
             }
         }
 
@@ -312,7 +312,7 @@ internal sealed partial class PlanningEngine(IngredientCatalog catalog, PlannerO
                 list.RemoveAll(filter => filter.Rule == relaxed);
             }
 
-            run.Warnings.Add($"The rule for {RecipeMatcher.Plural(slot)} {RecipeMatcher.Describe(relaxed)} couldn't be met with the recipes there are, so it was relaxed this week.");
+            run.Warnings.Add($"The rule for {RecipeMatcher.Plural(slot)} {RecipeMatcher.Describe(relaxed, run.Request.CookbookNames)} couldn't be met with the recipes there are, so it was relaxed this week.");
         }
     }
 
