@@ -128,9 +128,11 @@ internal sealed partial class IngredientCatalog
                 continue;
             }
 
-            // An alias is more specific than the entry's own name: "cremini mushrooms" is cremini, not mushroom.
+            // An alias is more specific than the entry's own name: "cremini mushrooms" is cremini, not mushroom. One
+            // that is only part of the name is less specific: "chicken broth" stays chicken broth, not broth.
             var alias = term == entry.Name
-                ? _matchers.FirstOrDefault(other => other.Entry == entry && other.Term != entry.Name && other.Pattern.IsMatch(normalized)).Term
+                ? _matchers.FirstOrDefault(other => other.Entry == entry && other.Term != entry.Name
+                    && !$" {entry.Name} ".Contains($" {other.Term} ", StringComparison.Ordinal) && other.Pattern.IsMatch(normalized)).Term
                 : null;
             return (entry, alias ?? term);
         }

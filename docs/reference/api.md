@@ -75,7 +75,7 @@ try each call. Both need you to be signed in.
 | `GET /api/ai/features` | Which AI features have a model set up: `{"recipeFromPhoto", "recipeDetails"}` |
 | `GET /api/session` | Whether setup is needed and who is signed in |
 | `POST /api/setup/account`, `POST /api/account/sign-in`, `POST /api/account/sign-out` | First account, signing in and out |
-| `GET` `POST /api/setup/samples` | Review the sample recipes and add chosen ones by name (admin) |
+| `GET` `POST /api/setup/samples` | Review the sample recipes (with their description and total time) and add chosen ones by name (admin) |
 | `POST /api/invites`, `POST /api/users/{id}/password-reset` | Create an invite or a password reset link (admin) |
 | `GET /api/links`, `POST /api/links/{id}/regenerate`, `DELETE /api/links/{id}` | List, replace or revoke unused links (admin) |
 | `POST /api/account/accept-invite`, `POST /api/account/reset-password` | Use an invite or reset link |

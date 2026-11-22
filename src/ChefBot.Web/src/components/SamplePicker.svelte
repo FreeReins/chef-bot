@@ -5,7 +5,7 @@
   import { tick } from 'svelte';
   import { app, run, loadRecipes } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
-  import { SLOT_TITLES } from '../lib/format.js';
+  import { SLOT_TITLES, duration } from '../lib/format.js';
   import { pendingClick } from '../lib/pending.js';
   import { celebrate } from '../lib/motion.js';
   import Chip from './Chip.svelte';
@@ -100,10 +100,15 @@
         <span class="sample-text">
           <strong>{sample.name}</strong>
           {#if sample.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
+          {#if sample.totalMinutes}<span class="muted time">{duration(sample.totalMinutes)}</span>{/if}
           {#if sample.alreadyAdded}
             <span class="added-chip" class:fresh={justAdded.includes(sample.name)} style:--delay={popDelay(sample)}><Chip tone={justAdded.includes(sample.name) ? 'good' : ''}>Added</Chip></span>
           {/if}
-          <span class="muted clip" title={sample.ingredients.join(', ')}>{sample.ingredients.join(', ')}</span>
+          {#if sample.description}
+            <span class="muted summary" title={sample.ingredients.join('\n')}>{sample.description}</span>
+          {:else}
+            <span class="muted clip" title={sample.ingredients.join(', ')}>{sample.ingredients.join(', ')}</span>
+          {/if}
         </span>
       </label>
     {/each}
@@ -128,6 +133,9 @@
   .sample.added { color: var(--muted); }
   .sample-text { min-width: 0; flex: 1; }
   .sample-text .clip { font-size: .8rem; }
+  .sample-text .time { font-size: .8rem; white-space: nowrap; }
+  /* A description wraps to three lines at most, so every sample in the grid stays about the same height. */
+  .sample-text .summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; font-size: .8rem; }
   /* While the chosen samples are being added, the list rests a little, so the button is where the eye goes. */
   .sample-grid { transition: opacity .2s; }
   .sample-grid.waiting { opacity: .6; }

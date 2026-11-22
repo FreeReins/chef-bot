@@ -52,7 +52,7 @@ new. A skipped recipe that has no photos gets the backup's photos.
 
 ### From the samples
 
-**Browse sample recipes** lists 25 sample recipes. Tick the ones you want.
+**Browse sample recipes** lists 28 sample recipes, each with a short description and how long it takes. Tick the ones you want.
 
 ## How recipes are sorted into courses
 

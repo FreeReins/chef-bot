@@ -18,7 +18,7 @@ It takes about five minutes. You can change every answer later.
    - **Import my recipes** from recipe files: a Mealie backup `.zip` with its photos, the `database.json` from one, a
      Mealie recipe export, schema.org recipes saved from a website, or JSON in ChefBot's own format. Add as many files
      as you like.
-   - **Start with sample recipes:** tick the ones you want from 25 samples. You can come back to this list later from
+   - **Start with sample recipes:** tick the ones you want from 28 samples. You can come back to this list later from
      the Recipes tab.
 
    Or press **Skip for now** and add recipes later.

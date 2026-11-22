@@ -269,7 +269,8 @@ internal sealed partial class RecipeManager(
         var existing = library.Select(recipe => recipe.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         return samples.All()
             .Select(sample => new SampleRecipeResponse(
-                sample.Name, sample.Course, sample.IsSlowCooker, sample.Servings, sample.Ingredients, existing.Contains(sample.Name)))
+                sample.Name, sample.Course, sample.IsSlowCooker, sample.Servings, sample.Ingredients, existing.Contains(sample.Name),
+                sample.Description, sample.TotalMinutes))
             .ToList();
     }
 

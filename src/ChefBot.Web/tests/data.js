@@ -347,9 +347,12 @@ export const linkDetails = (purpose = 'Invite') => ({ purpose, username: purpose
 
 /** SampleRecipeResponse[]: every course, one already in the library. */
 export const samples = () => [
-  { name: 'Slaw Fish Tacos', course: 'Main', isSlowCooker: false, servings: 4, ingredients: ['fish', 'cabbage', 'limes'], alreadyAdded: true },
-  { name: 'Lentil Shepherd\'s Pie', course: 'Main', isSlowCooker: false, servings: 6, ingredients: ['lentils', 'potatoes'], alreadyAdded: false },
-  { name: 'Pulled Pork', course: 'Main', isSlowCooker: true, servings: 8, ingredients: ['pork shoulder', 'onion'], alreadyAdded: false },
+  { name: 'Slaw Fish Tacos', course: 'Main', isSlowCooker: false, servings: 4, ingredients: ['fish', 'cabbage', 'limes'], alreadyAdded: true,
+    description: 'Spiced, pan-seared fish in charred tortillas with a bright lime slaw.', totalMinutes: 25 },
+  { name: 'Lentil Shepherd\'s Pie', course: 'Main', isSlowCooker: false, servings: 6, ingredients: ['lentils', 'potatoes'], alreadyAdded: false,
+    description: 'Thyme-scented lentils and vegetables under a golden mashed potato crust, a hearty meat-free dinner that feeds a crowd and reheats well.', totalMinutes: 75 },
+  { name: 'Pulled Pork', course: 'Main', isSlowCooker: true, servings: 8, ingredients: ['pork shoulder', 'onion'], alreadyAdded: false,
+    description: 'Spice-rubbed pork shoulder cooked until it falls apart.', totalMinutes: 510 },
   { name: 'Overnight Oats', course: 'Breakfast', isSlowCooker: false, servings: 2, ingredients: ['oats', 'milk'], alreadyAdded: false },
   { name: 'Maple Granola', course: 'Snack', isSlowCooker: false, servings: null, ingredients: ['oats', 'maple syrup'], alreadyAdded: false },
   { name: 'Pear Crumble', course: 'Sweet', isSlowCooker: false, servings: 6, ingredients: ['pears', 'butter'], alreadyAdded: false },

@@ -1,6 +1,6 @@
 # Customising the catalogs
 
-ChefBot ships with three files that it reads at startup. Edit your own copies to suit where you live and shop, then
+ChefBot ships with four files that it reads at startup. Edit your own copies to suit where you live and shop, then
 mount them over the built-in ones.
 
 | File | Holds |
@@ -8,6 +8,7 @@ mount them over the built-in ones.
 | `config/ingredients.json` | Every ingredient ChefBot knows: its shared name, other names, food group, shelf life and season |
 | `config/stores.json` | The stores offered as starting points under **Settings → Stores** |
 | `config/plan-styles.json` | The starter plan styles. The first is the default for a new household |
+| `config/sample-recipes.json` | The sample recipes offered in setup and under **Browse sample recipes** |
 
 ## The ingredient catalog
 
@@ -35,6 +36,22 @@ items or months afterwards.
 
 The same shape as a style in the web page: name, description, cooking days, leftover lunches, counts and rules. See
 [Plan styles](../using/plan-styles.md). Adding one in ChefBot copies it.
+
+## Sample recipes
+
+A list of recipes, each with a name, course (`Main`, `Breakfast`, `Snack`, `Sweet` or `Drink`), servings,
+`ingredients` lines and `instructions` steps, and optionally `isSlowCooker`, `description`, `prepMinutes`,
+`cookMinutes`, `totalMinutes`, `yieldText`, `notes` and `tags`:
+
+```json
+{"name": "Roasted Chickpeas", "course": "Snack", "servings": 4, "totalMinutes": 50,
+ "ingredients": ["2 (15 oz) cans chickpeas, rinsed and drained", "1 1/2 tbsp olive oil", "3/4 tsp kosher salt"],
+ "instructions": ["Preheat the oven to 425°F.", "Roast for 25 to 30 minutes, until crunchy."]}
+```
+
+Write each ingredient line as an amount, a unit, the food, then any preparation after a comma, so the shopping list
+gets the food's name. Give times in the steps ("simmer for 15 minutes", "Preheat the oven") so cooking mode can offer
+timers. Keep enough slow cooker, quick and meat-free mains for the plan styles you use.
 
 ## Use your own copy
 
