@@ -17,6 +17,9 @@ is made, and how backups relate to it.
 
 Settings rows start empty. Until one is saved, the defaults in its contract are used (`IsSaved` is false).
 
+`PlannedMeal.PortionsChosen` marks a meal whose servings someone chose (from a recipe's page), so resizing the plan
+doesn't change it. Backups from before it read it as false.
+
 ## The boundary
 
 Entities never leave `ResourceAccess/`. Accessors map them to plain contracts in

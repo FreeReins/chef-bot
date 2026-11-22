@@ -99,7 +99,7 @@
       <div class="segmented">
         {#each weeks as start (start)}
           <button type="button" aria-pressed={start === weekStart} onclick={() => { weekStart = start; picked = false; }}>
-            {weekName(start, addDays(start, 6))}<span class="sub"> · {shortDate(start)}</span>
+            {weekName(start, addDays(start, 6))}<span class="sub">&nbsp;· {shortDate(start)}</span>
           </button>
         {/each}
       </div>

@@ -6,6 +6,10 @@ you add by hand. Once the plan is confirmed, it's your list for the shop.
 ## What's on it
 
 - **Amounts are added up** across the week's meals and scaled to the number of people.
+- **A meal with chosen servings** (added from a recipe's page with **Choose servings**) is bought for that many
+  instead. A recipe is bought in half batches, so 6 servings of a recipe for 4 buys one and a half times its amounts.
+- **It follows the plan by itself.** After a recipe is added from its page, or the pantry changes, the list catches
+  up a moment later in the background, and open pages show the new list without a reload.
 - **Staples are left off,** such as salt, pepper and oil.
 - **The pantry is taken off:** what you already have isn't on the list. Amounts are only compared in the same unit,
   so having some of an ingredient in another unit counts as having enough. See

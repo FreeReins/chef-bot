@@ -183,7 +183,7 @@
         <div class="row-actions">
           <a class="button primary with-icon grow" href={link('cook')}><CookingPot size={16} />Start cooking</a>
           <a class="button with-icon grow" href={link('plan')}><CalendarPlus size={16} />Add to plan</a>
-          <FavouriteButton {recipe} size={16} label="Favourite" onchange={(list) => (recipe.favouredBy = list)} />
+          <FavouriteButton {recipe} size={18} onchange={(list) => (recipe.favouredBy = list)} />
           <RecipeMenu {recipe} {link} />
         </div>
 

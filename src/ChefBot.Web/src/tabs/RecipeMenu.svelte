@@ -92,4 +92,9 @@
   .menu-panel :is(button, a):hover { background: var(--chip); }
   .menu-panel .bad-text { color: var(--bad); }
   hr { border: 0; border-top: 1px solid var(--line); margin: .3rem .2rem; }
+  /* Phones: the menu unfolds in place on its own line, pushing the page down rather than covering what is below. */
+  @media (max-width: 40rem) {
+    .menu { display: contents; }
+    .menu-panel { position: static; flex: 1 1 100%; order: 1; box-shadow: none; }
+  }
 </style>

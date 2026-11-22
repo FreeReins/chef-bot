@@ -43,6 +43,18 @@ and each one ends with **`ReconcileAsync`**, which:
 Because there's one path, the leftovers and the shopping list can't drift from the meals. Plan writes run one at a
 time behind `PlanWriteLock`.
 
+Adding a recipe from its page (`AddMealAsync`) is the one change that leaves this for later: it saves the meal and
+publishes `MealAdded`, and `MealAddedHandler` runs the same reconcile through `CatchUpAsync` on the `plans` queue, then
+`PlanChanged` tells open pages. See [Messaging and scheduling](messaging-and-scheduling.md).
+
+## Portions
+
+Each meal is cooked in `Portions`: one per person at breakfast, lunch and dinner, and zero (the recipe as written)
+for snacks, sweets and drinks. `MealRequirements` scales a recipe by its total portions over its servings, rounded up
+to half batches. A meal added with chosen servings has `PortionsChosen` set: `Resize` (a change of people) and
+`PlaceLeftovers` leave its size alone, it doesn't feed leftover lunches, and Shuffle keeps its size when the meal is
+kept. Swapping a different recipe in clears it.
+
 ## Suggestions
 
 `SuggestionEngine` ranks swaps for one meal by how well each recipe uses the pantry, especially food about to expire,

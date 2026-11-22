@@ -5,7 +5,8 @@ recipe and press **Start cooking**.
 
 ## What you see
 
-1. **Gather your ingredients:** everything to set out before you start.
+1. **Gather your ingredients:** everything to set out before you start, for the servings chosen on the recipe's
+   page. See [Make it for more or fewer people](recipes.md#make-it-for-more-or-fewer-people).
 2. **Before you start:** anything that takes a while and is needed later, such as preheating the oven, a pot of
    water, or an overnight marinade. ChefBot finds these in the steps for you. Steps that wait a long time are
    flagged, so you can read ahead and dinner isn't late.

@@ -10,6 +10,9 @@ ChefBot plans next week by itself, as a **draft**, on the day and time set under
 
 To plan whenever you like, open the **Plan** tab, choose a **Plan style**, and press **Plan**.
 
+Already know what you want to cook? Open the recipe and press **Add to plan**. A week with no plan yet starts as a
+draft holding just that meal. See [Add a recipe to your plan](recipes.md#add-a-recipe-to-your-plan).
+
 ChefBot picks recipes that:
 
 - use pantry food that is about to expire, first;
@@ -34,6 +37,9 @@ the kind of meal: dinner, breakfast, lunch or leftovers. On each meal you can:
 - The shopping summary shows what you'd need to buy.
 
 Snacks, sweets and drinks sit under **Any day**: make them whenever suits during the week.
+
+To add a particular recipe to a day, or swap it in for what's there, use **Add to plan** on the recipe's page. It
+can be made for a chosen number of servings. See [Add a recipe to your plan](recipes.md#add-a-recipe-to-your-plan).
 
 ## 3. Confirm the plan
 

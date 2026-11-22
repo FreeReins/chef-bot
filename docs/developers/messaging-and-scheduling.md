@@ -18,6 +18,7 @@ gets a `.v2` identity.
 | Handler | Reacts to | Does |
 |---|---|---|
 | `PantryChangedHandler` | `PantryChanged` | Rebuilds the open plans' shopping lists after a hand edit to the pantry |
+| `MealAddedHandler` | `MealAdded` | Brings a plan's leftover lunches and shopping list in line after a recipe is added from its page (`IPlanManager.CatchUpAsync`) |
 | `PlanningSettingsChangedHandler` | `PlanningSettingsChanged` | Rebuilds open shopping lists after the advanced settings change |
 | `SecuritySettingsChangedHandler` | `SecuritySettingsChanged` | Applies a changed "Always use HTTPS" to the running server |
 | `GroceryStoresChangedHandler` | `GroceryStoresChanged` | Re-splits open shopping lists between stores |

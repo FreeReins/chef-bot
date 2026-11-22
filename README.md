@@ -55,7 +55,7 @@ household's habits stay on your hardware.
 | 🥬 **Less food waste** | Plans share fresh ingredients, favour what's in season, and use pantry food that's about to expire first. [How planning works →](docs/developers/planner.md) |
 | 🛒 **Smart shopping list** | Totalled, scaled, split by store, sendable to Home Assistant or Todoist, and it works offline. [The shopping list →](docs/using/shopping-list.md) |
 | 🥫 **Pantry tracker** | Bought items go in with expiry dates. Cooking takes them out. Swaps that use up food come first. [The pantry →](docs/using/pantry.md) |
-| 📖 **Recipe manager** | Paste a link from almost any recipe site, import a Mealie backup, or type it in. Photos, tags, reviews and favourites. [Recipes →](docs/using/recipes.md) |
+| 📖 **Recipe manager** | Paste a link from almost any recipe site, import a Mealie backup, or type it in. Photos, tags, reviews and favourites. Scale any recipe to the servings you need and add it straight to your plan. [Recipes →](docs/using/recipes.md) |
 | 👩‍🍳 **Cooking mode** | Big text, one step at a time, what to start early, and timers that ring. [Cooking mode →](docs/using/cooking-mode.md) |
 | 📅 **Calendar feed** | Your meal plan in Apple Calendar, Google Calendar, Outlook or Thunderbird, with slow cooker reminders. [Calendar →](docs/using/calendar.md) |
 | 🔔 **Reminders** | Plan ready, start the slow cooker, food to use soon, shopping to do: sent to Home Assistant or any webhook. [Notifications →](docs/admin/notifications.md) |

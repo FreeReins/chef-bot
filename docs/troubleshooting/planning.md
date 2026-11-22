@@ -45,6 +45,17 @@ breakfasts to 0 in the plan style.
   pantry item's ingredient name.
 - **Not enough.** The week's meals need more than you have.
 
+## "… has moved since you chose it"
+
+The meal you chose to replace was moved, swapped or removed while **Add to plan** was open, perhaps on another
+device. Close the dialog, open **Add to plan** again, and choose the day and meal from the plan as it is now.
+
+## A recipe added from its page isn't on the shopping list yet
+
+The shopping list catches up a moment after **Add to plan**, in the background. Open pages update by themselves. If the
+list still looks out of date, reload the page. If it never catches up, check the logs for errors from
+`MealAddedHandler`. See [Monitoring and logs](../admin/monitoring-and-logs.md).
+
 ## The weekly plan wasn't made
 
 - Check **Plan next week automatically** under **Settings → Planning**, and the day and time shown as **Next**.

@@ -1,7 +1,7 @@
 # Recipes
 
 ChefBot keeps its own recipe library: ingredients, steps, prep and cook times, description, tags, notes, source link
-and photos. Everyone in the household shares it. This page covers adding, finding, rating and downloading recipes.
+and photos. Everyone in the household shares it. This page covers adding, finding, scaling, planning, rating and downloading recipes.
 
 ## Add a recipe
 
@@ -55,13 +55,55 @@ only**, or how long a recipe takes. Show them as **Cards** or a **List**.
 
 ## On a recipe
 
-- **Start cooking:** large text, one step at a time, with timers. See [Cooking mode](cooking-mode.md).
+- **Start cooking:** large text, one step at a time, with timers, at the servings you chose. See
+  [Cooking mode](cooking-mode.md).
+- **Add to plan:** put it on a day of this week or a later one. See [Add a recipe to your plan](#add-a-recipe-to-your-plan).
 - **Favourite** (the heart): plan styles can prefer favourites. See [Plan styles](plan-styles.md#favourites).
 - **Reviews:** give it 1 to 5 stars and a note each time it's cooked. The average shows next to its name.
-- **Add a photo:** JPEG, PNG, WebP or GIF, up to 5 MB, at most 10 per recipe. The first photo is the one shown in the
-  recipe list.
-- **Edit**, **Print recipe**, **Copy as text**, **Share recipe**.
+- The **⋯** menu has **Edit recipe**, **Photos**, **Share recipe** (or **Copy as text**), **Print recipe**, the
+  downloads, and **Archive recipe**.
+- **Photos:** JPEG, PNG, WebP or GIF, up to 5 MB, at most 10 per recipe. The first photo is the one shown in the
+  recipe list. A recipe without a photo shows **Add a photo** where the photo goes.
 - **Archive recipe:** takes it out of the library and future plans. Its history is kept.
+
+## Make it for more or fewer people
+
+The ingredients are shown for the servings the recipe makes. To change that:
+
+1. Above the ingredients, press **−** or **+**, or type a number into **Servings**. **½×**, **1×**, **2×** and
+   **3×** jump straight to half, as written, double and triple.
+2. Every amount changes to match. Cups, spoons and whole items show as kitchen fractions such as 1½ or ¾; grams and
+   millilitres are rounded to easy amounts.
+3. Press **Back to 4** (or whatever the recipe makes) to see it as written again.
+
+The choice stays in the page's address, so a reload, a bookmark or a shared link keeps it, and **Start cooking**
+uses it too. A line ChefBot couldn't read an amount from, such as "salt to taste", stays as written and is marked
+with **\***. Check those yourself. Scaling only changes what the page shows; the recipe itself isn't changed.
+
+## Add a recipe to your plan
+
+1. On the recipe, press **Add to plan**.
+2. Choose the **Week**: **This week**, **Next week**, or a later week that already has a plan.
+3. Choose the **Meal**. It starts on the one that suits the recipe: dinner for a main, breakfast for a breakfast,
+   and so on.
+4. Choose the **Day**. Days that already have that meal are marked with a dot. Snacks, sweets and drinks can also go
+   on **Any day**.
+5. Under **How many**, keep **For the household** to cook for the number of people your plans are for, or pick
+   **Choose servings** and set a number. If you scaled the recipe on its page, that number is already chosen.
+6. Press **Add to** (the button names the day and meal).
+
+If the day already has that meal, ChefBot says what is there and asks whether to **Replace it** or **Add alongside
+it**. A meal already marked cooked or skipped can't be replaced, so the recipe goes alongside it.
+
+If the week has no plan yet, ChefBot starts a draft with just this meal. You can add more by hand, or plan the rest
+of the week on the **Plan** tab. See [The weekly routine](weekly-routine.md).
+
+The meal shows on the **Plan** tab straight away. The shopping list catches up a moment later, in the background: it
+adds what the recipe needs at that size and leaves out what your pantry already has. Open pages update by
+themselves. See [The shopping list](shopping-list.md#whats-on-it).
+
+A meal with chosen servings keeps them: changing how many people your plans are for, or leftover lunches, don't
+resize it.
 
 ## Download recipes
 

@@ -56,6 +56,8 @@ tables needs a fresh database, with your data brought across in a backup:
   planning settings moved from `chefbot.env` into the database. Set them again under **Settings → Planning**,
   **Calendar** and **Advanced**, and remove the old lines from `chefbot.env`. See the
   [settings reference](settings.md#settings-in-the-environment).
+- **Scaling recipes and adding them to the plan:** added a column to the planned meals, for meals made for a chosen
+  number of servings. Backups from before it restore as they are.
 
 ## Go back to an older version
 
