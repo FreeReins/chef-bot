@@ -1,0 +1,76 @@
+# The weekly routine
+
+This page goes through a normal week with ChefBot, from planning to cooking. Everyone in the household can do every
+step.
+
+## 1. Get a plan
+
+ChefBot plans next week by itself, as a **draft**, on the day and time set under **Settings → Planning** (Saturday at
+09:00 to start with). It uses your default [plan style](plan-styles.md).
+
+To plan whenever you like, open the **Plan** tab, choose a **Plan style**, and press **Plan**.
+
+ChefBot picks recipes that:
+
+- use pantry food that is about to expire, first;
+- share fresh ingredients, so nothing is left half used;
+- are in season;
+- weren't planned recently (28 days to start with);
+- follow the rules in your plan style, such as "at least 2 quick dinners".
+
+## 2. Review the draft
+
+The Plan tab shows the week day by day. On each meal you can:
+
+| Button | What it does |
+|---|---|
+| **Swap** | Choose another recipe for that meal. Suggestions that use what you have come first |
+| **Move** (or drag it) | Put the meal on another day. A meal already there swaps places with it |
+| **Keep** | Keep this meal when you shuffle |
+| **Skip** | Leave this meal out |
+
+- **Shuffle** plans the meals you haven't kept again. Keep the ones you like and shuffle until the week looks right.
+- **Discard draft** throws the draft away.
+- The shopping summary shows what you'd need to buy.
+
+Snacks, sweets and drinks sit under **Any day**: make them whenever suits during the week.
+
+## 3. Confirm the plan
+
+Press **Confirm plan**. The **Shopping** tab is now your shopping list.
+
+## 4. Shop
+
+Open the **Shopping** tab, in the shop or before you go:
+
+- Tick each item as you buy it, or press **Mark all as bought** when you get home.
+- Bought items go into the **Pantry** with an expiry date, worked out from the ingredient's shelf life unless you
+  enter the date on the package.
+- Add anything else you need by hand, with or without a plan.
+
+The list works with no signal. See [Offline on your phone](offline-on-your-phone.md) and
+[The shopping list](shopping-list.md).
+
+## 5. Cook
+
+- Open a meal's recipe and press **Start cooking** for big text and timers. See [Cooking mode](cooking-mode.md).
+- When it's done, mark it **Cooked**. Its ingredients come out of the pantry. Leftover lunches are marked **Eaten**.
+- Plans changed? **Swap** or **Move** the meal. ChefBot suggests recipes that use up expiring food first, and the
+  leftovers and shopping list follow.
+
+When this week is confirmed, the Plan tab offers to plan the week after. A switch at the top moves between the two.
+
+## Change the whole week
+
+On a confirmed week:
+
+- **Replan from pantry** plans the whole week again in the same style, built around what's in the pantry. Use it
+  after shopping, when plans have changed: recipes that use food you've already bought are strongly preferred, and
+  the new shopping list only holds what is still missing. It replaces every day of the week, including days already
+  past, and comes back as a draft to review and confirm.
+- **Clear plan** removes the plan and its shopping list. The pantry is kept.
+
+## If something goes wrong
+
+- The plan is short, or a rule wasn't followed: see [Planning problems](../troubleshooting/planning.md).
+- "There are no recipes to plan with yet": add some. See [Recipes](recipes.md).

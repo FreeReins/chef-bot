@@ -1,0 +1,55 @@
+# The shopping list
+
+The **Shopping** tab shows what the week's plan needs, added up and split between your stores. It also holds anything
+you add by hand. Once the plan is confirmed, it's your list for the shop.
+
+## What's on it
+
+- **Amounts are added up** across the week's meals and scaled to the number of people.
+- **Staples are left off,** such as salt, pepper and oil.
+- **The pantry is taken off:** what you already have isn't on the list. Amounts are only compared in the same unit,
+  so having some of an ingredient in another unit counts as having enough. See
+  [Limits worth knowing](../reference/limits.md).
+- **Each item shows where it comes from** (to buy, pantry or staple) and which meals use it.
+
+## Shop
+
+- Tick each item as you buy it, or press **Mark all as bought**. Before the plan is confirmed, that button only marks
+  the items you added by hand.
+- Bought items go into the pantry with an expiry date.
+- The list works with no signal. See [Offline on your phone](offline-on-your-phone.md).
+- **Copy list**, **Share list**, **Print** and **Download CSV** give the list to other apps or paper.
+
+## Add things by hand
+
+Use **Add to the list** for anything else: milk, paper towels, whatever you need. An amount and a unit are optional.
+Adding the same thing again adds to its amount. Hand-added items need no plan. Remove them when you change your mind.
+
+## Stores
+
+An admin chooses the household's stores under **Settings → Stores**, or in setup. Each item goes to:
+
+1. the first store that lists its ingredient;
+2. otherwise, for in-season produce, a seasonal market while it's open (a farmers market from May to October, for
+   example);
+3. otherwise your main store.
+
+With no stores chosen, the list is grouped by food group instead.
+
+To buy an ingredient somewhere else from now on, use the menu beside the item and move it to another store. Later
+lists remember it.
+
+## Send it to a to-do app
+
+If an admin has set up a to-do app (see [To-do apps](../admin/to-do-apps.md)), press **Send to** with its name. What's
+left to buy is added as one item per thing, such as "fish fillets, 600 g", with its store and meals.
+
+- Nothing is ticked off in ChefBot when you send.
+- Sending again adds the items again, so send once you've finished changing the plan.
+
+## If something goes wrong
+
+- An item you have is still on the list: check the pantry item's unit. See
+  [Planning problems](../troubleshooting/planning.md).
+- Sending to a to-do app fails: see
+  [Notifications and integrations](../troubleshooting/notifications-and-integrations.md).

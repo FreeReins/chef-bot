@@ -1,0 +1,97 @@
+# Install on other platforms
+
+ChefBot runs anywhere containers do. Every platform below uses the same
+[compose file](install-docker-compose.md#install) and the same rules, so read that page first. This one says where
+each platform wants the file.
+
+> [!NOTE]
+> Menu names change between versions of these products. If yours look different, look for "Compose", "Stack",
+> "Project" or "Install via YAML".
+
+## What every platform needs
+
+- **Two containers:** `postgres:17-alpine` and `ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest`.
+- **Three places to keep data:** the database (`/var/lib/postgresql/data`), `/app/keys` and `/app/backups`. Use
+  named volumes, or host folders owned by user id **1654** for the two ChefBot ones.
+- **Two ports:** 8080 (HTTP) and 8443 (HTTPS). If you change the HTTPS one, set `Https__PublicPort`.
+- **The connection string** `ConnectionStrings__ChefBot`, with the same password as the database, and **`TZ`** set to
+  your time zone.
+
+## Docker Desktop (Windows and macOS)
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2. Make a folder, save the compose file in it as `compose.yaml`, and change the password and `TZ`.
+3. Open a terminal in that folder and run `docker compose up -d`.
+4. Open <http://localhost:8080>.
+
+To reach it from your phone, use the computer's address on your network, and allow ports 8080 and 8443 through the
+computer's firewall when asked. ChefBot only runs while the computer is on and Docker Desktop is running.
+
+## Podman Desktop (Windows, macOS and Linux)
+
+Install [Podman Desktop](https://podman-desktop.io) and its Compose extension, then run `podman compose up -d` in the
+folder with `compose.yaml`. On Linux with systemd, [Install with Podman](install-podman.md) is the better choice: it
+starts ChefBot at boot and restarts it if it stops.
+
+## Synology (Container Manager)
+
+1. Install **Container Manager** from the Package Center.
+2. In **File Station**, make a folder such as `docker/chefbot`.
+3. In Container Manager, open **Project → Create**. Name it `chefbot`, choose the folder, choose **Create
+   docker-compose.yml**, and paste the compose file. Change the password and `TZ`.
+4. Finish the wizard. It downloads the images and starts both containers.
+5. Open `http://<your NAS>:8080`.
+
+If 8080 or 8443 is already used on the NAS, change the left-hand port numbers in the compose file.
+
+## Unraid
+
+The simplest way is the **Docker Compose Manager** plugin from Community Applications:
+
+1. Install **Docker Compose Manager**.
+2. Under **Docker → Compose**, add a stack called `chefbot`, edit its compose file, and paste the compose file. Change
+   the password and `TZ`.
+3. Press **Compose Up**.
+
+To keep the data in your appdata share, replace the named volumes with folders, such as
+`/mnt/user/appdata/chefbot/keys:/app/keys`, and run `chown 1654 /mnt/user/appdata/chefbot/keys
+/mnt/user/appdata/chefbot/backups` once from the terminal.
+
+## TrueNAS SCALE
+
+On TrueNAS SCALE 24.10 or later:
+
+1. Open **Apps → Discover Apps**, then the menu next to **Custom App**, and choose **Install via YAML**.
+2. Name it `chefbot` and paste the compose file. Change the password and `TZ`.
+3. Save. TrueNAS starts both containers.
+
+For datasets instead of volumes, make the keys and backups datasets writable by user id 1654.
+
+## Portainer
+
+1. Open **Stacks → Add stack**.
+2. Name it `chefbot`, choose **Web editor**, and paste the compose file. Change the password and `TZ`.
+3. Press **Deploy the stack**.
+
+## Raspberry Pi
+
+Use a **64-bit** system, such as Raspberry Pi OS (64-bit), on a Raspberry Pi 4 or 5.
+
+1. Install Docker: `curl -fsSL https://get.docker.com | sh`, then `sudo usermod -aG docker $USER` and log in again.
+2. Follow [Install with Docker Compose](install-docker-compose.md).
+
+An SD card can wear out under a database. Keep the data on an SSD if you can, and
+[download backups](../admin/backups-and-restore.md) regularly.
+
+## Proxmox
+
+Run ChefBot in a small Debian or Ubuntu VM, or an LXC container with nesting turned on. Install Docker inside it,
+then follow [Install with Docker Compose](install-docker-compose.md).
+
+## After installing
+
+Continue with [First run](first-run.md). For problems, see
+[Install and startup problems](../troubleshooting/install-and-startup.md).
+
+Got ChefBot running on a platform that isn't here, or found a step that has changed?
+[Suggest an edit](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/edit/main/docs/getting-started/install-other-platforms.md).

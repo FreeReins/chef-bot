@@ -28,7 +28,7 @@ the feed for changes about once an hour, though some check less often (see each 
    Calendar, Outlook on the web) can only reach a ChefBot that is on the internet. The table shows which is which.
 4. **If ChefBot uses its own certificate**, the device must trust it first, or the calendar app will refuse to
    connect. Download the certificate from ChefBot's **Settings → HTTPS** and install it on the device, as the
-   [HTTPS section of the README](../README.md#https) describes.
+   [HTTPS and certificates](../admin/https-and-certificates.md#trust-the-certificate-on-your-devices) describes.
 
 | Calendar app | Fetches the feed from | Works with ChefBot only on your home network |
 |---|---|---|
@@ -97,7 +97,7 @@ Calendar on the web.
 
 Google Calendar fetches feeds from Google's servers, not from your phone or computer. It can only subscribe when
 ChefBot is reachable from the internet, at an address with a certificate from a public certificate authority,
-such as through a reverse proxy (see [Behind a reverse proxy](../README.md#behind-a-reverse-proxy)). On a home
+such as through a reverse proxy (see [Behind a reverse proxy](../admin/reverse-proxy.md)). On a home
 network only, use [ICSx⁵](#android) on Android instead.
 
 1. Copy the address from ChefBot's **Settings → Calendar**.
@@ -156,15 +156,13 @@ if ChefBot uses its own.
 
 ## Changing the mealtimes
 
-An admin changes the times under **Settings → Calendar → Meal times**. Everyone else can see them there.
+An admin sets the times under **Settings → Calendar → Meal times**. They save by themselves.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| Breakfast, Lunch, Dinner | `08:00`, `12:30`, `18:30` | When each meal starts, as local time |
-| Each meal lasts | 45 minutes | How long each meal's event lasts |
-| Slow cooker reminder | 8 hours | How many hours before a slow cooker dinner the reminder goes off; `0` for none |
-
-The `Calendar__*` settings in `chefbot.env` of earlier versions are no longer read.
+| **Breakfast**, **Lunch**, **Dinner** | 08:00, 12:30, 18:30 | When each meal starts, in ChefBot's local time |
+| **Each meal lasts (minutes)** | 45 | How long each meal's event lasts, from 5 to 240 |
+| **Slow cooker reminder (hours before dinner)** | 8 | When the reminder to start the slow cooker goes off, from 0 to 12. 0 turns it off |
 
 Subscribed calendars show the new times the next time they check the feed.
 
