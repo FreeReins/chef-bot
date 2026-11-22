@@ -2,7 +2,7 @@
 
 ChefBot is built for a home network, and guards the things that matter there: passwords, sessions, and requests it
 makes on someone else's behalf. This page describes each part. To report a problem privately, see
-[SECURITY.md](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/SECURITY.md).
+[SECURITY.md](https://github.com/FreeReins/chef-bot/blob/main/SECURITY.md).
 
 ## Accounts and passwords
 

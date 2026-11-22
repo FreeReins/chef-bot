@@ -13,7 +13,7 @@
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
     <Property Id="ARPHELPLINK" Value="https://jamiethenextkevinbaconhamm.github.io/chef-bot/getting-started/install-windows/" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/FreeReins/chef-bot" />
 
     <!-- One page with the licence and Install, then a finish page that can open ChefBot. -->
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />

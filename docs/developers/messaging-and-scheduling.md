@@ -70,4 +70,4 @@ flowchart LR
   restarting never leaves two waiting.
 - At startup each job looks once, so a run missed while ChefBot was off happens straight away.
 
-The rules are in [CONTRIBUTING.md](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/CONTRIBUTING.md#where-things-go), under "Rules of thumb".
+The rules are in [CONTRIBUTING.md](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md#where-things-go), under "Rules of thumb".

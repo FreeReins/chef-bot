@@ -112,4 +112,4 @@ Continue with [First run](first-run.md). For problems, see
 [Reach ChefBot over Tailscale](../admin/tailscale.md) or [Behind a reverse proxy](../admin/reverse-proxy.md).
 
 Got ChefBot running on a platform that isn't here, or found a step that has changed?
-[Suggest an edit](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/edit/main/docs/getting-started/install-other-platforms.md).
+[Suggest an edit](https://github.com/FreeReins/chef-bot/edit/main/docs/getting-started/install-other-platforms.md).

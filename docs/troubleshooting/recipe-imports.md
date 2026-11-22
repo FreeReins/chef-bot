@@ -17,7 +17,7 @@ means:
 
 A site that doesn't work but should? A reader can be added for it: see
 [Adding a recipe site](../developers/adding-a-recipe-site.md), or
-[open an issue](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/issues/new/choose) with the link.
+[open an issue](https://github.com/FreeReins/chef-bot/issues/new/choose) with the link.
 
 ## A photo won't read
 

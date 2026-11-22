@@ -33,4 +33,4 @@ These solve a lot of problems:
 ## Still stuck?
 
 [Collect the details](../admin/monitoring-and-logs.md#before-asking-for-help) and
-[open an issue](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/issues/new/choose).
+[open an issue](https://github.com/FreeReins/chef-bot/issues/new/choose).

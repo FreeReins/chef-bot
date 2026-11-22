@@ -9,7 +9,7 @@ You need **Windows 10 or 11, 64-bit** (x86, not ARM), and an administrator accou
 ## Install
 
 1. Download `ChefBot-<version>-win-x64.msi` from the
-   [latest release](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/releases/latest).
+   [latest release](https://github.com/FreeReins/chef-bot/releases/latest).
 2. Open it. If Windows says **Windows protected your PC**, press **More info**, check that the file name is the one
    you downloaded, then press **Run anyway**. Windows shows this for programs it hasn't seen often.
 3. Accept the licence and press **Install**, then **Yes** when Windows asks for permission.

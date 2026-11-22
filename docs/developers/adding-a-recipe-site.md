@@ -1,6 +1,6 @@
 # Adding a recipe site
 
-This page is for developers. To ask for a site instead, [open an issue](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/issues/new/choose)
+This page is for developers. To ask for a site instead, [open an issue](https://github.com/FreeReins/chef-bot/issues/new/choose)
 with a link to one of its recipes.
 
 `SchemaOrgPage` reads the JSON-LD or microdata most recipe sites include for search engines, so most sites need

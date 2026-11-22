@@ -60,5 +60,5 @@ tokens instead of the session cookie.
 ## Adding one
 
 Follow the `add-core-operation` checklist in
-[`.claude/skills/add-core-operation/SKILL.md`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/.claude/skills/add-core-operation/SKILL.md). It covers the manager
+[`.claude/skills/add-core-operation/SKILL.md`](https://github.com/FreeReins/chef-bot/blob/main/.claude/skills/add-core-operation/SKILL.md). It covers the manager
 method, records, JSON context, endpoint, tests and docs.

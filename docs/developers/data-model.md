@@ -32,7 +32,7 @@ The schema is created with `EnsureCreated` on the first start, and is **not upgr
 fresh database. For development, run `./dev.sh reset`. For users, it's the backup → fresh database → restore path in
 [Upgrading](../admin/upgrading.md#when-a-version-changes-the-database). Before the first release that changes a table
 for existing users, ChefBot should switch to EF Core migrations, as
-[Database changes](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/CONTRIBUTING.md#database-changes) describes.
+[Database changes](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md#database-changes) describes.
 
 ## Backups
 
@@ -42,5 +42,5 @@ table is neither. Renaming an entity property changes the backup format, so old 
 
 ## Adding a table
 
-Follow [`.claude/skills/add-stored-entity/SKILL.md`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/.claude/skills/add-stored-entity/SKILL.md): entity, contract,
+Follow [`.claude/skills/add-stored-entity/SKILL.md`](https://github.com/FreeReins/chef-bot/blob/main/.claude/skills/add-stored-entity/SKILL.md): entity, contract,
 mapping, DbContext, backups, accessor, registration and test fake.

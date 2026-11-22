@@ -7,5 +7,5 @@ contact_links:
     url: https://jamiethenextkevinbaconhamm.github.io/chef-bot/troubleshooting/
     about: Common problems and how to fix them. Most questions are answered here.
   - name: Report a security problem privately
-    url: https://github.com/Jamiethenextkevinbaconhamm/chef-bot/security/advisories/new
+    url: https://github.com/FreeReins/chef-bot/security/advisories/new
     about: Please don't open a public issue for security problems.

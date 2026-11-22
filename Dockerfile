@@ -70,11 +70,11 @@ RUN chmod 644 /usr/share/keyrings/postgresql.asc \
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 # Links the published image to its repository on the GitHub Container Registry.
-LABEL org.opencontainers.image.source="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" \
+LABEL org.opencontainers.image.source="https://github.com/FreeReins/chef-bot" \
       org.opencontainers.image.title="ChefBot" \
       org.opencontainers.image.description="Self-hosted meal planner: weekly meal plans, a smart shopping list and a pantry tracker that helps you waste less food." \
       org.opencontainers.image.documentation="https://jamiethenextkevinbaconhamm.github.io/chef-bot/" \
-      org.opencontainers.image.url="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" \
+      org.opencontainers.image.url="https://github.com/FreeReins/chef-bot" \
       org.opencontainers.image.licenses="GPL-3.0-only"
 
 # The bundled PostgreSQL, at the paths it was built for, and the libraries it needs that the base image doesn't

@@ -2,7 +2,7 @@
 
 `src/ChefBot.Web` is a Svelte 5 page in plain JavaScript, built with Vite. It's a thin client: everything it shows comes
 from the [HTTP API](../reference/api.md). Before changing it, read
-[`src/ChefBot.Web/AGENTS.md`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/src/ChefBot.Web/AGENTS.md) and [The web page](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/CONTRIBUTING.md#the-web-page) in
+[`src/ChefBot.Web/AGENTS.md`](https://github.com/FreeReins/chef-bot/blob/main/src/ChefBot.Web/AGENTS.md) and [The web page](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md#the-web-page) in
 CONTRIBUTING.md.
 
 ## Layout

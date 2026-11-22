@@ -80,4 +80,4 @@ doesn't hold.
 | Use cases | `Managers/PlanManager*.cs` |
 
 Tests: `WeekPlannerTests`, `ShoppingTests` and others in
-[`tests/ChefBot.Core.Tests`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/tests/ChefBot.Core.Tests).
+[`tests/ChefBot.Core.Tests`](https://github.com/FreeReins/chef-bot/blob/main/tests/ChefBot.Core.Tests).

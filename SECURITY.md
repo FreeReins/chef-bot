@@ -3,7 +3,7 @@
 ## Reporting a problem
 
 Please report security problems privately, not in a public issue:
-[open a private security advisory](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/security/advisories/new).
+[open a private security advisory](https://github.com/FreeReins/chef-bot/security/advisories/new).
 
 Include what you found, how to reproduce it, and what someone could do with it. You'll get a reply as soon as
 possible. Once a fix is released, you'll be credited in the release notes unless you'd rather not be.

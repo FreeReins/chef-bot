@@ -26,14 +26,14 @@ docker compose up -d
 ```
 
 **Windows:** download the new `ChefBot-….msi` from the
-[releases](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/releases) and run it. It replaces the old version
+[releases](https://github.com/FreeReins/chef-bot/releases) and run it. It replaces the old version
 and keeps `C:\ProgramData\ChefBot`. For the portable app, replace the `.exe` and keep the `ChefBot-data` folder
 next to it.
 
 To stay on one version of the image instead of `latest`, use a version tag such as
 `ghcr.io/jamiethenextkevinbaconhamm/chef-bot:1.2` (that minor version's fixes) or `:1.2.3` (exactly that one).
 
-Read the [release notes](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/releases) first. They say when a
+Read the [release notes](https://github.com/FreeReins/chef-bot/releases) first. They say when a
 version needs the steps below.
 
 ## When a version changes the database

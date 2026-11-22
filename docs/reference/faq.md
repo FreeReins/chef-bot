@@ -51,4 +51,4 @@ shopping list. See [AI assistants](../admin/ai-assistants.md).
 ## How do I get help?
 
 See [Troubleshooting](../troubleshooting/index.md) first. If that doesn't help,
-[open an issue](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/issues/new/choose).
+[open an issue](https://github.com/FreeReins/chef-bot/issues/new/choose).

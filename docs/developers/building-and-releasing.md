@@ -2,7 +2,7 @@
 
 ## The container image
 
-The [`Dockerfile`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/Dockerfile) builds everything, so
+The [`Dockerfile`](https://github.com/FreeReins/chef-bot/blob/main/Dockerfile) builds everything, so
 only Podman or Docker is needed:
 
 | Stage | Does |
@@ -35,7 +35,7 @@ with its own throwaway database container instead.
 
 ## The Windows app
 
-[`deploy/windows/build.ps1`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/deploy/windows/build.ps1)
+[`deploy/windows/build.ps1`](https://github.com/FreeReins/chef-bot/blob/main/deploy/windows/build.ps1)
 builds both Windows downloads, after the web page and docs are built:
 
 1. Downloads EDB's PostgreSQL binaries zip pinned in `deploy/windows/postgres.json`, checks its SHA-256, and keeps
@@ -61,13 +61,13 @@ ChefBot doesn't use reflection-based JSON or compile code while running:
 - Release builds compile in Wolverine's handler code, written beforehand to `src/ChefBot.Api/Internal/Generated/`.
   The image build writes it from the source. Debug builds generate it at startup.
 
-[Code made at build time](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/CONTRIBUTING.md#code-made-at-build-time)
+[Code made at build time](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md#code-made-at-build-time)
 in CONTRIBUTING.md has the details, including how to run a Release build locally.
 
 ## Releases
 
 Pushing a tag such as `v1.2.3` runs
-[`.github/workflows/release.yml`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/.github/workflows/release.yml):
+[`.github/workflows/release.yml`](https://github.com/FreeReins/chef-bot/blob/main/.github/workflows/release.yml):
 
 1. Builds the image natively for `linux/amd64` and `linux/arm64`, each running the tests.
 2. Pushes both to `ghcr.io/jamiethenextkevinbaconhamm/chef-bot` and joins them into one multi-arch image tagged
@@ -93,7 +93,7 @@ These pages are Markdown in `docs/`, readable on GitHub as they are. The same fi
 | Where | How |
 |---|---|
 | GitHub | Read as they are |
-| The documentation site | [`.github/workflows/docs.yml`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/.github/workflows/docs.yml) builds them with MkDocs Material and publishes them to GitHub Pages on every push to `main` |
+| The documentation site | [`.github/workflows/docs.yml`](https://github.com/FreeReins/chef-bot/blob/main/.github/workflows/docs.yml) builds them with MkDocs Material and publishes them to GitHub Pages on every push to `main` |
 | Inside ChefBot, at `/help` | The `docs` stage of the image builds them, and the app serves them without sign-in |
 
 To build them locally:
@@ -104,9 +104,9 @@ python3 -m venv .venv && .venv/bin/pip install -r docs/requirements.txt
 .venv/bin/mkdocs build --strict
 ```
 
-The site's menu is `nav` in [`mkdocs.yml`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/mkdocs.yml):
-a new page needs a line there. [`docs/AGENTS.md`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/docs/AGENTS.md)
+The site's menu is `nav` in [`mkdocs.yml`](https://github.com/FreeReins/chef-bot/blob/main/mkdocs.yml):
+a new page needs a line there. [`docs/AGENTS.md`](https://github.com/FreeReins/chef-bot/blob/main/docs/AGENTS.md)
 has the writing rules.
 
-[`.github/workflows/links.yml`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/.github/workflows/links.yml)
+[`.github/workflows/links.yml`](https://github.com/FreeReins/chef-bot/blob/main/.github/workflows/links.yml)
 checks the links in every Markdown file on pull requests, and outside links once a week.

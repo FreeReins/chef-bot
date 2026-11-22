@@ -29,7 +29,7 @@ build the container image to check docs.
   Don't promise timings or behaviour the code doesn't show.
 - **Links:** relative between `.md` files inside `docs/`, always to a file (`../admin/settings.md#advanced`), never to a
   directory. Anything outside `docs/` (CONTRIBUTING.md, `deploy/`, source files) gets an absolute
-  `https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/…` link, or the strict build and `/help` break.
+  `https://github.com/FreeReins/chef-bot/blob/main/…` link, or the strict build and `/help` break.
 - **Only syntax both GitHub and MkDocs render:** tables, fenced code, Mermaid, and GitHub alerts (`> [!NOTE]`,
   `> [!TIP]`, `> [!WARNING]`). No definition lists, no MkDocs-only admonitions (`!!!`), no tabs.
 - **Say it once.** Link to the page that owns a fact instead of repeating it. The table below says who owns what.

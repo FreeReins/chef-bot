@@ -48,7 +48,7 @@ The design follows *volatility-based decomposition*: each layer hides a differen
 Rules that keep it this way:
 
 - Calls only go down. No manager calls a manager, no engine calls an engine, and only `ValidationEngine` among engines
-  reads through accessors. [`ArchitectureTests`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/tests/ChefBot.Core.Tests/ArchitectureTests.cs) fails the build
+  reads through accessors. [`ArchitectureTests`](https://github.com/FreeReins/chef-bot/blob/main/tests/ChefBot.Core.Tests/ArchitectureTests.cs) fails the build
   when a call goes the wrong way.
 - Managers that need to react to each other do it with [messages](messaging-and-scheduling.md), never direct calls.
 - One way to do each thing: ingredient needs come only from `MealRequirements`, and every plan change goes through
@@ -58,7 +58,7 @@ Each layer keeps the types its callers use in its own `Contracts/` folder: `Cont
 `Contracts/Messages/` for the records passed through them. The records in `Managers/Contracts/Messages/` are the HTTP
 JSON bodies, so their shapes are kept stable.
 
-[Where things go](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/CONTRIBUTING.md#where-things-go) in CONTRIBUTING.md has the full table.
+[Where things go](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md#where-things-go) in CONTRIBUTING.md has the full table.
 
 ## Why one process
 

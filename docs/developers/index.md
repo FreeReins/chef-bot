@@ -2,7 +2,7 @@
 
 This section explains how ChefBot is built and why, for anyone who wants to change it, extend it, or just understand
 it. For the day-to-day rules (where a class goes, style, checks to run), read
-[CONTRIBUTING.md](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/CONTRIBUTING.md). These pages explain the design behind those rules.
+[CONTRIBUTING.md](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md). These pages explain the design behind those rules.
 
 ## The short version
 
@@ -31,9 +31,9 @@ it. For the day-to-day rules (where a class goes, style, checks to run), read
 ## Get started
 
 ```sh
-git clone https://github.com/Jamiethenextkevinbaconhamm/chef-bot.git && cd chef-bot
+git clone https://github.com/FreeReins/chef-bot.git && cd chef-bot
 ./dev.sh          # dev database in a container, app with hot reload on http://localhost:8080
 ```
 
 You need the .NET 10 SDK and Podman. Node isn't needed on the host. See
-[Build and test](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/CONTRIBUTING.md#build-and-test).
+[Build and test](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md#build-and-test).

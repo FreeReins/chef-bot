@@ -126,7 +126,7 @@ To run code that isn't released yet, or on a machine that can't reach GitHub's r
 repository and use it in place of the `ghcr.io/…` one:
 
 ```sh
-git clone https://github.com/Jamiethenextkevinbaconhamm/chef-bot.git
+git clone https://github.com/FreeReins/chef-bot.git
 docker build -t chefbot:local chef-bot
 ```
 

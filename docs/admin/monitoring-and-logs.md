@@ -71,4 +71,4 @@ Collect:
 3. The log around the time of the problem, with passwords and tokens removed.
 4. What you did, what you expected, and what happened.
 
-Then [open an issue](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/issues/new/choose).
+Then [open an issue](https://github.com/FreeReins/chef-bot/issues/new/choose).

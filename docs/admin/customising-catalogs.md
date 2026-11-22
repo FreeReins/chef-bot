@@ -56,7 +56,7 @@ timers. Keep enough slow cooker, quick and meat-free mains for the plan styles y
 ## Use your own copy
 
 1. Get the file from the repository (for example
-   [config/ingredients.json](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/config/ingredients.json))
+   [config/ingredients.json](https://github.com/FreeReins/chef-bot/blob/main/config/ingredients.json))
    and save it as, say, `~/.config/chefbot/ingredients.json`.
 2. Edit it. Keep it valid JSON: ChefBot reads the files at startup, and a mistake such as a missing comma is reported
    in its log, with where it is.
