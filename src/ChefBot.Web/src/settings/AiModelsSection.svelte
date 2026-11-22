@@ -83,6 +83,25 @@
     saving = false;
   }
 
+  const providerName = (provider) => (provider === 'Anthropic' ? 'Anthropic' : 'OpenAI-compatible');
+
+  /** The model a task uses in the draft: its own choice, else the default (fallback). */
+  function usedBy(task) {
+    const chosen = routes[task];
+    if (chosen && models.some((model) => model.name === chosen)) return { name: chosen, fallback: false };
+    return { name: defaultModel || null, fallback: true };
+  }
+
+  /** The labels of the tasks a model does in the draft. */
+  const tasksFor = (model) => (model.name ? settings.tasks.filter((task) => usedBy(task.task).name === model.name).map((task) => task.label) : []);
+
+  /** Whether a model is new or differs from what is saved. */
+  function modelChanged(model) {
+    const before = settings.models.find((other) => other.id === model.id);
+    if (!before) return true;
+    return model.apiKey.trim() !== '' || ['name', 'provider', 'model', 'endpoint'].some((field) => (model[field] ?? '') !== (before[field] ?? ''));
+  }
+
   const test = (model) => run(async () => {
     const result = await api('POST', `/api/ai/models/${model.id}/test`);
     if (result.worked) toast(`${model.name} answered. It's ready to use.`);
@@ -104,54 +123,89 @@
   }
 </script>
 
-<h3>AI models ChefBot uses</h3>
 <p class="muted">
-  ChefBot can use an AI model to read recipes from photos and to suggest what a recipe is missing. Set up one model
-  as the default; any task can use a different one, such as a local model for photos. A recipe is sent to the model
-  only when someone asks.
+  ChefBot can use an AI model to read recipes from photos and to suggest what a recipe is missing. One model is the
+  default; any task can use a different one, such as a local model for photos. A recipe is sent to a model only when
+  someone asks.
 </p>
 
 {#if settings}
+  <div class="card glance">
+    <h4>At a glance</h4>
+    <dl>
+      {#each settings.tasks as task (task.task)}
+        {@const used = usedBy(task.task)}
+        <div>
+          <dt>{task.label}</dt>
+          <dd>
+            {#if used.name}
+              <strong>{used.name}</strong>
+              {#if used.fallback}<span class="chip">Default</span>{/if}
+            {:else}
+              <span class="muted">Not set up</span>
+            {/if}
+          </dd>
+        </div>
+      {/each}
+    </dl>
+  </div>
+
   <form class="stack" onsubmit={save}>
+    <h4>Models</h4>
     {#each models as model, index (model.id ?? `new-${index}`)}
-      <fieldset class="card model">
-        <legend>{model.name || 'New model'}</legend>
-        <div class="fields">
-          <label>Name <input bind:value={model.name} required maxlength="60" placeholder="Claude"></label>
-          <label>Talks to
-            <select bind:value={model.provider}>
-              {#each PROVIDERS as [provider, title] (provider)}<option value={provider}>{title}</option>{/each}
-            </select>
-          </label>
-          <label>Model <input bind:value={model.model} required autocomplete="off"
-                              placeholder={model.provider === 'Anthropic' ? 'claude-opus-5-5' : 'qwen2.5vl'}></label>
-          <label class="wide">{model.provider === 'Anthropic' ? 'Address (empty for Anthropic\'s own)' : 'Address, ending in /v1'}
-            <input type="url" bind:value={model.endpoint} required={model.provider !== 'Anthropic'}
-                   placeholder={model.provider === 'Anthropic' ? 'https://api.anthropic.com' : 'http://ollama.local:11434/v1'}>
-          </label>
-          <label class="wide">{model.provider === 'Anthropic' ? 'API key' : 'API key (if the service needs one)'}
-            <input type="password" autocomplete="off" bind:value={model.apiKey} required={model.provider === 'Anthropic' && !model.hasApiKey}
-                   placeholder={model.hasApiKey ? 'Saved. Type a new one to replace it' : ''}>
-          </label>
-          <label class="default"><input type="radio" name="default-model" value={model.name} bind:group={defaultModel}> Default model</label>
+      <details class="card model" open={model.id === null}>
+        <summary>
+          <span class="title">
+            <strong>{model.name || 'New model'}</strong>
+            <span class="muted">{providerName(model.provider)}{model.model ? ` · ${model.model}` : ''}</span>
+          </span>
+          <span class="chips">
+            {#if model.name && model.name === defaultModel}<span class="chip info">Default</span>{/if}
+            {#if model.provider === 'Anthropic'}
+              {#if model.hasApiKey || model.apiKey.trim()}<span class="chip good">Key saved</span>{:else}<span class="chip bad">No key</span>{/if}
+            {/if}
+            {#each tasksFor(model) as label (label)}<span class="chip">{label}</span>{/each}
+            {#if modelChanged(model)}<span class="chip warn">Not saved</span>{/if}
+          </span>
+        </summary>
+        <div class="body">
+          <div class="fields">
+            <label>Name <input bind:value={model.name} required maxlength="60" placeholder="Claude"></label>
+            <label>Talks to
+              <select bind:value={model.provider}>
+                {#each PROVIDERS as [provider, title] (provider)}<option value={provider}>{title}</option>{/each}
+              </select>
+            </label>
+            <label>Model <input bind:value={model.model} required autocomplete="off"
+                                placeholder={model.provider === 'Anthropic' ? 'claude-opus-5-5' : 'qwen2.5vl'}></label>
+            <label class="wide">{model.provider === 'Anthropic' ? 'Address (empty for Anthropic\'s own)' : 'Address, ending in /v1'}
+              <input type="url" bind:value={model.endpoint} required={model.provider !== 'Anthropic'}
+                     placeholder={model.provider === 'Anthropic' ? 'https://api.anthropic.com' : 'http://ollama.local:11434/v1'}>
+            </label>
+            <label class="wide">{model.provider === 'Anthropic' ? 'API key' : 'API key (if the service needs one)'}
+              <input type="password" autocomplete="off" bind:value={model.apiKey} required={model.provider === 'Anthropic' && !model.hasApiKey}
+                     placeholder={model.hasApiKey ? 'Saved. Type a new one to replace it' : ''}>
+            </label>
+            <label class="default"><input type="radio" name="default-model" value={model.name} bind:group={defaultModel}> Default model</label>
+          </div>
+          <p class="muted hint">
+            {#if model.provider === 'Anthropic'}
+              Make an API key in the Claude Console, under API keys.
+            {:else}
+              For Ollama, pull a model that can see images, such as <code>qwen2.5vl</code> or <code>llama3.2-vision</code>,
+              for reading photos.
+            {/if}
+          </p>
+          <div class="row-actions">
+            {#if model.id}
+              <button type="button" class="small" onclick={pendingClick(() => test(model))} disabled={changed}
+                      title={changed ? 'Save your changes first' : 'Asks a short question to check the connection'}>Test</button>
+            {/if}
+            <button type="button" class="small with-icon" onclick={() => remove(index)}
+                    aria-label="Remove {model.name || 'this model'}"><Trash2 size={14} />Remove</button>
+          </div>
         </div>
-        <p class="muted hint">
-          {#if model.provider === 'Anthropic'}
-            Make an API key in the Claude Console, under API keys.
-          {:else}
-            For Ollama, pull a model that can see images, such as <code>qwen2.5vl</code> or <code>llama3.2-vision</code>,
-            for reading photos.
-          {/if}
-        </p>
-        <div class="row-actions">
-          {#if model.id}
-            <button type="button" class="small" onclick={pendingClick(() => test(model))} disabled={changed}
-                    title={changed ? 'Save your changes first' : 'Asks a short question to check the connection'}>Test</button>
-          {/if}
-          <button type="button" class="small with-icon" onclick={() => remove(index)}
-                  aria-label="Remove {model.name || 'this model'}"><Trash2 size={14} />Remove</button>
-        </div>
-      </fieldset>
+      </details>
     {:else}
       <p class="card muted">No AI models yet. Add one to read recipes from photos and complete recipes.</p>
     {/each}
@@ -167,12 +221,12 @@
 
     {#if models.length > 1}
       <fieldset class="card">
-        <legend>Use a different model for…</legend>
+        <legend>Which model does each task</legend>
         <div class="fields">
           {#each settings.tasks as task (task.task)}
             <label>{task.label}
               <select bind:value={routes[task.task]}>
-                <option value="">The default model</option>
+                <option value="">The default model{defaultModel ? ` (${defaultModel})` : ''}</option>
                 {#each models.filter((model) => model.name) as model (model.name)}<option value={model.name}>{model.name}</option>{/each}
               </select>
               <span class="muted hint">{task.description}</span>
@@ -189,8 +243,9 @@
   </form>
 
   {#if sweep?.modelName}
+    <h4>Recipe tools</h4>
     <div class="card stack sweep">
-      <h4 class="with-icon"><Sparkles size={16} />Complete sparse recipes</h4>
+      <h5 class="with-icon"><Sparkles size={16} />Complete sparse recipes</h5>
       {#if sweep.sparse > 0}
         <p>{plural(sweep.sparse, 'recipe')} {sweep.sparse === 1 ? 'is' : 'are'} missing details, such as times, tags, amounts or clear steps.
           {sweep.modelName} can suggest what to add; you choose what to keep on each recipe.</p>
@@ -207,7 +262,17 @@
 {/if}
 
 <style>
+  h4 { margin: 1.25rem 0 .5rem; font-size: 1rem; }
+  .glance h4 { margin: 0 0 .5rem; }
+  .glance dl { margin: 0; display: grid; gap: .4rem; }
+  .glance dl div { display: flex; justify-content: space-between; align-items: center; gap: .5rem 1rem; flex-wrap: wrap; }
+  .glance dt { color: var(--muted); }
+  .glance dd { margin: 0; display: flex; align-items: center; gap: .4rem; }
   .model { border: 1px solid var(--line); }
+  .model summary { cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: .5rem 1rem; flex-wrap: wrap; }
+  .model summary .title { display: flex; flex-direction: column; }
+  .model summary .chips { margin: 0; }
+  .model .body { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--line); }
   legend { font-weight: 600; padding: 0 .25rem; }
   .fields { display: grid; gap: .5rem .75rem; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); }
   .fields .wide { grid-column: 1 / -1; }
@@ -216,6 +281,6 @@
   .unsaved { align-self: center; }
   .add { align-items: end; }
   .add label { display: grid; gap: .25rem; }
-  .sweep h4 { margin: 0; display: flex; align-items: center; gap: .4rem; }
+  .sweep h5 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: .4rem; }
   .sweep p { margin: 0; }
 </style>

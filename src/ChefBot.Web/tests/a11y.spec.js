@@ -468,6 +468,14 @@ const VIEWS = [
     act: (page) => page.getByRole('button', { name: 'Ask for suggestions' }).waitFor(),
   },
   {
+    name: 'settings: editing a saved AI model', path: '/settings/assistants',
+    answers: { ...AI, 'GET /api/ai/settings': data.aiSettings(), 'GET /api/ai/sweeps/recipe-details': data.detailsSweep() },
+    act: async (page) => {
+      await page.locator('summary').filter({ hasText: 'claude-opus-5-5' }).click();
+      await page.getByLabel('API key', { exact: true }).waitFor();
+    },
+  },
+  {
     name: 'settings: adding an Ollama model', path: '/settings/assistants',
     act: async (page) => {
       await page.getByLabel('Start from').selectOption('ollama');

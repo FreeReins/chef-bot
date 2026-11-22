@@ -2,7 +2,7 @@
      words, and under "Filters" by course, favourites, tags, slow cooker, time and waiting AI suggestions. Each recipe has a heart to make it a favourite, and shows its rating and whose favourite it is (RecipeBadges.svelte). Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
 <script>
   import { untrack } from 'svelte';
-  import { app, run, isAdmin } from '../lib/app.svelte.js';
+  import { app, run, isAdmin, searchParams } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import Chip from '../components/Chip.svelte';
   import RecipeDetail from './RecipeDetail.svelte';
@@ -69,15 +69,8 @@
   $effect(() => {
     if (app.recipeId) return;
     void app.recipesChanged;
-    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-    if (query) params.set('query', query);
-    if (course) params.set('course', course);
-    if (favourites === 'any') params.set('favourites', 'true');
-    else if (favourites) params.set('favouredBy', favourites === 'mine' ? app.session?.user?.id : favourites);
-    for (const tag of tags) params.append('tag', tag);
-    if (slowCooker) params.set('slowCooker', 'true');
-    if (withSuggestions) params.set('withSuggestions', 'true');
-    if (readyWithin) params.set('readyWithin', readyWithin);
+    const params = searchParams({ page, pageSize: PAGE_SIZE, query, course, favourites, tags, slowCooker, readyWithin, withSuggestions,
+      me: app.session?.user?.id });
     const ticket = ++latest;
     loading = true;
     // run() clears old messages as it starts; untracked, so that doesn't make this effect run again.
@@ -98,8 +91,7 @@
 
   const librarySize = $derived(result?.librarySize ?? app.recipeCount);
   /** How many filters are on, for the Filters button. Each tag counts as one. */
-  const filterCount = $derived((course ? 1 : 0) + (favourites ? 1 : 0) + tags.length + (slowCooker ? 1 : 0) + (readyWithin ? 1 : 0)
-    + (withSuggestions ? 1 : 0));
+  const filterCount = $derived((course ? 1 : 0) + (favourites ? 1 : 0) + tags.length + [slowCooker, readyWithin, withSuggestions].filter(Boolean).length);
   const filtering = $derived(query !== '' || filterCount > 0);
   const otherPeople = $derived(filterChoices.people.filter((person) => person.userId !== app.session?.user?.id));
 

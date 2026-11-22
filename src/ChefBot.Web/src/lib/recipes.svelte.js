@@ -49,3 +49,20 @@ export async function importFile(file) {
 export async function loadFileFormats() {
   if (app.fileFormats.length === 0) app.fileFormats = await api('GET', '/api/recipes/import/formats');
 }
+
+/**
+ * The query for one page of the library search (GET /api/recipes/search), from the Recipes tab's search and filters.
+ * favourites is '' for all recipes, 'mine' (the signed-in person, `me`), 'any', or another person's id.
+ */
+export function searchParams({ page, pageSize, query, course, favourites, tags, slowCooker, readyWithin, withSuggestions, me }) {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (query) params.set('query', query);
+  if (course) params.set('course', course);
+  if (favourites === 'any') params.set('favourites', 'true');
+  else if (favourites) params.set('favouredBy', favourites === 'mine' ? me : favourites);
+  for (const tag of tags) params.append('tag', tag);
+  if (slowCooker) params.set('slowCooker', 'true');
+  if (withSuggestions) params.set('withSuggestions', 'true');
+  if (readyWithin) params.set('readyWithin', readyWithin);
+  return params;
+}

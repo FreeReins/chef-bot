@@ -2,10 +2,10 @@
 
 AI works with ChefBot in two ways, both under **Settings → AI assistants**:
 
-- **AI models ChefBot uses** (admins): ChefBot itself asks a model you choose to
+- **ChefBot's AI models** (admins): ChefBot itself asks a model you choose to
   [read recipes from photos](../using/recipes.md#from-a-photo) and to
   [suggest what a recipe is missing](../using/recipes.md#make-a-recipe-more-complete).
-- **Assistants connected to ChefBot** (everyone): ChefBot is an [MCP](https://modelcontextprotocol.io) server, so AI
+- **Connect your assistant** (everyone): ChefBot is an [MCP](https://modelcontextprotocol.io) server, so AI
   assistants such as Claude can work with your kitchen. You can ask one to plan next week, swap Tuesday's dinner for
   something with chicken, mark tonight's meal cooked, or add milk to the shopping list.
 
@@ -13,6 +13,11 @@ AI works with ChefBot in two ways, both under **Settings → AI assistants**:
 
 This part is for admins. Nothing is sent to a model until someone in the household asks: by reading a photo, by
 pressing **Ask for suggestions** on a recipe, or by starting the library sweep below.
+
+**At a glance** lists each task and the model it uses, marked **Default** when it falls back to the default model,
+or **Not set up** when there is no model yet. Under **Models**, each model is one row showing its service, model
+name, whether it's the default, whether its API key is saved, and the tasks it does. Select a row to open it and
+change its fields, **Test** it, or **Remove** it. A row marked **Not saved** has changes waiting for **Save models**.
 
 ### Set up a model
 
@@ -28,8 +33,8 @@ pressing **Ask for suggestions** on a recipe, or by starting the library sweep b
 
    LM Studio, OpenRouter, vLLM and other services that answer OpenAI's chat completions API work as
    **OpenAI-compatible**. An address on your own network is fine here, unlike for recipe links.
-3. Choose the **Default model**. Every task uses it unless you choose another.
-4. Press **Save models**, then **Test** on the model. It asks a short question and says whether the model answered.
+3. Choose the **Default model** in the new model's row. Every task uses it unless you choose another.
+4. Press **Save models**, then open the model's row and press **Test**. It asks a short question and says whether the model answered.
 
 API keys are never shown again after saving. Leave the key field empty to keep the saved one.
 
@@ -39,7 +44,7 @@ API keys are never shown again after saving. Leave the key field empty to keep t
 
 ### Use a different model for a task
 
-With two or more models, **Use a different model for…** lists each task:
+With two or more models, **Which model does each task** lists each task:
 
 - **Reading recipe photos**
 - **Completing recipes**
@@ -49,7 +54,7 @@ recipes with Claude. Removing a model sends its tasks back to the default.
 
 ### Complete sparse recipes
 
-Once a model is set up, **Complete sparse recipes** counts the recipes missing details: no description, no times, no
+Once a model is set up, **Complete sparse recipes**, under **Recipe tools**, counts the recipes missing details: no description, no times, no
 tags, ingredient lines without amounts, or steps that are short or missing. **Ask for suggestions** queues them all.
 ChefBot asks the model about one recipe at a time in the background, and suggestions appear on each recipe as they're
 ready. Find them on the **Recipes** tab with the **Has suggestions** filter.
@@ -72,8 +77,11 @@ the pantry and the shopping list. Admin settings (people, stores, plan styles, b
 
 ### Connect one
 
+Under **Connect your assistant** there are two steps: **1. ChefBot's address** shows the MCP address to copy, and
+**2. Your tokens** lists your tokens and makes new ones.
+
 1. Open **Settings → AI assistants**.
-2. Under **Name for a new token**, enter the assistant it's for, and press **Make a token**.
+2. Under **2. Your tokens**, in **Name for a new token**, enter the assistant it's for, and press **Make a token**.
 3. Copy the token. It's shown only once.
 4. Give the assistant the **MCP address**, `https://<ChefBot's address>:8443/mcp`, and the token, sent as the header
    `Authorization: Bearer <token>`.

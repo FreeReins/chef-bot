@@ -59,7 +59,7 @@ household's habits stay on your hardware.
 | 👩‍🍳 **Cooking mode** | Big text, one step at a time, what to start early, and timers that ring. [Cooking mode →](docs/using/cooking-mode.md) |
 | 📅 **Calendar feed** | Your meal plan in Apple Calendar, Google Calendar, Outlook or Thunderbird, with slow cooker reminders. [Calendar →](docs/using/calendar.md) |
 | 🔔 **Reminders** | Plan ready, start the slow cooker, food to use soon, shopping to do: sent to Home Assistant or any webhook. [Notifications →](docs/admin/notifications.md) |
-| 🤖 **AI assistant ready** | A built-in MCP server lets Claude and other assistants plan your week and manage your pantry. [AI assistants →](docs/admin/ai-assistants.md) |
+| 🤖 **AI assistant ready** | Read a recipe from a photo of a cookbook page or card, and have gaps in your recipes filled in for you to check, with Claude, OpenAI or a local model such as Ollama. A built-in MCP server lets Claude and other assistants plan your week and manage your pantry. [AI assistants →](docs/admin/ai-assistants.md) |
 | 👪 **For one or for many** | Each person signs in, everyone shares the kitchen. Works just as well for a household of one. [People →](docs/admin/people-and-accounts.md) |
 | 💾 **Backs itself up** | Nightly backups with one-click restore. [Backups →](docs/admin/backups-and-restore.md) |
 | 🔒 **Secure by default** | HTTPS out of the box, account lockout, and a strict browser security policy. [HTTPS →](docs/admin/https-and-certificates.md) |
