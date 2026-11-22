@@ -137,7 +137,7 @@ public static class ServiceRegistration
     public static CertificateStore AddChefBotHttps(this IServiceCollection services, IConfiguration configuration)
     {
         DataFolders.RequireWritable(KeysFolder(configuration), "Data:SessionKeys");
-        DataFolders.RequireWritable(CoreRegistration.DataPath(configuration, "Data:Backups", "backups"), "Data:Backups");
+        DataFolders.RequireWritable(CoreRegistration.StoragePath(configuration, "Data:Backups", "backups"), "Data:Backups");
 
         var options = configuration.GetSection("Https").Get<HttpsOptions>() ?? new HttpsOptions();
         var certificates = new CertificateStore(options, KeysFolder(configuration));
@@ -314,5 +314,5 @@ public static class ServiceRegistration
     }
 
     /// <summary>The folder for files ChefBot creates and must keep: session keys and its own HTTPS certificate.</summary>
-    private static string KeysFolder(IConfiguration configuration) => CoreRegistration.DataPath(configuration, "Data:SessionKeys", "keys");
+    private static string KeysFolder(IConfiguration configuration) => CoreRegistration.StoragePath(configuration, "Data:SessionKeys", "keys");
 }

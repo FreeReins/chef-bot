@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
     <PackageReference Include="WolverineFx" />
@@ -26,5 +27,19 @@
   <ItemGroup>
     <!-- Editable data files live in /config at the repository root and ship next to the app. -->
     <Content Include="../../config/*.json" Link="config/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <!--
+    The Windows app (deploy/windows/build.ps1). ChefBotPayload is a folder holding wwwroot/ (the page and help),
+    pgsql/ (PostgreSQL) and appsettings.Production.json, published next to the app, or packed inside ChefBot.exe in
+    the portable build, where the ChefBot.Portable switch tells the app to keep its data next to the exe (PortableApp).
+  -->
+  <PropertyGroup Condition="'$(ChefBotPayload)' != ''">
+    <ChefBotPayloadFiles>$([MSBuild]::EnsureTrailingSlash('$(ChefBotPayload)'))**</ChefBotPayloadFiles>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(ChefBotPayloadFiles)' != ''">
+    <Content Include="$(ChefBotPayloadFiles)" Link="%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="Never" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ChefBotPortable)' == 'true'">
+    <RuntimeHostConfigurationOption Include="ChefBot.Portable" Value="true" />
   </ItemGroup>
 </Project>

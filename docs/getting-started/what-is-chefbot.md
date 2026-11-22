@@ -36,7 +36,8 @@ recipes and plans stay with you.
 
 - **Households of any size.** A single person gets the same features as a family of six. Everyone in the
   household shares the same recipes, plan and pantry, and each has their own sign-in.
-- **People who like to run their own services.** ChefBot is two containers: the app and its PostgreSQL database.
+- **People who like to run their own services.** ChefBot is one container, or one Windows program,
+  with its PostgreSQL database inside.
   It runs anywhere Docker or Podman does.
 - **Home Assistant users.** Reminders go to a webhook, the shopping list can go to any Home Assistant to-do list,
   and the meal plan can appear in your calendar.

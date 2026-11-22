@@ -42,8 +42,11 @@ For a new stored table, a new manager operation or endpoint, a new web screen, o
 - Admin-only endpoints use `[Authorize(Policy = Sessions.AdminPolicy)]`; managers don't check roles.
 - The schema comes from `EnsureCreated` and is never upgraded: after changing an entity, tell the user to run
   `./dev.sh reset`. Don't add migrations unless asked. A new stored entity also goes in `BackupAccess.Tables`.
-- A setting people should change goes in `deploy/podman/chefbot.env.example`. A volume or port: update the
-  units in `deploy/podman/` and `deploy/compose/compose.yaml`, and the install guides in `docs/getting-started/`. An
+- ChefBot ships as one container (and a Windows app) that runs its own PostgreSQL (`src/ChefBot.Api/Database/`):
+  never add a second container or volume. Files ChefBot writes go under `Data:Root` via `CoreRegistration.StoragePath`.
+- A setting people should change goes in `deploy/podman/chefbot.env.example`. A port: update the unit in
+  `deploy/podman/install.sh`, `deploy/compose/compose.yaml`, `deploy/windows/Package.wxs`, and the install guides in
+  `docs/getting-started/`. An
   HTTP API change: update `docs/reference/api.md`. A user-visible change: update its page in `docs/` (see
   `docs/AGENTS.md`, which maps features to pages).
 - User-facing messages are plain sentences saying what happened and what to do next.

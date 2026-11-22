@@ -12,10 +12,46 @@ only Podman or Docker is needed:
 | `build` | Restores and builds the .NET solution, and writes Wolverine's generated code |
 | `test` | Runs the tests |
 | `publish` | Publishes the API |
-| `final` | The runtime image: the app, the page in `wwwroot/`, the docs in `wwwroot/help/`, running as user 1654 |
+| `postgres` | Installs PostgreSQL 17 from PostgreSQL's apt repository, so the server can be copied out without the package's dependencies (LLVM, Perl, systemd) |
+| `final` | The runtime image: the app, the page in `wwwroot/`, the docs in `wwwroot/help/`, the PostgreSQL server in `/usr/lib/postgresql/17`, and `tini` as process 1, running as user 1654 with everything it keeps in `/data` |
 
-`deploy/podman/install.sh` runs the `test` stage, then builds the image as `localhost/chefbot:latest`. While
-developing, run the tests with `dotnet run --project tests/ChefBot.Core.Tests` instead: it's much faster.
+`deploy/podman/install.sh --build` builds the image as `localhost/chefbot:latest`. While developing, run the tests
+with `dotnet run --project tests/ChefBot.Core.Tests` instead: it's much faster.
+
+## The bundled database
+
+ChefBot runs its own PostgreSQL, so an install is one container or one Windows program.
+`src/ChefBot.Api/Database/BundledDatabase.cs` does it, unless `Database:Mode` is `External`:
+
+1. Before the services are registered, it points `ConnectionStrings:ChefBot` at `127.0.0.1:<Database:Port>`, with the
+   password kept in `<Data:Root>/database/password`.
+2. As the host starts (`BundledDatabaseLifetime`, before `ChefBotStartup` creates the tables and before the message
+   bus), it runs `initdb` the first time, writes `chefbot.conf` (listen on 127.0.0.1 only, no socket files, no JIT),
+   and starts the server with `pg_ctl`. A server left running by a ChefBot that was killed is used as it is.
+3. Once the host has stopped, the message bus included, it stops the server with `pg_ctl stop -m fast`.
+
+It refuses a data folder made by another major version of PostgreSQL. `./dev.sh` uses `Database:Mode=External`
+with its own throwaway database container instead.
+
+## The Windows app
+
+[`deploy/windows/build.ps1`](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/deploy/windows/build.ps1)
+builds both Windows downloads, after the web page and docs are built:
+
+1. Downloads EDB's PostgreSQL binaries zip pinned in `deploy/windows/postgres.json`, checks its SHA-256, and keeps
+   only `bin`, `lib` and `share` (plus the Visual C++ runtime from the zip).
+2. Publishes `src/ChefBot.Api` for `win-x64`, self-contained, with `ChefBotPayload` pointing at the page, the help,
+   PostgreSQL and `appsettings.Production.json` (HTTPS on, as in the image). Once as a folder, renamed to
+   `ChefBot.exe`, for the installer; once as a single self-extracting exe with the `ChefBot.Portable` switch, which
+   keeps its data in `ChefBot-data` next to the exe.
+3. On Windows, builds `ChefBot.msi` from `deploy/windows/Package.wxs` with WiX 5. It installs the **ChefBot** service
+   (account `NT SERVICE\ChefBot`, started with `--Data:Root=C:\ProgramData\ChefBot`), firewall rules for 8080 and 8443
+   on private networks, the event log source and Start menu shortcuts.
+
+On Linux, `pwsh deploy/windows/build.ps1 -SkipInstaller` (in the .NET SDK container, which has PowerShell) builds the
+portable exe for checking. Updating PostgreSQL: change the version, URL and checksum in `postgres.json`, and
+`POSTGRES_MAJOR` in the Dockerfile only for a new major version, which needs a backup and restore (see
+[Upgrading](../admin/upgrading.md#when-a-version-changes-the-database)).
 
 ## Code made at build time
 
@@ -36,7 +72,11 @@ Pushing a tag such as `v1.2.3` runs
 1. Builds the image natively for `linux/amd64` and `linux/arm64`, each running the tests.
 2. Pushes both to `ghcr.io/jamiethenextkevinbaconhamm/chef-bot` and joins them into one multi-arch image tagged
    `1.2.3`, `1.2` and `latest`.
-3. Creates a GitHub release with generated notes and the documentation as a zip, to read with no service running.
+3. Builds the Windows installer and portable app on a Windows runner, after running the tests, and checks both:
+   the portable app must answer `/health`, then again after being killed; the MSI must install a service that
+   answers `/health`, and uninstall cleanly.
+4. Creates a GitHub release with generated notes, the two Windows downloads, and the documentation as a zip, to read
+   with no service running.
 
 ```sh
 git tag v1.2.3

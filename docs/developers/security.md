@@ -16,7 +16,7 @@ makes on someone else's behalf. This page describes each part. To report a probl
 
 - A cookie, `chefbot.session`: HttpOnly and `SameSite=Strict`, marked Secure when the request came over HTTPS. It
   lasts 30 days, renewed as it is used.
-- Cookies are encrypted with ASP.NET Core Data Protection keys kept in `/app/keys`, so sessions survive restarts.
+- Cookies are encrypted with ASP.NET Core Data Protection keys kept in `keys` in the data folder (`/data/keys` in the container), so sessions survive restarts.
   Losing the keys signs everyone out.
 - Changing a password, or restoring a backup, ends older sessions.
 

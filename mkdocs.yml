@@ -95,7 +95,8 @@ nav:
       - What ChefBot does: getting-started/what-is-chefbot.md
       - What you need: getting-started/requirements.md
       - Install with Podman: getting-started/install-podman.md
-      - Install with Docker Compose: getting-started/install-docker-compose.md
+      - Install with Docker: getting-started/install-docker-compose.md
+      - Install on Windows: getting-started/install-windows.md
       - Other platforms: getting-started/install-other-platforms.md
       - First run: getting-started/first-run.md
   - Using ChefBot:

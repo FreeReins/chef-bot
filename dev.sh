@@ -17,8 +17,9 @@
 #   ./dev.sh reset    delete the dev database, sign-in keys and backups, for example after changing an entity
 #   ./dev.sh fresh    reset, then run the app: the setup wizard runs again (same as ./dev-fresh.sh)
 #
-# The dev database is separate from an installed ChefBot (deploy/podman). Its settings match the defaults in
-# src/ChefBot.Api/appsettings.json, so a plain `dotnet run` works too while it is running.
+# An installed ChefBot runs its own PostgreSQL inside its one container. The dev copy uses this separate dev
+# database instead (Database__Mode=External). For a plain `dotnet run` while it is running, set the two variables
+# ./dev.sh db prints.
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -26,6 +27,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 container=chefbot-dev-db
 volume=chefbot-dev-db
 db_port=5432
+dev_connection="Host=localhost;Port=$db_port;Database=chefbot;Username=chefbot;Password=chefbot"
 # Where the dev copy keeps its session keys and backups: next to the built app (Data:SessionKeys, Data:Backups).
 app_output=src/ChefBot.Api/bin/Debug/net10.0
 web=src/ChefBot.Web
@@ -147,6 +149,8 @@ run_app() {
     # Development turns on hot reload's browser refresh. The schedule is off so the dev copy never stages plans
     # on its own, and edits that hot reload can't apply restart the app instead of asking.
     ASPNETCORE_ENVIRONMENT=Development \
+    Database__Mode=External \
+    ConnectionStrings__ChefBot="$dev_connection" \
     DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1 \
     Https__Mode=SelfSigned \
     Https__HttpPort="$http_port" \
@@ -196,7 +200,7 @@ case "${1:-run}" in
         ;;
     db)
         start_db
-        echo "Connection: Host=localhost;Port=$db_port;Database=chefbot;Username=chefbot;Password=chefbot"
+        echo "Database__Mode=External ConnectionStrings__ChefBot=\"$dev_connection\""
         ;;
     psql)
         start_db

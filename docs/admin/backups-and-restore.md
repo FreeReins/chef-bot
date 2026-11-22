@@ -28,9 +28,11 @@ Backups contain password hashes and to-do app tokens, so keep downloaded copies 
 
 ### Keep backups in a folder
 
-**Podman:** create the folder and give it to ChefBot's user, then change the backups line in
-`~/.config/containers/systemd/chefbot/chefbot.container` (and in `deploy/podman/chefbot.container`, so `install.sh`
-keeps it):
+Backups are kept in `backups` in ChefBot's data folder. To keep them somewhere else, mount a folder over it.
+
+**Podman:** create the folder and give it to ChefBot's user, then add a line after the `/data` one in
+`~/.config/containers/systemd/chefbot/chefbot.container` (running `install.sh` again writes that file afresh, so add
+it again after):
 
 ```sh
 mkdir ~/chefbot-backups
@@ -38,12 +40,16 @@ podman unshare chown 1654 ~/chefbot-backups
 ```
 
 ```ini
-Volume=%h/chefbot-backups:/app/backups:Z
+Volume=%h/chefbot-backups:/data/backups:Z
 ```
 
 Then run `systemctl --user daemon-reload && systemctl --user restart chefbot`.
 
-**Docker Compose:** see [Use host folders instead of volumes](../getting-started/install-docker-compose.md#use-host-folders-instead-of-volumes).
+**Docker Compose:** add `- ./backups:/data/backups` under `volumes:`, after the `/data` line, with the folder made
+as in [Use a host folder instead of a volume](../getting-started/install-docker-compose.md#use-a-host-folder-instead-of-a-volume).
+
+**Windows:** set `Data:Backups` to the folder in `settings.json` (see the
+[settings reference](settings.md#settings-in-the-environment)). The ChefBot service must be able to write to it.
 
 ## Restore a backup
 
@@ -53,8 +59,9 @@ Then run `systemctl --user daemon-reload && systemctl --user restart chefbot`.
 
 1. Open **Settings → Backups**.
 2. To restore a backup you downloaded, put it back in the backups folder first, keeping its name
-   (`chefbot-backup-….json.gz`). For a volume, copy it in: `podman cp chefbot-backup-….json.gz chefbot:/app/backups/`
-   or `docker compose cp chefbot-backup-….json.gz chefbot:/app/backups/`. Then reload the page.
+   (`chefbot-backup-….json.gz`). For a volume, copy it in: `podman cp chefbot-backup-….json.gz chefbot:/data/backups/`
+   or `docker compose cp chefbot-backup-….json.gz chefbot:/data/backups/`. On Windows, copy it into
+   `C:\ProgramData\ChefBot\backups`. Then reload the page.
 3. Press restore next to the backup and confirm.
 4. Sign in again.
 

@@ -1,12 +1,42 @@
 using ChefBot.Api;
+using ChefBot.Api.Database;
 using ChefBot.Api.Mcp;
 using ChefBot.Core;
 using ChefBot.Core.Managers.Contracts;
 using JasperFx;
+using Microsoft.Extensions.Hosting.WindowsServices;
 using Wolverine;
 using Wolverine.Http;
 
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions { Args = args, WebRootPath = WebPage.Folder() });
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    WebRootPath = WebPage.Folder(),
+    // A Windows service starts in System32, so its settings and page are found from the app's own folder.
+    ContentRootPath = WindowsServiceHelpers.IsWindowsService() ? AppContext.BaseDirectory : null,
+});
+
+// Everything ChefBot writes lives under Data:Root, which can hold a settings.json of its own.
+DataFolders.UseDataRoot(builder.Configuration);
+// ChefBot runs its own PostgreSQL unless Database:Mode is External. This sets the connection string, so it comes
+// before anything reads it.
+var database = BundledDatabase.Configure(builder.Configuration);
+if (database is not null)
+{
+    builder.Services.AddSingleton(database);
+    builder.Services.AddHostedService<BundledDatabaseLifetime>();
+}
+
+// Creates ChefBot's tables as the app starts, after the database and before the message bus, which creates its own.
+// Registered before UseWolverine, so it runs first.
+builder.Services.AddHostedService<ChefBotStartup>();
+
+// Runs as the ChefBot Windows service when the installer set it up as one; otherwise this does nothing.
+builder.Host.UseWindowsService(service => service.ServiceName = "ChefBot");
+if (OperatingSystem.IsWindows())
+{
+    builder.Services.Configure<Microsoft.Extensions.Logging.EventLog.EventLogSettings>(WindowsEventLog.UseChefBotSource);
+}
 
 builder.Services.AddChefBot(builder.Configuration);
 builder.Services.AddChefBotSignIn(builder.Configuration);
@@ -78,9 +108,20 @@ if (args is ["codegen", ..])
     return await app.RunJasperFxCommands(args);
 }
 
-// ChefBot's tables are created before the message bus starts and creates its own.
-await app.Services.PrepareChefBotAsync();
-await app.StartAsync();
-await app.Services.ApplyChefBotStartupSettingsAsync();
-await app.WaitForShutdownAsync();
-return 0;
+try
+{
+    // Starts the bundled database and creates the tables first (BundledDatabaseLifetime, ChefBotStartup).
+    await app.StartAsync();
+    await app.Services.ApplyChefBotStartupSettingsAsync();
+    PortableApp.Announce(app.Configuration, app.Logger);
+    await app.WaitForShutdownAsync();
+    return 0;
+}
+finally
+{
+    // Normally stopped with the app already; this covers a start that failed part way.
+    if (database is not null)
+    {
+        await database.StopAsync(app.Services.GetRequiredService<ILogger<BundledDatabase>>());
+    }
+}

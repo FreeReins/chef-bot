@@ -10,7 +10,7 @@ Traefik or nginx handles HTTPS in front of ChefBot, see [Behind a reverse proxy]
 ## How it works out of the box
 
 - ChefBot serves **HTTPS on port 8443** and plain **HTTP on port 8080**.
-- On the first start it makes a **self-signed certificate** and keeps it in the keys volume (`/app/keys`).
+- On the first start it makes a **self-signed certificate** and keeps it in `keys` in the data folder (`/data/keys` in the container).
 - The certificate lasts about **two years** and is renewed by itself in its last 30 days.
 - **Always use HTTPS** sends anyone arriving on port 8080 to the HTTPS address. It's on from the start.
 

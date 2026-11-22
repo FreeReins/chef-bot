@@ -1,0 +1,20 @@
+<!--
+  The Windows installer, ChefBot.msi. Built on Windows by build.ps1 with dotnet build, from the app it published:
+    dotnet build deploy/windows/ChefBot.Installer.wixproj -p:Version=1.4.0 -p:AppFolder=<published app>
+  It isn't in ChefBot.slnx, because WiX only builds on Windows.
+-->
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <OutputName>ChefBot</OutputName>
+    <Platform>x64</Platform>
+    <Version Condition="'$(Version)' == ''">0.0.0</Version>
+    <DefineConstants>AppFolder=$(AppFolder);ProductVersion=$(Version)</DefineConstants>
+    <!-- ICE validation needs an administrator on some build machines; the GitHub runner is one. -->
+    <SuppressValidation Condition="'$(CI)' != 'true'">true</SuppressValidation>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Firewall.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+</Project>

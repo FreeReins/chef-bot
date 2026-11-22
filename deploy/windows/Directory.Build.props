@@ -1,0 +1,3 @@
+<Project>
+  <!-- Stops the repository's .NET build settings and central package versions from applying to the installer. -->
+</Project>

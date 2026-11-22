@@ -48,6 +48,26 @@ RUN dotnet run --project tests/ChefBot.Core.Tests --configuration Release --no-b
 FROM build AS publish
 RUN dotnet publish src/ChefBot.Api/ChefBot.Api.csproj --configuration Release --no-build --output /app
 
+# PostgreSQL, for the database ChefBot runs itself (src/ChefBot.Api/Database). It comes from PostgreSQL's own apt
+# repository, because the base image is Ubuntu 24.04, which only has 16; its key is checked against this checksum.
+# The package is installed here and only the server is copied into the image: its dependencies (LLVM for JIT, Perl
+# and systemd for the cluster tools) would double the image's size, and ChefBot uses none of them.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS postgres
+ARG POSTGRES_MAJOR=17
+ADD --checksum=sha256:0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76 \
+    https://www.postgresql.org/media/keys/ACCC4CF8.asc /usr/share/keyrings/postgresql.asc
+RUN chmod 644 /usr/share/keyrings/postgresql.asc \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/usr/share/keyrings/postgresql.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+        > /etc/apt/sources.list.d/pgdg.list \
+    && mkdir -p /etc/postgresql-common/createcluster.d \
+    && echo "create_main_cluster = false" > /etc/postgresql-common/createcluster.d/chefbot.conf \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "postgresql-${POSTGRES_MAJOR}" \
+    && rm -rf "/usr/lib/postgresql/${POSTGRES_MAJOR}/lib/bitcode" "/usr/lib/postgresql/${POSTGRES_MAJOR}/lib/llvmjit"* \
+    && mkdir "/usr/lib/postgresql/${POSTGRES_MAJOR}/libpq" \
+    && cp -P /usr/lib/*-linux-gnu/libpq.so.5* "/usr/lib/postgresql/${POSTGRES_MAJOR}/libpq/"
+
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 # Links the published image to its repository on the GitHub Container Registry.
 LABEL org.opencontainers.image.source="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" \
@@ -56,23 +76,41 @@ LABEL org.opencontainers.image.source="https://github.com/Jamiethenextkevinbacon
       org.opencontainers.image.documentation="https://jamiethenextkevinbaconhamm.github.io/chef-bot/" \
       org.opencontainers.image.url="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" \
       org.opencontainers.image.licenses="GPL-3.0-only"
+
+# The bundled PostgreSQL, at the paths it was built for, and the libraries it needs that the base image doesn't
+# have (readline is for psql, for looking at the database by hand). tini is process 1, so it passes on the stop
+# signal to ChefBot, which stops PostgreSQL cleanly, and reaps anything left behind. No database is made here:
+# ChefBot creates its own in /data on first start.
+ARG POSTGRES_MAJOR=17
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        tini libxml2 libxslt1.1 libldap2 libgssapi-krb5-2 libpam0g libsystemd0 libselinux1 libedit2 \
+        liblz4-1 libzstd1 libuuid1 libreadline8t64 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=postgres /usr/lib/postgresql/${POSTGRES_MAJOR}/ /usr/lib/postgresql/${POSTGRES_MAJOR}/
+COPY --from=postgres /usr/share/postgresql/${POSTGRES_MAJOR}/ /usr/share/postgresql/${POSTGRES_MAJOR}/
+# Its own libpq, which its tools need (Ubuntu's is older).
+RUN echo "/usr/lib/postgresql/${POSTGRES_MAJOR}/libpq" > /etc/ld.so.conf.d/postgresql.conf && ldconfig
+
 WORKDIR /app
 COPY --from=publish /app ./
 # The app serves the page from wwwroot next to it (WebPage.Folder).
 COPY --from=web /source/src/ChefBot.Web/dist/ ./wwwroot/
 # The documentation, served at /help without sign-in (WebPage.MapChefBotWebPage).
 COPY --from=docs /site/ ./wwwroot/help/
-# Session keys, the HTTPS certificate and backups live in these folders. They are created with the
-# app's user so mounted volumes are writable. Declared as volumes so they survive even when nobody mounts
-# them; give them named volumes (docs/getting-started/install-docker-compose.md) so they also survive replacing the
+# Everything ChefBot keeps lives in /data: the database, sign-in keys, the HTTPS certificate, backups and an
+# optional settings.json. It is created with the app's user so a mounted volume is writable, and declared as a
+# volume so it survives even when nobody mounts one; give it a named volume so it also survives replacing the
 # container.
-RUN mkdir -p /app/keys /app/backups && chown $APP_UID /app/keys /app/backups
-VOLUME ["/app/keys", "/app/backups"]
+RUN mkdir -p /data && chown $APP_UID /data
+VOLUME ["/data"]
 USER $APP_UID
+ENV Data__Root=/data \
+    Database__Binaries=/usr/lib/postgresql/${POSTGRES_MAJOR}/bin
 # ChefBot sets its own ports (Https:HttpPort and Https:Port), so the image's default is cleared.
 ENV ASPNETCORE_HTTP_PORTS=
 # Secure out of the box: ChefBot makes its own certificate. Behind a reverse proxy that handles HTTPS, set
 # Https__Mode=Off; to use your own certificate, set Https__Mode=Certificate.
 ENV Https__Mode=SelfSigned
 EXPOSE 8080 8443
-ENTRYPOINT ["dotnet", "ChefBot.Api.dll"]
+ENTRYPOINT ["tini", "--", "dotnet", "ChefBot.Api.dll"]

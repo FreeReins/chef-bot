@@ -2,12 +2,15 @@
 
 ## The page doesn't open
 
-1. **Check it's running:** `systemctl --user status chefbot chefbot-db` or `docker compose ps`. If it isn't, read the
-   log (`journalctl --user -u chefbot -n 50` or `docker compose logs chefbot`): the last lines say why it stopped.
+1. **Check it's running:** `systemctl --user status chefbot`, `docker compose ps`, or the **ChefBot** service in the
+   Windows **Services** app. If it isn't, read the log (`journalctl --user -u chefbot -n 50`,
+   `docker compose logs chefbot`, or **Event Viewer** on Windows): the last lines say why it stopped.
 2. **Check the address.** From the machine itself, try <http://localhost:8080>. From another device, use the
    machine's network address, such as `http://192.168.1.20:8080`.
 3. **Check the firewall.** On Fedora: `sudo firewall-cmd --add-port=8080/tcp --add-port=8443/tcp --permanent && sudo
-   firewall-cmd --reload`. On Windows or macOS, allow Docker through when asked.
+   firewall-cmd --reload`. On macOS, or Windows with Docker, allow Docker through when asked. The ChefBot installer
+   for Windows opens 8080 and 8443 on private networks only: if Windows calls your home network **Public**, change it
+   to **Private** in **Settings → Network & internet**.
 4. **It stops when you log out (Podman):** run `loginctl enable-linger $USER`.
 
 ## A port is already in use
@@ -16,9 +19,13 @@ The log or `podman`/`docker` says the address is already in use. Something else 
 other ports: [Podman](../getting-started/install-podman.md#change-the-ports) or
 [Docker Compose](../getting-started/install-docker-compose.md#use-other-ports).
 
+If the bundled database's port is the one in use, ChefBot says its PostgreSQL didn't start, and the end of the
+database log mentions `could not bind` or `Address already in use`: set `Database__Port` to another port. See the
+[settings reference](../admin/settings.md#settings-in-the-environment).
+
 ## ChefBot can't write to a folder
 
-> ChefBot can't write to '/app/backups' (Data:Backups): … It runs as user 1654 …
+> ChefBot can't write to '/data/backups' (Data:Backups): … It runs as user 1654 …
 
 A host folder mounted into the container belongs to someone else. Give it to ChefBot's user:
 
@@ -29,28 +36,28 @@ podman unshare chown 1654 <folder>    # rootless Podman
 
 On Fedora and other SELinux systems, also add `:Z` to the mount. Named volumes need none of this.
 
-## The database rejects the password
+## "ChefBot's bundled PostgreSQL didn't start"
 
-The log says `password authentication failed for user "chefbot"`.
+ChefBot runs its own database and stops if it can't start it. The message ends with the last lines of the database's
+log, which say why. Common causes: the disk is full, the data folder can't be written (see above), or the database
+port is in use (see [A port is already in use](#a-port-is-already-in-use)).
 
-PostgreSQL only takes the password when the database is first created. If the password changed since (a new Podman
-secret, or a changed compose file), it no longer matches.
+## "The database … was made by PostgreSQL N"
 
-- **Put the old password back,** if you know it.
-- **Or start again with a fresh database,** keeping your data in a backup: see
-  [When a version changes the database](../admin/upgrading.md#when-a-version-changes-the-database). With Podman,
-  `uninstall.sh --delete-data` removes the secret and the database together.
+The data folder holds a database from another major version of PostgreSQL than the one this ChefBot comes with.
+ChefBot doesn't touch it. Go back to the ChefBot version you had, or move to the new one with a backup: see
+[When a version changes the database](../admin/upgrading.md#when-a-version-changes-the-database).
 
-## The database isn't ready
+## "ChefBot's database password file … is missing"
 
-ChefBot waits for PostgreSQL to accept connections. If the database container keeps restarting, read its log
-(`journalctl --user -u chefbot-db` or `docker compose logs db`). Common causes: the disk is full, or the database
-volume belongs to a different PostgreSQL version.
+The `database/password` file in the data folder was deleted or not copied with the rest. Put it back from wherever
+the data folder came from. Without it, start with a fresh database and restore a backup, as in
+[When a version changes the database](../admin/upgrading.md#when-a-version-changes-the-database).
 
-## "Set the ConnectionStrings__ChefBot setting"
+## "… has files in it but isn't a PostgreSQL database"
 
-ChefBot was started without a database connection string. Add `ConnectionStrings__ChefBot` (see the
-[compose file](../getting-started/install-docker-compose.md#install)).
+The first start was interrupted while it was creating the database. If ChefBot has never run properly with this data
+folder, delete its `database` folder and start ChefBot again.
 
 ## A setting is wrong
 
@@ -62,10 +69,15 @@ ChefBot stops at startup with a message that names the setting, such as:
 
 Fix the setting in `chefbot.env` or `compose.yaml` and start it again.
 
-## The build fails (Podman install)
+## The build fails (`install.sh --build`)
 
-`install.sh` builds the image and runs the tests first. If a step fails, the output above the error says which. Make
-sure you have the latest code (`git pull`), enough disk space (`podman system df`), and run it again.
+If a step fails, the output above the error says which. Make sure you have the latest code (`git pull`), enough disk
+space (`podman system df`), and run it again. Without `--build`, `install.sh` downloads the published image instead.
+
+## Windows says it protected your PC
+
+Windows SmartScreen warns about programs it hasn't seen often. Press **More info**, check the publisher and file name,
+then **Run anyway**. See [Install on Windows](../getting-started/install-windows.md).
 
 ## The web page looks broken after an upgrade
 

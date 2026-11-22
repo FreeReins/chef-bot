@@ -1,0 +1,3 @@
+<Project>
+  <!-- The installer pins its own WiX package versions. -->
+</Project>

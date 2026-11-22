@@ -9,7 +9,7 @@ need only the web page or one command.
 |---|---|
 | ChefBot won't start, or the page doesn't open | [Install and startup](install-and-startup.md) |
 | "ChefBot can't write to …" in the log | [Install and startup](install-and-startup.md#chefbot-cant-write-to-a-folder) |
-| The database won't accept the password | [Install and startup](install-and-startup.md#the-database-rejects-the-password) |
+| "ChefBot's bundled PostgreSQL didn't start" | [Install and startup](install-and-startup.md#chefbots-bundled-postgresql-didnt-start) |
 | "Your connection is not private" or another certificate warning | [HTTPS and certificates](https-and-certificates.md) |
 | A phone won't trust ChefBot, or the shopping list doesn't work offline | [HTTPS and certificates](https-and-certificates.md#a-phone-wont-trust-the-certificate) |
 | "This account is locked…" | [Signing in](signing-in.md#an-account-is-locked) |

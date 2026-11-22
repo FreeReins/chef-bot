@@ -1,0 +1,79 @@
+<!--
+  ChefBot.msi: installs ChefBot into Program Files and runs it as the ChefBot Windows service, which starts at boot and
+  keeps its data (database, sign-in keys, certificate, backups, settings.json) in C:\ProgramData\ChefBot. A newer MSI
+  upgrades in place; uninstalling leaves the data folder, so reinstalling brings everything back.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:fire="http://wixtoolset.org/schemas/v4/wxs/firewall"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package Name="ChefBot" Manufacturer="ChefBot" Version="$(var.ProductVersion)" Scope="perMachine"
+           UpgradeCode="{4F2D6B1E-8C3A-4E57-9B0D-6A1C2E7F9D35}">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of ChefBot is already installed. To go back to this one, uninstall it first: your data is kept." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Property Id="ARPHELPLINK" Value="https://jamiethenextkevinbaconhamm.github.io/chef-bot/getting-started/install-windows/" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" />
+
+    <!-- One page with the licence and Install, then a finish page that can open ChefBot. -->
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Open ChefBot in your browser" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="ChefBot is running and starts with Windows. Open it at http://localhost:8080 on this PC, or http://&lt;this PC's name&gt;:8080 from a phone on the same network. Your data is in C:\ProgramData\ChefBot." />
+    <Property Id="WixShellExecTarget" Value="http://localhost:8080" />
+    <CustomAction Id="OpenChefBot" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixShellExec" Impersonate="yes" />
+    <UI>
+      <ui:WixUI Id="WixUI_Minimal" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="OpenChefBot"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT REMOVE" />
+    </UI>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="ChefBot">
+        <Component Id="ChefBotService">
+          <File Id="ChefBotExe" Source="$(var.AppFolder)\ChefBot.exe" KeyPath="yes" />
+          <!-- A virtual account: no password, no administrator rights, which PostgreSQL refuses to run with. -->
+          <ServiceInstall Name="ChefBot" DisplayName="ChefBot"
+                          Description="Self-hosted meal planner. Open http://localhost:8080 to use it."
+                          Type="ownProcess" Start="auto" ErrorControl="normal" Account="NT SERVICE\ChefBot"
+                          Arguments="--Data:Root=&quot;[CommonAppDataFolder]ChefBot&quot;">
+            <ServiceConfig DelayedAutoStart="yes" OnInstall="yes" OnReinstall="yes" />
+            <util:ServiceConfig FirstFailureActionType="restart" SecondFailureActionType="restart"
+                                ThirdFailureActionType="restart" RestartServiceDelayInSeconds="10" ResetPeriodInDays="1" />
+          </ServiceInstall>
+          <ServiceControl Id="ChefBotServiceControl" Name="ChefBot" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+          <!-- Phones and other computers on a private network (home or work) can reach it; public networks can't. -->
+          <fire:FirewallException Id="ChefBotHttp" Name="ChefBot (HTTP)" Port="8080" Protocol="tcp" Scope="any" Profile="private" />
+          <fire:FirewallException Id="ChefBotHttps" Name="ChefBot (HTTPS)" Port="8443" Protocol="tcp" Scope="any" Profile="private" />
+          <!-- The service's warnings and errors go to the Application event log (WindowsEventLog). -->
+          <util:EventSource Name="ChefBot" Log="Application"
+                            EventMessageFile="[WindowsFolder]Microsoft.NET\Framework64\v4.0.30319\EventLogMessages.dll" />
+        </Component>
+        <Files Include="$(var.AppFolder)\**">
+          <Exclude Files="$(var.AppFolder)\ChefBot.exe" />
+        </Files>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Kept on uninstall and upgrade. The service account may change everything in it. -->
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="DATAFOLDER" Name="ChefBot">
+        <Component Id="DataFolder" Permanent="yes" Guid="{9B5E2C47-1D8F-4A63-B0E9-3C7D5A1F8E26}">
+          <CreateFolder>
+            <util:PermissionEx User="NT SERVICE\ChefBot" GenericAll="yes" />
+            <util:PermissionEx User="Administrators" GenericAll="yes" />
+            <util:PermissionEx User="SYSTEM" GenericAll="yes" />
+          </CreateFolder>
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenu" Guid="{2E8A4F91-6C3B-4D05-A7E2-8F1B9C6D0A43}">
+        <util:InternetShortcut Id="OpenChefBotShortcut" Name="ChefBot" Target="http://localhost:8080" Type="url" />
+        <util:InternetShortcut Id="ChefBotDataShortcut" Name="ChefBot data folder" Target="[DATAFOLDER]" Type="link" />
+        <RegistryValue Root="HKLM" Key="Software\ChefBot" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+  </Package>
+</Wix>

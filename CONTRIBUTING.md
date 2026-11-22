@@ -10,14 +10,16 @@ Everything runs in containers, so only Podman is required (`docker build` works 
 
 ```sh
 podman build --target test .      # restore, build and run the tests
-deploy/podman/install.sh          # build the image and run the app and its database as Quadlet services
-deploy/podman/uninstall.sh        # stop and remove them again, keeping the data (--delete-data removes it)
+deploy/podman/install.sh --build  # build the image and run it as a Quadlet service
+deploy/podman/uninstall.sh        # stop and remove it again, keeping the data (--delete-data removes it)
 ```
 
-The Quadlet units in `deploy/podman/` are the supported way to run ChefBot. A new setting that people should
-be able to change goes in `chefbot.env.example` and the [settings reference](docs/admin/settings.md); a new volume
-or port goes in the units and `deploy/compose/compose.yaml`, with a note in the install guides under
-`docs/getting-started/`.
+ChefBot ships as one container, running its own PostgreSQL ([the bundled database](docs/developers/building-and-releasing.md#the-bundled-database)),
+and as a Windows installer and portable exe built by `deploy/windows/build.ps1`. A new setting that people should
+be able to change goes in `chefbot.env.example` and the [settings reference](docs/admin/settings.md); a new port
+goes in the unit `install.sh` writes, `deploy/compose/compose.yaml` and `deploy/windows/Package.wxs` (its firewall
+rules), with a note in the install guides under `docs/getting-started/`. Anything ChefBot writes goes under
+`Data:Root` (`CoreRegistration.StoragePath`), never in a new volume.
 
 To see changes as you make them, with the .NET 10 SDK and Podman installed:
 
@@ -149,8 +151,9 @@ Assertions are awaited: `await Assert.That(actual).IsEqualTo(expected);`.
 ## Database changes
 
 The schema is created with `EnsureCreated` on first start, which is simple but cannot upgrade an existing
-database. It only creates tables in a database that has none, so `PrepareChefBotAsync` runs it before the
-message bus starts and creates its own tables in the `wolverine` schema. Before the first release that changes
+database. It only creates tables in a database that has none, so `PrepareChefBotAsync` runs it (from
+`ChefBotStartup`, registered before the message bus) before the message bus starts and creates its own tables in
+the `wolverine` schema. Before the first release that changes
 a table, switch to EF Core migrations: add `Microsoft.EntityFrameworkCore.Design`, run
 `dotnet ef migrations add Initial`, and replace `EnsureCreatedAsync` with `MigrateAsync` in `CoreRegistration.cs`.
 

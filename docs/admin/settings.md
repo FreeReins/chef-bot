@@ -134,9 +134,21 @@ These are read when ChefBot starts. Set them in `~/.config/chefbot/chefbot.env` 
 `systemctl --user restart chefbot`. With Docker Compose, put them under the ChefBot service's `environment:` and run
 `docker compose up -d`. Names use `__` (two underscores) between their parts.
 
+They can also go in `settings.json` in the data folder, which is the way to set them on Windows
+(`C:\ProgramData\ChefBot\settings.json`, or `ChefBot-data\settings.json` next to the portable app). It's JSON, with
+one level per part of the name; environment variables win over it. Restart ChefBot after changing it.
+
+```json
+{
+  "Https": { "Hostnames": "kitchen-pc,192.168.1.20" },
+  "Accounts": { "RecoverUsername": "" }
+}
+```
+
 | Setting | Default | Meaning |
 |---|---|---|
-| `ConnectionStrings__ChefBot` | set by the Podman units | The PostgreSQL connection string, such as `Host=db;Port=5432;Database=chefbot;Username=chefbot;Password=…`. With Podman, the password comes from the `chefbot-db-password` secret |
+| `Data__Root` | `/data` in the container; `C:\ProgramData\ChefBot` for the Windows service; `ChefBot-data` next to the portable app | The folder that holds everything ChefBot keeps: `database`, `keys`, `backups` and `settings.json` |
+| `Database__Port` | `54329` | The port ChefBot's own PostgreSQL listens on. It only listens on 127.0.0.1, so nothing outside the computer or container can reach it. Change it if something else on the computer uses it |
 | `TZ` | the host's, with Podman | Your time zone, such as `Europe/London`. Weeks, reminders and backups follow local time |
 | `Https__Mode` | `SelfSigned` | `SelfSigned`, `Certificate` or `Off`. See [HTTPS](https-and-certificates.md) |
 | `Https__Hostnames` | empty | Names and addresses the first self-signed certificate covers, separated by commas |
@@ -148,7 +160,7 @@ These are read when ChefBot starts. Set them in `~/.config/chefbot/chefbot.env` 
 | `Planner__DefaultServings` | `4` | Servings assumed for an imported recipe that doesn't say |
 | `Planner__Weights__*` | see below | How strongly each thing counts when choosing a week. Rarely changed |
 | `Data__IngredientCatalog`, `Data__KnownStores`, `Data__PlanStyles`, `Data__SampleRecipes` | `config/…json` | Where the catalogs are read from. Mounting your own file over the built-in one is simpler. See [Customising the catalogs](customising-catalogs.md) |
-| `Data__Backups`, `Data__SessionKeys` | `backups`, `keys` | The backup and keys folders inside the container (`/app/backups`, `/app/keys`) |
+| `Data__Backups`, `Data__SessionKeys` | `backups`, `keys` | The backup and keys folders, inside `Data__Root` unless a full path is given |
 | `Logging__LogLevel__Default` | `Information` | `Debug` for more detail when tracking down a problem, `Warning` for less |
 
 ### Planner weights

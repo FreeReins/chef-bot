@@ -6,10 +6,11 @@ This page shows how to check that ChefBot is running, where its logs are, and wh
 
 | Setup | Command |
 |---|---|
-| Podman | `systemctl --user status chefbot chefbot-db` |
+| Podman | `systemctl --user status chefbot` |
 | Docker Compose | `docker compose ps` |
+| Windows | `Get-Service ChefBot` in PowerShell, or the **Services** app |
 
-Both containers should be running, and the database should be healthy.
+ChefBot starts and stops its database itself, so if ChefBot is running, so is the database.
 
 ## Health check
 
@@ -27,12 +28,24 @@ errors, or search.
 
 **Full logs:**
 
-| Setup | App | Database |
-|---|---|---|
-| Podman | `journalctl --user -u chefbot -f` | `journalctl --user -u chefbot-db -f` |
-| Docker Compose | `docker compose logs -f chefbot` | `docker compose logs -f db` |
+| Setup | Command |
+|---|---|
+| Podman | `journalctl --user -u chefbot -f` |
+| Docker Compose | `docker compose logs -f chefbot` |
+| Windows service | Warnings and errors are in **Event Viewer → Windows Logs → Application**, source **ChefBot** |
+| Windows portable app | The window it runs in |
 
 Leave out `-f` to read the log so far instead of following it. With Podman, `--since "1 hour ago"` narrows it down.
+
+The database's warnings and failures are copied into ChefBot's log, starting `PostgreSQL:`. Its full log is
+`database/postgres.log` in the data folder: `podman exec chefbot cat /data/database/postgres.log` (or
+`docker compose exec chefbot …`), or `C:\ProgramData\ChefBot\database\postgres.log` on Windows.
+
+To look inside the database by hand, in the container:
+
+```sh
+podman exec -it chefbot sh -c 'PGPASSWORD=$(cat /data/database/password) psql -h 127.0.0.1 -p 54329 -U chefbot chefbot'
+```
 
 For more detail while tracking down a problem, set `Logging__LogLevel__Default=Debug`, restart, reproduce the
 problem, then set it back.
@@ -54,7 +67,7 @@ A webhook or photo site that's down is tried again over the next half hour. Anyt
 Collect:
 
 1. The ChefBot version (the release tag, or `git log -1 --oneline` with Podman).
-2. How you installed it (Podman, Docker Compose, NAS…).
+2. How you installed it (Podman, Docker Compose, Windows, NAS…).
 3. The log around the time of the problem, with passwords and tokens removed.
 4. What you did, what you expected, and what happened.
 

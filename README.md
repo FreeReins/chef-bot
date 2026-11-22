@@ -68,24 +68,27 @@ household's habits stay on your hardware.
 
 **Mealie** (import your backup with photos) · **Home Assistant** (reminders, to-do lists, calendar) · **Todoist** ·
 **Apple Calendar, Google Calendar, Outlook, Thunderbird** · **Claude and other MCP assistants** · any recipe site that
-publishes schema.org data · **Docker, Podman, Synology, Unraid, TrueNAS, Portainer, Raspberry Pi**
+publishes schema.org data · **Docker, Podman, Windows, Synology, Unraid, TrueNAS, Portainer, Raspberry Pi**
 
 ## Get started in two minutes
 
-**Docker Compose** (Linux, Windows, macOS, NAS):
+ChefBot is one container (or one Windows program) with its database inside. Nothing else to set up.
+
+**Docker or Podman** (Linux, macOS, NAS):
 
 ```sh
-curl -O https://raw.githubusercontent.com/Jamiethenextkevinbaconhamm/chef-bot/main/deploy/compose/compose.yaml
-# set a password and your time zone in compose.yaml, then:
-docker compose up -d
+docker run -d --name chefbot --restart unless-stopped -p 8080:8080 -p 8443:8443 \
+  -v chefbot-data:/data -e TZ=America/Chicago ghcr.io/jamiethenextkevinbaconhamm/chef-bot:latest
 ```
 
-**Podman** (Fedora, Bazzite and other Linux with systemd):
+**Podman as a service** (Fedora, Bazzite and other Linux with systemd; starts at boot and updates itself):
 
 ```sh
-git clone https://github.com/Jamiethenextkevinbaconhamm/chef-bot.git && cd chef-bot
-deploy/podman/install.sh
+curl -fsSL https://raw.githubusercontent.com/Jamiethenextkevinbaconhamm/chef-bot/main/deploy/podman/install.sh | bash
 ```
+
+**Windows:** download `ChefBot-….msi` from the [latest release](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/releases/latest)
+and run it, or the portable `ChefBot-…-portable.exe` to try it without installing.
 
 Then open `http://<your server>:8080` and follow the setup wizard.
 [Full install guides →](docs/getting-started/requirements.md)
@@ -98,7 +101,7 @@ by pressing **?**.
 
 | I want to… | Start here |
 |---|---|
-| Install ChefBot | [Requirements](docs/getting-started/requirements.md) · [Podman](docs/getting-started/install-podman.md) · [Docker Compose](docs/getting-started/install-docker-compose.md) · [NAS and others](docs/getting-started/install-other-platforms.md) |
+| Install ChefBot | [Requirements](docs/getting-started/requirements.md) · [Podman](docs/getting-started/install-podman.md) · [Docker](docs/getting-started/install-docker-compose.md) · [Windows](docs/getting-started/install-windows.md) · [NAS and others](docs/getting-started/install-other-platforms.md) |
 | Learn to use it | [First run](docs/getting-started/first-run.md) · [The weekly routine](docs/using/weekly-routine.md) |
 | Run it for my household | [Settings](docs/admin/settings.md) · [HTTPS](docs/admin/https-and-certificates.md) · [Backups](docs/admin/backups-and-restore.md) · [Upgrading](docs/admin/upgrading.md) |
 | Fix a problem | [Troubleshooting](docs/troubleshooting/index.md) · [FAQ](docs/reference/faq.md) |

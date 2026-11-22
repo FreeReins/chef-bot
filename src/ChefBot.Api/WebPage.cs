@@ -35,11 +35,14 @@ public static class WebPage
     };
 
     /// <summary>
-    /// The folder the page is served from, relative to the app's folder: wwwroot in the published app and the
-    /// container image, otherwise the build output in src/ChefBot.Web/dist, for dotnet run and dotnet watch.
+    /// The folder the page is served from: wwwroot in the app's folder in the published app, the container image
+    /// and the Windows app, otherwise the build output in src/ChefBot.Web/dist, for dotnet run and dotnet watch.
+    /// Found from the app's folder, not the current one, which for a Windows service is System32.
     /// </summary>
     public static string Folder() =>
-        Directory.Exists("wwwroot") ? "wwwroot" : Path.Combine("..", "ChefBot.Web", "dist");
+        Path.Combine(AppContext.BaseDirectory, "wwwroot") is var published && Directory.Exists(published)
+            ? published
+            : Path.Combine("..", "ChefBot.Web", "dist");
 
     /// <summary>Adds Brotli and gzip compression for the page's files.</summary>
     public static IServiceCollection AddChefBotWebPage(this IServiceCollection services) =>

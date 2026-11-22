@@ -9,15 +9,14 @@ safe to undo.
 
 ## Upgrade
 
-**Podman:**
+**Podman:** nothing to do. `podman-auto-update.timer`, which `install.sh` turns on, checks once a day and restarts
+ChefBot with a new image. To update now:
 
 ```sh
-cd chef-bot
-git pull
-deploy/podman/install.sh
+podman auto-update
 ```
 
-The script rebuilds the image, runs the tests and restarts ChefBot. Your settings, data and password are kept.
+If you installed with `install.sh --build`, `git pull` in the clone and run `deploy/podman/install.sh --build` again.
 
 **Docker Compose:**
 
@@ -26,7 +25,12 @@ docker compose pull
 docker compose up -d
 ```
 
-To stay on one version instead of `latest`, use a version tag such as
+**Windows:** download the new `ChefBot-….msi` from the
+[releases](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/releases) and run it. It replaces the old version
+and keeps `C:\ProgramData\ChefBot`. For the portable app, replace the `.exe` and keep the `ChefBot-data` folder
+next to it.
+
+To stay on one version of the image instead of `latest`, use a version tag such as
 `ghcr.io/jamiethenextkevinbaconhamm/chef-bot:1.2` (that minor version's fixes) or `:1.2.3` (exactly that one).
 
 Read the [release notes](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/releases) first. They say when a
@@ -38,16 +42,27 @@ ChefBot creates its database tables on the first start, but doesn't upgrade them
 tables needs a fresh database, with your data brought across in a backup:
 
 1. **On the old version:** **Settings → Backups → Back up now**, and download the backup.
-2. **Stop ChefBot and delete only its database,** keeping the keys and backups:
-   - **Podman:** `systemctl --user stop chefbot chefbot-db && podman volume rm chefbot-db`
-   - **Docker Compose:** `docker compose down && docker volume rm <folder name>_chefbot-db`
-     (`docker volume ls` shows the exact name)
-3. **Start the new version** (`install.sh`, or `docker compose up -d`) and create a temporary first account in the
-   setup wizard.
+2. **Stop ChefBot and delete only its database,** the `database` folder in the data folder, keeping the keys and
+   backups:
+   - **Podman:** `systemctl --user stop chefbot`, then
+     `podman run --rm -v chefbot-data:/data --entrypoint rm ghcr.io/jamiethenextkevinbaconhamm/chef-bot -rf /data/database`
+   - **Docker Compose:** `docker compose down`, then
+     `docker compose run --rm --entrypoint rm chefbot -rf /data/database`
+   - **Windows:** stop the **ChefBot** service, then delete `C:\ProgramData\ChefBot\database`
+3. **Start the new version** (`systemctl --user start chefbot`, `docker compose up -d`, or start the service) and
+   create a temporary first account in the setup wizard.
 4. **Restore the backup** under **Settings → Backups**. Everything, including the accounts, is replaced by what the
    backup holds, so sign in again with your old account.
 
+The same steps move a database to a new major version of PostgreSQL. ChefBot comes with PostgreSQL 17, and only
+moves to a newer one in a release that says so; if it ever finds a database made by another version, it stops and
+says so rather than touching it.
+
 ### Versions that needed this
+
+- **One container:** ChefBot runs its own PostgreSQL, keeping everything in one `/data` volume (or
+  `C:\ProgramData\ChefBot`). Installs from before it used a separate database container and three volumes: back up,
+  install afresh, and restore the backup.
 
 - **Layered core and stored messages:** added the `ScheduleState` table and the `wolverine` schema.
 - **Choosing stores:** added the `GroceryStores` table. Backups from before it have no stores, so choose yours again
@@ -65,8 +80,8 @@ tables needs a fresh database, with your data brought across in a backup:
 
 ## Go back to an older version
 
-Install the older version the same way (`git checkout <tag>` then `install.sh`, or the older image tag), with a fresh
-database if the tables changed, and restore a backup made on that version.
+Install the older version the same way (the older image tag, or the older MSI after uninstalling the newer one),
+with a fresh database if the tables changed, and restore a backup made on that version.
 
 ## If something goes wrong
 

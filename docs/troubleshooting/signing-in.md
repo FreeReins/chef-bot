@@ -25,8 +25,8 @@ Invite and reset links work once. Invites expire after 7 days and resets after 2
 That happens when:
 
 - **a backup was restored:** sign in with the passwords from the time of the backup;
-- **the keys volume was lost or replaced,** for example a new container without `/app/keys` on a named volume. Keep it
-  on a volume. See [Keep the volumes](../getting-started/install-docker-compose.md#keep-the-volumes);
+- **the data volume was lost or replaced,** for example a new container without `/data` on a named volume. Keep it
+  on a volume. See [Keep the volume](../getting-started/install-docker-compose.md#keep-the-volume);
 - **you changed your password:** your other devices sign out.
 
 ## Signed out over and over

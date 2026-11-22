@@ -4,7 +4,7 @@ This page lists what ChefBot needs to run, so you can choose where to install it
 
 ## A machine to run it on
 
-ChefBot is a web app in a container, with a PostgreSQL database in a second container. Any always-on computer on
+ChefBot is one container, or one Windows program, with its PostgreSQL database inside. Any always-on computer on
 your home network works: a home server, a NAS, a mini PC, a Raspberry Pi 4 or 5 with a 64-bit system, or the
 desktop you use every day.
 
@@ -14,8 +14,8 @@ desktop you use every day.
 - **Software**, one of these:
   - Linux with **Podman 5 or later and systemd**, such as Fedora, Bazzite or another Fedora Atomic desktop. This is
     the main supported setup. See [Install with Podman](install-podman.md).
-  - **Docker** with Docker Compose, on Linux, Windows, macOS or a NAS. See
-    [Install with Docker Compose](install-docker-compose.md).
+  - **Docker** or Podman, on Linux, Windows, macOS or a NAS. See [Install with Docker](install-docker-compose.md).
+  - **Windows 10 or 11** (64-bit x86), with no containers at all. See [Install on Windows](install-windows.md).
 
 ## Network
 
@@ -23,6 +23,7 @@ desktop you use every day.
 |---|---|
 | `8080` | Plain HTTP. Sends visitors on to HTTPS once **Always use HTTPS** is on |
 | `8443` | HTTPS, with a certificate ChefBot makes itself |
+| `54329` | The database, on the same computer only (127.0.0.1). Nothing outside can reach it. Change it with `Database__Port` if something else uses it |
 
 You can publish them on other ports on the host. See
 [Use other ports](install-docker-compose.md#use-other-ports).
@@ -35,11 +36,14 @@ recipe's photos, and the webhook, to-do apps and calendar apps you set up.
 
 ## Storage that must be kept
 
-| Volume | Holds | If it's lost |
+Everything ChefBot keeps is in one folder: `/data` in the container (the `chefbot-data` volume), or
+`C:\ProgramData\ChefBot` on Windows. Keep it, and keep a copy of the backups somewhere else too.
+
+| In the data folder | Holds | If it's lost |
 |---|---|---|
-| Database (`chefbot-db`) | Everything: recipes, plans, pantry, accounts and settings | All data is gone. Restore a backup |
-| Keys (`/app/keys`) | Sign-in keys and the HTTPS certificate | Everyone is signed out, and every device has to accept or install the new certificate |
-| Backups (`/app/backups`) | Daily backups | Only the backups. Keep a copy somewhere else too |
+| `database` | Everything: recipes, plans, pantry, accounts and settings, and the database's own password | All data is gone. Restore a backup |
+| `keys` | Sign-in keys and the HTTPS certificate | Everyone is signed out, and every device has to accept or install the new certificate |
+| `backups` | Daily backups | Only the backups |
 
 ## Browsers and phones
 
@@ -50,5 +54,6 @@ signal, the phone needs ChefBot over HTTPS with a certificate it trusts. See
 ## Next
 
 - [Install with Podman](install-podman.md) on Linux with systemd
-- [Install with Docker Compose](install-docker-compose.md) anywhere else
-- [Other platforms](install-other-platforms.md): Synology, Unraid, TrueNAS, Portainer, Windows, macOS
+- [Install on Windows](install-windows.md) with the installer or the portable app
+- [Install with Docker](install-docker-compose.md) anywhere else
+- [Other platforms](install-other-platforms.md): Synology, Unraid, TrueNAS, Portainer, Docker Desktop, macOS

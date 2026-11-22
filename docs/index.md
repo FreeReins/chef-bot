@@ -15,8 +15,8 @@ in any text editor, or inside ChefBot itself: press the **?** button at the top 
 - [Find out what ChefBot does](getting-started/what-is-chefbot.md)
 - [Check what I need to run it](getting-started/requirements.md)
 - Install it: [with Podman on Linux](getting-started/install-podman.md),
-  [with Docker Compose](getting-started/install-docker-compose.md), or
-  [on a NAS, Windows, macOS or a Raspberry Pi](getting-started/install-other-platforms.md)
+  [with Docker](getting-started/install-docker-compose.md), [on Windows](getting-started/install-windows.md), or
+  [on a NAS, macOS or a Raspberry Pi](getting-started/install-other-platforms.md)
 - [Set it up the first time](getting-started/first-run.md)
 
 ### Use it day to day

@@ -69,7 +69,7 @@ public static class CoreRegistration
         services.AddScoped<IReviewAccess, ReviewAccess>();
         services.AddScoped<IRecipeSuggestionAccess, RecipeSuggestionAccess>();
         services.AddScoped<ICookbookAccess, CookbookAccess>();
-        var backupFolder = DataPath(configuration, "Data:Backups", "backups");
+        var backupFolder = StoragePath(configuration, "Data:Backups", "backups");
         services.AddScoped<IBackupAccess>(provider => new BackupAccess(provider.GetRequiredService<ChefBotDbContext>(), backupFolder));
         services.AddSingleton<ISampleRecipeAccess>(new SampleRecipeAccess(DataPath(configuration, "Data:SampleRecipes", "config/sample-recipes.json")));
         services.AddSingleton<IKnownStoreAccess>(new KnownStoreAccess(DataPath(configuration, "Data:KnownStores", "config/stores.json")));
@@ -214,12 +214,26 @@ public static class CoreRegistration
         }
     }
 
-    /// <summary>Resolves a data file or folder path from settings. Relative paths are relative to the application folder.</summary>
-    public static string DataPath(IConfiguration configuration, string key, string fallback)
-    {
-        var path = configuration[key] is { Length: > 0 } configured ? configured : fallback;
-        return Path.IsPathRooted(path) ? path : Path.Combine(AppContext.BaseDirectory, path);
-    }
+    /// <summary>
+    /// Resolves a path to a file ChefBot ships with, such as the ingredient catalog, from settings. Relative paths are
+    /// relative to the application folder.
+    /// </summary>
+    public static string DataPath(IConfiguration configuration, string key, string fallback) =>
+        Resolve(AppContext.BaseDirectory, configuration[key] is { Length: > 0 } configured ? configured : fallback);
+
+    /// <summary>
+    /// The folder that holds everything ChefBot writes and must keep: its database, session keys, HTTPS certificate,
+    /// backups and settings.json (Data:Root). A relative path is relative to the application folder, which is also the
+    /// default; the container image sets /data.
+    /// </summary>
+    public static string DataRoot(IConfiguration configuration) => DataPath(configuration, "Data:Root", ".");
+
+    /// <summary>Resolves a path to something ChefBot writes, from settings. Relative paths are relative to <see cref="DataRoot"/>.</summary>
+    public static string StoragePath(IConfiguration configuration, string key, string fallback) =>
+        Resolve(DataRoot(configuration), configuration[key] is { Length: > 0 } configured ? configured : fallback);
+
+    private static string Resolve(string folder, string path) =>
+        Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(folder, path));
 
     private static string ConnectionString(IConfiguration configuration) =>
         configuration.GetConnectionString("ChefBot")
