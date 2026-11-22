@@ -2,6 +2,7 @@ import { api } from './api.js';
 import { applyPlan, loadPlan, refreshAfterPantryChange } from './plan.svelte.js';
 import { loadStores } from './settings.svelte.js';
 import { app, ask, isConfirmed, run, toast, wentOffline } from './state.svelte.js';
+import { refreshAchievements } from './achievements.svelte.js';
 import {
   addManualOffline, buyAllOffline, buyManualOffline, buyPlanItemOffline, removeManualOffline,
 } from './outbox.svelte.js';
@@ -83,6 +84,7 @@ const buyAll = () => run(() => online(async () => {
   } else {
     app.manualItems = await api('POST', '/api/shopping/items/purchase-all', {});
     await refreshAfterPantryChange();
+    refreshAchievements();
   }
 }, () => buyAllOffline(isConfirmed())));
 

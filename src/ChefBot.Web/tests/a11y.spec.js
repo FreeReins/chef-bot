@@ -395,6 +395,16 @@ const VIEWS = [
 
   // Someone who isn't an admin sees fewer tabs and sections.
   { name: 'plan for a member', path: '/plan', answers: { 'GET /api/session': data.session(data.member()) } },
+  // Achievements, from the award in the header: halfway, a brand-new kitchen, every first step done, the optional
+  // invite step waved off, and a member (who can't invite, so never sees that step).
+  { name: 'achievements', path: '/achievements' },
+  { name: 'achievements, a brand-new kitchen', path: '/achievements', answers: { 'GET /api/achievements': data.freshAchievements() } },
+  { name: 'achievements, first steps all done', path: '/achievements', answers: { 'GET /api/achievements': data.graduatedAchievements() } },
+  {
+    name: 'achievements, invite step waved off', path: '/achievements',
+    act: async (page) => { await page.getByRole('button', { name: 'Just me, thanks' }).click(); },
+  },
+  { name: 'achievements for a member', path: '/achievements', answers: { 'GET /api/session': data.session(data.member()) } },
   { name: 'plan for a member, no recipes', path: '/plan', answers: { ...noPlan, ...library([]), 'GET /api/session': data.session(data.member()) } },
   { name: 'settings for a member', path: '/settings/https', answers: { 'GET /api/session': data.session(data.member()) } },
   { name: 'AI assistants for a member', path: '/settings/assistants', answers: { 'GET /api/session': data.session(data.member()) } },

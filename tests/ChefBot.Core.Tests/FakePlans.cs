@@ -1,3 +1,4 @@
+using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
 
@@ -23,6 +24,9 @@ internal sealed class FakePlans(FakeRecipes recipes) : IPlanAccess
     public Task<HashSet<Guid>> RecipeIdsPlannedAsync(DateOnly from, DateOnly before, CancellationToken cancellationToken) =>
         Task.FromResult(Rows.Where(p => p.WeekStart >= from && p.WeekStart < before)
             .SelectMany(p => p.Meals).Where(m => m.RecipeId is not null).Select(m => m.RecipeId!.Value).ToHashSet());
+
+    public Task<PlanTally> TallyAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(new PlanTally(Rows.Count, Rows.Count(p => p.Status == PlanStatus.Confirmed)));
 
     public Task SaveAsync(MealPlan plan, CancellationToken cancellationToken)
     {

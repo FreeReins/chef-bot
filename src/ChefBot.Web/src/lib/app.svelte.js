@@ -10,3 +10,4 @@ export * from './session.svelte.js';
 export * from './offline.svelte.js';
 export * from './outbox.svelte.js';
 export * from './reviews.svelte.js';
+export * from './achievements.svelte.js';

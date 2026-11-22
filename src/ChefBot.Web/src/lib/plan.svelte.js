@@ -3,6 +3,7 @@ import { addDays, shortDate, upcomingSunday } from './format.js';
 import { copyStyle } from './styles.js';
 import { saveStyles } from './settings.svelte.js';
 import { app, ask, isConfirmed, run, toast } from './state.svelte.js';
+import { refreshAchievements } from './achievements.svelte.js';
 
 // ---------- plan ----------
 
@@ -38,6 +39,7 @@ export async function applyPlan(plan, { quiet = false } = {}) {
   app.keep = app.keep.filter((id) => plan.meals.some((meal) => meal.id === id));
   if (!quiet) for (const note of plan.notes ?? []) toast(note);
   app.swap = null;
+  refreshAchievements(); // planning, confirming, cooking and shopping can each earn one
 }
 
 export const planAction = (path, body) => run(async () => applyPlan(await api('POST', `/api/plans/${app.plan.id}/${path}`, body)));

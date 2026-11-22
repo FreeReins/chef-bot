@@ -1,7 +1,7 @@
 <!-- The heart on a recipe: filled when it is one of the signed-in person's favourites. Pressing it adds or takes it off
      their favourites, and hands everyone's favourites back through `onchange`. -->
 <script>
-  import { app, run } from '../lib/app.svelte.js';
+  import { app, run, refreshAchievements } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { favouriteOf } from '../lib/format.js';
   import Heart from '@lucide/svelte/icons/heart';
@@ -25,6 +25,7 @@
       const summary = await api(adding ? 'PUT' : 'DELETE', `/api/recipes/${recipe.id}/favourite`);
       onchange?.(summary.favouredBy);
       popped = adding;
+      refreshAchievements();
     }).finally(() => (saving = false));
   }
 </script>

@@ -110,6 +110,7 @@ internal sealed class TestCore
         services.AddSingleton<PlanningEngine>();
         services.AddSingleton<CalendarEngine>();
         services.AddSingleton<HistoryEngine>();
+        services.AddSingleton<AchievementEngine>();
         services.AddSingleton<SecurityEngine>();
         services.AddTransient<ValidationEngine>();
 

@@ -18,6 +18,9 @@ internal interface IPlanAccess
     /// <summary>Recipes used by plans whose week starts in [<paramref name="from"/>, <paramref name="before"/>).</summary>
     Task<HashSet<Guid>> RecipeIdsPlannedAsync(DateOnly from, DateOnly before, CancellationToken cancellationToken);
 
+    /// <summary>How many plans are stored, and how many of them were confirmed.</summary>
+    Task<PlanTally> TallyAsync(CancellationToken cancellationToken);
+
     /// <summary>Adds the plan, or updates the stored one with the same id, including its meals and shopping list.</summary>
     Task SaveAsync(MealPlan plan, CancellationToken cancellationToken);
 

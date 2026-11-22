@@ -43,6 +43,7 @@ export const app = $state({
   dealt: 0,            // when a week was last planned or shuffled (Date.now()), so the board deals its new meals in
   offline: false,      // true while ChefBot can't be reached: Shopping and Pantry show what was saved (offline.svelte.js)
   offlineSince: null,  // when what is shown offline was last loaded from ChefBot (an ISO time)
+  achievements: null,  // AchievementsResponse: first steps, badges and chef rank (achievements.svelte.js)
   outbox: [],          // shopping changes made offline, oldest first, waiting to be sent (outbox.svelte.js)
 });
 

@@ -18,9 +18,11 @@ internal sealed partial class RecipeManager(
     IHistoryAccess history,
     IFavouriteAccess favourites,
     IReviewAccess reviews,
+    IPlanAccess plans,
     IMessageAccess messages,
     TransformationEngine transformation,
     HistoryEngine storyteller,
+    AchievementEngine achievements,
     ValidationEngine validation,
     TimeProvider clock) : IRecipeManager
 {

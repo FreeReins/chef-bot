@@ -1,11 +1,11 @@
 // Each view has its own address, so it can be bookmarked, reloaded or opened in a new tab:
-//   /plan  /shopping  /pantry  /recipes  /recipes/{id}  /recipes/samples  /history  /people  /settings/{section}
+//   /plan  /shopping  /pantry  /recipes  /recipes/{id}  /recipes/samples  /history  /achievements  /people  /settings/{section}
 // and the Recipes dialogs: /recipes/new/{link|write|files}  /recipes/{id}/{edit|photos|cook}
 // The address is the source of truth: links and buttons call go(path), and showAddress() shows what it names.
 import { api } from './api.js';
 import { app, run, isAdmin, clearErrors } from './state.svelte.js';
 
-const TAB_KEYS = ['plan', 'shopping', 'pantry', 'recipes', 'history', 'people', 'settings'];
+const TAB_KEYS = ['plan', 'shopping', 'pantry', 'recipes', 'history', 'achievements', 'people', 'settings'];
 /** Tabs that were renamed, so old bookmarks still land somewhere sensible. */
 const RENAMED_TABS = { ingredients: 'shopping', meals: 'plan', schedule: 'plan' };
 const ADMIN_TABS = ['people'];

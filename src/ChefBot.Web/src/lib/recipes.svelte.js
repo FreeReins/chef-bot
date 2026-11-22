@@ -1,5 +1,6 @@
 import { api, upload } from './api.js';
 import { app } from './state.svelte.js';
+import { refreshAchievements } from './achievements.svelte.js';
 
 // ---------- recipes ----------
 
@@ -7,6 +8,7 @@ import { app } from './state.svelte.js';
 export async function loadRecipes() {
   app.recipeCount = (await api('GET', '/api/recipes/search?pageSize=1')).librarySize;
   app.recipesChanged++;
+  refreshAchievements();
 }
 
 /**

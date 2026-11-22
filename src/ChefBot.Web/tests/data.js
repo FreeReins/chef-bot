@@ -417,3 +417,34 @@ export const reviews = (recipeId) => (recipeId === ids.tacos ? {
       notes: null, at: '2026-10-20T19:10:00Z', edited: true },
   ],
 } : { rating: null, reviews: [] });
+
+/** Achievement, for AchievementsResponse below: `tiers` 1 for a first step, 3 for a badge. */
+const achievement = (kind, tier, progress, goal, { tiers = 3, optional = false } = {}) => ({ kind, tier, tiers, progress, goal, optional });
+const step = (kind, done, optional = false) => achievement(kind, done ? 1 : 0, done ? 1 : 0, done ? null : 1, { tiers: 1, optional });
+const STEP_KINDS = ['FirstRecipe', 'FirstPlan', 'PlanConfirmed', 'FirstShop', 'FirstCook', 'FirstFavourite'];
+
+/** AchievementsResponse: halfway through the first steps, a few badges in, nobody invited yet. */
+export const achievements = () => ({
+  points: 640, rank: 2, rankPoints: 500, nextRankPoints: 1200,
+  starter: [...STEP_KINDS.map((kind, index) => step(kind, index < 3)), step('FirstGuest', false, true)],
+  badges: [
+    achievement('Cookbook', 1, 12, 50), achievement('Dinners', 1, 14, 50), achievement('Repertoire', 2, 21, 50),
+    achievement('WeeksPlanned', 1, 5, 12), achievement('Hauls', 0, 2, 3), achievement('BestStreak', 3, 27, null),
+    achievement('Comebacks', 0, 0, 1), achievement('Critic', 1, 3, 10), achievement('Favourites', 0, 4, 5),
+  ],
+});
+
+/** AchievementsResponse: every first step done, so the card offers to be put away. */
+export const graduatedAchievements = () => ({
+  ...achievements(), starter: [...STEP_KINDS.map((kind) => step(kind, true)), step('FirstGuest', false, true)],
+});
+
+/** Each badge's bronze goal, as AchievementEngine sets them. */
+const FIRST_GOALS = { Cookbook: 10, Dinners: 10, Repertoire: 5, WeeksPlanned: 4, Hauls: 3, BestStreak: 3, Comebacks: 1, Critic: 1, Favourites: 5 };
+
+/** AchievementsResponse for a kitchen that has just opened. */
+export const freshAchievements = () => ({
+  points: 0, rank: 0, rankPoints: 0, nextRankPoints: 150,
+  starter: [...STEP_KINDS.map((kind) => step(kind, false)), step('FirstGuest', false, true)],
+  badges: Object.entries(FIRST_GOALS).map(([kind, goal]) => achievement(kind, 0, 0, goal)),
+});

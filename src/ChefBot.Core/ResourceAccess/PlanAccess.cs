@@ -1,3 +1,4 @@
+using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Persistence;
@@ -33,6 +34,10 @@ internal sealed class PlanAccess(ChefBotDbContext db) : IPlanAccess
                 .FirstOrDefaultAsync(cancellationToken);
         return plan?.ToContract();
     }
+
+    public async Task<PlanTally> TallyAsync(CancellationToken cancellationToken) => new(
+        await db.MealPlans.CountAsync(cancellationToken),
+        await db.MealPlans.CountAsync(plan => plan.Status == PlanStatus.Confirmed, cancellationToken));
 
     public async Task<List<MealPlan>> ListOpenAsync(DateOnly today, CancellationToken cancellationToken)
     {

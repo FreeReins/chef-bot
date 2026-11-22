@@ -21,6 +21,9 @@
   --area-people: light-dark(#7048b0, #b9a0ec); --area-settings: light-dark(#556675, #a3b2bf);
   /* History is tomato sauce, and its timeline is a noodle. */
   --area-history: light-dark(#b0352b, #f2958a); --noodle: light-dark(#e2b35a, #b8893a);
+  /* Achievements (the award in the header) are gold; the medals are for rings and fills, not text. */
+  --area-achievements: light-dark(#8a6400, #e9c45a);
+  --bronze: light-dark(#b0713c, #d99a63); --silver: light-dark(#8d99a3, #b9c4cc); --gold: light-dark(#c99a1e, #e9c45a);
   /* One colour per food group (FOOD_GROUPS in lib/format.js), so the pantry's sections tell apart at a glance. Used
      for small heading text, so each keeps 4.5:1 on --panel. */
   --group-vegetable: light-dark(#2f6b4f, #7fc8a3); --group-fruit: light-dark(#a3325e, #f08bb4);

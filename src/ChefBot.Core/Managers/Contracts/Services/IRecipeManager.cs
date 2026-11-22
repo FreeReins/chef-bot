@@ -97,6 +97,12 @@ public interface IRecipeManager
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
     Task<RecipeSummaryResponse> RemoveFavouriteAsync(Guid id, Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The household's kitchen achievements: the first steps, badges with bronze, silver and gold tiers, and the
+    /// points and chef rank they add up to. None depend on how many people are in the household.
+    /// </summary>
+    Task<AchievementsResponse> GetAchievementsAsync(CancellationToken cancellationToken);
+
     /// <summary>A recipe's reviews, newest first, with the rating they add up to.</summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
     Task<RecipeReviewsResponse> ListReviewsAsync(Guid id, CancellationToken cancellationToken);

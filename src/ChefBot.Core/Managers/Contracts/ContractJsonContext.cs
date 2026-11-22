@@ -83,6 +83,7 @@ namespace ChefBot.Core.Managers.Contracts;
 // The food history
 [JsonSerializable(typeof(HistoryRequest))]
 [JsonSerializable(typeof(HistoryResponse))]
+[JsonSerializable(typeof(AchievementsResponse))]
 // Accounts
 [JsonSerializable(typeof(NewAccount))]
 [JsonSerializable(typeof(SignInRequest))]

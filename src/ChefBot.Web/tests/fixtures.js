@@ -100,6 +100,7 @@ function defaults() {
     },
     'GET /api/plans/*/ingredients': data.ingredients(),
     'GET /api/history': data.history(),
+    'GET /api/achievements': data.achievements(),
     'GET /api/plans/*/meals/*/alternatives': (request) => {
       const mealId = new URL(request.url()).pathname.split('/')[5];
       return data.alternatives(data.plan().meals.find((meal) => meal.id === mealId));

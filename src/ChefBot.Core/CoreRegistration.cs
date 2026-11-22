@@ -104,6 +104,7 @@ public static class CoreRegistration
         services.AddSingleton<NotificationEngine>();
         services.AddSingleton<CalendarEngine>();
         services.AddSingleton<HistoryEngine>();
+        services.AddSingleton<AchievementEngine>();
         services.AddScoped<ValidationEngine>();
 
         // Managers: one per request or message, sharing one database transaction.
