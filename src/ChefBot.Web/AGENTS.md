@@ -19,9 +19,10 @@ Run these from the repository root. A web change is done when both pass with no 
 
 ## Rules
 
-- The page's state (`app`) and the actions shared between screens live in `src/lib/app.svelte.js`; a form's own
-  submit stays in its component. That file is about 560 lines in `// ---------- <area> ----------` sections.
-  Run `grep -n '^// ----------'` and read only the section you need.
+- The page's state (`app`) and `run()` live in `src/lib/state.svelte.js`; the actions shared between screens in
+  `src/lib/<area>.svelte.js` (plan, shopping, recipes, setup, settings, session). Components import all of it
+  from `src/lib/app.svelte.js`, which re-exports them; modules in `src/lib/` import from each other directly.
+  A form's own submit stays in its component.
 - Wrap anything that calls the API in `run()`, so failures show as a message.
 - An async button uses `onclick={pendingClick(() => action())}` and a form's submit uses `pending(event, ...)`,
   both from `src/lib/pending.js`. They give a spinner and ignore a second press. The action must return its

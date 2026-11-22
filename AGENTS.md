@@ -36,7 +36,7 @@ For a new stored table, a new manager operation or endpoint, or a new web screen
   which ends with `ReconcileAsync` so leftovers and the shopping list stay in step.
 - Admin-only endpoints use `[Authorize(Policy = Sessions.AdminPolicy)]`; managers don't check roles.
 - The schema comes from `EnsureCreated` and is never upgraded: after changing an entity, tell the user to run
-  `./dev.sh reset`. Don't add migrations unless asked. A new stored entity also goes in `BackupAccess`.
+  `./dev.sh reset`. Don't add migrations unless asked. A new stored entity also goes in `BackupAccess.Tables`.
 - A setting people should change goes in `deploy/podman/chefbot.env.example`. A volume or port: update the
   units in `deploy/podman/` and add a note to `README.md`. An HTTP API change: update the API section of `README.md`.
 - User-facing messages are plain sentences saying what happened and what to do next.
@@ -51,7 +51,8 @@ accessors through `TestCore` (`new TestCore().PlanManager()`). Assertions are aw
 
 - Skip `README.md` unless editing it. Skip `node_modules/`, `bin/`, `obj/` and `TestResults/`.
 - In Core, start from the manager interface in `Managers/Contracts/Services/`, then open only the engines and
-  accessors that manager uses.
+  accessors that manager uses. Big classes are split by area into `<Type>.<Area>.cs` partial files
+  (`PlanManager.Shopping.cs`): open only the area you need. Files stay under 400 lines (`FileSizeTests`).
 - The web page is one component per screen: `src/ChefBot.Web/src/tabs/<Tab>.svelte` (Recipes.svelte, ...),
   `screens/` for setup and sign-in, `settings/<Section>Panel.svelte`.
 - `config/ingredients.json` is a large catalog. Search it; don't read it whole.

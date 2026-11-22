@@ -105,7 +105,13 @@ Rules of thumb:
   and photos are downloaded through `PublicWeb.Handler`, which refuses private network addresses, so a link
   can't reach the database or the home network. Keep any new download of an address someone else chose on it.
 - Something new to store: add the entity in `ResourceAccess/Persistence/`, the data contract in
-  `ResourceAccess/Contracts/Messages/`, map them in `EntityMapping.cs`, and add it to `BackupAccess` so backups include it.
+  `ResourceAccess/Contracts/Messages/`, map them in a new `EntityMapping.<Name>.cs`, and add a line to
+  `BackupAccess.Tables` (in `BackupAccess.Tables.cs`) so backups include it. `SchemaTests` fails when a table is
+  neither backed up nor listed as left out, or an enum column isn't stored by name.
+- No source file is over 400 lines; `FileSizeTests` checks, and lists the few files still allowed over. A class
+  that outgrows it is split into partial files by area, `<Type>.<Area>.cs` beside `<Type>.cs` (`PlanManager.Shopping.cs`,
+  `ValidationEngine.Recipes.cs`). `<Type>.cs` keeps the constructor, the class's summary and helpers several areas
+  share; each other part starts with a `/// <content>` line saying what it covers.
 
 ## Adding a recipe site
 
@@ -191,8 +197,10 @@ it. Run the commands above again to fix it.
 Node is only needed to build it: `./dev.sh` and the image build use Node from a container when this machine
 has none.
 
-- `src/lib/app.svelte.js` holds everything the page shows (`app`) and every action that loads or changes it.
-  Components read `app` and call those actions; Svelte redraws what changed.
+- `src/lib/state.svelte.js` holds everything the page shows (`app`), with `run()`, toasts and the confirmation
+  dialog. The actions that load or change it are in one module per area: `plan`, `shopping`, `recipes`, `setup`,
+  `settings` and `session` (`src/lib/<area>.svelte.js`). `app.svelte.js` re-exports them all, so components
+  import from it; the modules in `src/lib/` import from each other directly. Svelte redraws what changed.
 - Every view has its own address (`/recipes/{id}`, `/settings/backups`, ...) so it can be bookmarked. The list
   is at the top of `src/lib/addresses.js`. Move between views with plain `<a href>` links or `go(path)` from
   there, not by setting `app.tab`; the server answers any path that isn't a file or `/api` with `index.html`.

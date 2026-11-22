@@ -6,7 +6,7 @@
 //   <form onchange={saver.schedule}>  ...  <SaveStatus {saver} />
 //
 // A change waiting to be saved is saved at once when the section closes or the page is left.
-import { run } from './app.svelte.js';
+import { run } from './state.svelte.js';
 
 /**
  * save: async () => void, sends the changes. Errors are shown by run() as usual.

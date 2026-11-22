@@ -3,7 +3,7 @@
 // and the Recipes dialogs: /recipes/new/{link|write|files}  /recipes/{id}/{edit|photos|cook}
 // The address is the source of truth: links and buttons call go(path), and showAddress() shows what it names.
 import { api } from './api.js';
-import { app, run, isAdmin, clearErrors } from './app.svelte.js';
+import { app, run, isAdmin, clearErrors } from './state.svelte.js';
 
 const TAB_KEYS = ['plan', 'shopping', 'pantry', 'recipes', 'history', 'people', 'settings'];
 /** Tabs that were renamed, so old bookmarks still land somewhere sensible. */

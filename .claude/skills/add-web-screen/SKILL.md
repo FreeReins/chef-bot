@@ -8,7 +8,7 @@ description: "Add a tab or screen to ChefBot's Svelte page: tab list, routing, a
 All paths are under `src/ChefBot.Web/`.
 
 1. **Component** `src/tabs/<Tab>.svelte`: load in `onMount(() => { run(() => load()); })` with `api()` from
-   `lib/api.js`. Keep state local unless another screen needs it (then `lib/app.svelte.js`). An empty state
+   `lib/api.js`. Keep state local unless another screen needs it (then the area's `lib/<area>.svelte.js`, re-exported by `lib/app.svelte.js`). An empty state
    uses `<div class="card empty">` with `.empty-icon`. Use `<h2>` for the tab title and `<h3>` below it.
 2. **Tab**: in `src/App.svelte` add an import, a `TABS` entry (Lucide icon from `@lucide/svelte/icons/<name>`;
    check `node_modules/@lucide/svelte/dist/icons`), and `TAB_VIEWS`. In `src/lib/addresses.js` add the key to

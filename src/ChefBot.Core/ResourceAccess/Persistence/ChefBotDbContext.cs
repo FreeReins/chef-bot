@@ -1,5 +1,3 @@
-using ChefBot.Core.Managers.Contracts.Messages;
-using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
@@ -36,15 +34,6 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        // Enums are stored by name so the tables stay readable and survive reordering.
-        configurationBuilder.Properties<RecipeCourse>().HaveConversion<string>().HaveMaxLength(20);
-        configurationBuilder.Properties<MealSlot>().HaveConversion<string>().HaveMaxLength(20);
-        configurationBuilder.Properties<MealStatus>().HaveConversion<string>().HaveMaxLength(20);
-        configurationBuilder.Properties<PlanStatus>().HaveConversion<string>().HaveMaxLength(20);
-        configurationBuilder.Properties<LinkPurpose>().HaveConversion<string>().HaveMaxLength(20);
-        configurationBuilder.Properties<ShoppingTargetKind>().HaveConversion<string>().HaveMaxLength(20);
-        configurationBuilder.Properties<FoodMomentKind>().HaveConversion<string>().HaveMaxLength(20);
-        configurationBuilder.Properties<FavouriteLean>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<decimal>().HavePrecision(12, 3);
     }
 
@@ -133,7 +122,26 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
             favourite.HasIndex(f => f.UserId);
         });
 
+        StoreEnumsByName(modelBuilder);
         UseKeysGeneratedInCode(modelBuilder);
+    }
+
+    /// <summary>
+    /// Stores every enum column by name, so the tables stay readable and survive reordering. Applies to enums added
+    /// later too; <c>SchemaTests</c> checks it.
+    /// </summary>
+    private static void StoreEnumsByName(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes().ToList())
+        {
+            foreach (var property in entityType.GetProperties().ToList())
+            {
+                if ((Nullable.GetUnderlyingType(property.ClrType) ?? property.ClrType).IsEnum)
+                {
+                    modelBuilder.Entity(entityType.ClrType).Property(property.Name).HasConversion<string>().HasMaxLength(20);
+                }
+            }
+        }
     }
 
     /// <summary>
