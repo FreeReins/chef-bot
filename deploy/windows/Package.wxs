@@ -48,6 +48,12 @@
           <!-- The service's warnings and errors go to the Application event log (WindowsEventLog). -->
           <util:EventSource Name="ChefBot" Log="Application"
                             EventMessageFile="[WindowsFolder]Microsoft.NET\Framework64\v4.0.30319\EventLogMessages.dll" />
+          <!-- Start menu shortcuts for everyone. They belong to this component (kept in Program Files) rather than one
+               of their own in the Start menu folder, which ICE38 would want keyed to the installing user's HKCU. -->
+          <util:InternetShortcut Id="OpenChefBotShortcut" Directory="ProgramMenuFolder" Name="ChefBot"
+                                 Target="http://localhost:8080" Type="url" />
+          <util:InternetShortcut Id="ChefBotDataShortcut" Directory="ProgramMenuFolder" Name="ChefBot data folder"
+                                 Target="[DATAFOLDER]" Type="link" />
         </Component>
         <Files Include="$(var.AppFolder)\**">
           <Exclude Files="$(var.AppFolder)\ChefBot.exe" />
@@ -68,12 +74,7 @@
       </Directory>
     </StandardDirectory>
 
-    <StandardDirectory Id="ProgramMenuFolder">
-      <Component Id="StartMenu" Guid="{2E8A4F91-6C3B-4D05-A7E2-8F1B9C6D0A43}">
-        <util:InternetShortcut Id="OpenChefBotShortcut" Name="ChefBot" Target="http://localhost:8080" Type="url" />
-        <util:InternetShortcut Id="ChefBotDataShortcut" Name="ChefBot data folder" Target="[DATAFOLDER]" Type="link" />
-        <RegistryValue Root="HKLM" Key="Software\ChefBot" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
-      </Component>
-    </StandardDirectory>
+    <!-- The all-users Start menu, for the shortcuts above. -->
+    <StandardDirectory Id="ProgramMenuFolder" />
   </Package>
 </Wix>
