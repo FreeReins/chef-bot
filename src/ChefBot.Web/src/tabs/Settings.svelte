@@ -16,6 +16,7 @@
   import BackupsPanel from '../settings/BackupsPanel.svelte';
   import LogsPanel from '../settings/LogsPanel.svelte';
   import AppearancePanel from '../settings/AppearancePanel.svelte';
+  import RecipeHealthPanel from '../settings/RecipeHealthPanel.svelte';
   import HelpLink from '../components/HelpLink.svelte';
   import Palette from '@lucide/svelte/icons/palette';
   import KeyRound from '@lucide/svelte/icons/key-round';
@@ -30,31 +31,39 @@
   import ScrollText from '@lucide/svelte/icons/scroll-text';
   import CalendarClock from '@lucide/svelte/icons/calendar-clock';
   import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
+  import HeartPulse from '@lucide/svelte/icons/heart-pulse';
   import Menu from '@lucide/svelte/icons/menu';
   import X from '@lucide/svelte/icons/x';
 
   /**
    * The Settings sidebar: key, label, icon, who sees it, and what it shows. A wide section uses the full width; help is
    * the guide in the documentation (a page under docs/, and what it is about), linked at the end of the section.
+   * Sections are listed under the group they belong to, in GROUPS order.
    */
+  const GROUPS = ['You', 'Household', 'Recipes', 'Connections', 'System'];
   const SECTIONS = [
-    { key: 'login', label: 'Login', icon: KeyRound, visible: () => true, panel: LoginPanel, help: ['admin/people-and-accounts#passwords', 'Passwords and lockout'] },
-    { key: 'appearance', label: 'Appearance', icon: Palette, visible: () => true, panel: AppearancePanel },
-    { key: 'https', label: 'HTTPS', icon: Lock, visible: () => true, panel: HttpsPanel, heading: 'Secure connection (HTTPS)', help: ['admin/https-and-certificates', 'HTTPS and certificates'] },
-    { key: 'planning', label: 'Planning', icon: CalendarClock, visible: () => Boolean(app.planning), panel: PlanningPanel, help: ['admin/settings#planning', 'Planning settings'] },
-    { key: 'styles', label: 'Plan styles', icon: ListChecks, visible: () => Boolean(app.styles), panel: PlanStylesPanel, help: ['using/plan-styles', 'Plan styles'] },
-    { key: 'stores', label: 'Stores', icon: Store, visible: () => isAdmin() && app.stores, panel: StoresPanel, help: ['using/shopping-list#stores', 'Stores'] },
-    { key: 'calendar', label: 'Calendar', icon: CalendarDays, visible: () => true, panel: CalendarPanel, help: ['using/calendar', 'The meal plan in your calendar'] },
-    { key: 'assistants', label: 'AI assistants', icon: Bot, visible: () => true, panel: AssistantsPanel, help: ['admin/ai-assistants', 'AI models and assistants'] },
-    { key: 'todo-apps', label: 'To-do apps', icon: ListTodo, visible: () => isAdmin(), panel: ToDoAppsPanel, help: ['admin/to-do-apps', 'To-do apps'] },
-    { key: 'notifications', label: 'Notifications', icon: Bell, visible: () => isAdmin() && app.notifications, panel: NotificationsPanel, help: ['admin/notifications', 'Notifications and Home Assistant'] },
-    { key: 'backups', label: 'Backups', icon: Archive, visible: () => isAdmin() && app.backups, panel: BackupsPanel, help: ['admin/backups-and-restore', 'Backups and restore'] },
-    { key: 'logs', label: 'Logs', icon: ScrollText, visible: () => isAdmin(), panel: LogsPanel, wide: true, help: ['admin/monitoring-and-logs', 'Monitoring and logs'] },
-    { key: 'advanced', label: 'Advanced', icon: SlidersHorizontal, visible: () => isAdmin(), panel: AdvancedPanel, help: ['admin/settings#advanced', 'Advanced settings'] },
+    { group: 'You', key: 'login', label: 'Login', icon: KeyRound, visible: () => true, panel: LoginPanel, help: ['admin/people-and-accounts#passwords', 'Passwords and lockout'] },
+    { group: 'You', key: 'appearance', label: 'Appearance', icon: Palette, visible: () => true, panel: AppearancePanel },
+    { group: 'Household', key: 'planning', label: 'Planning', icon: CalendarClock, visible: () => Boolean(app.planning), panel: PlanningPanel, help: ['admin/settings#planning', 'Planning settings'] },
+    { group: 'Household', key: 'styles', label: 'Plan styles', icon: ListChecks, visible: () => Boolean(app.styles), panel: PlanStylesPanel, help: ['using/plan-styles', 'Plan styles'] },
+    { group: 'Household', key: 'stores', label: 'Stores', icon: Store, visible: () => isAdmin() && app.stores, panel: StoresPanel, help: ['using/shopping-list#stores', 'Stores'] },
+    { group: 'Household', key: 'calendar', label: 'Calendar', icon: CalendarDays, visible: () => true, panel: CalendarPanel, help: ['using/calendar', 'The meal plan in your calendar'] },
+    { group: 'Recipes', key: 'recipe-health', label: 'Recipe health', icon: HeartPulse, visible: () => true, panel: RecipeHealthPanel, help: ['using/recipes#recipe-health', 'Recipe health'] },
+    { group: 'Connections', key: 'assistants', label: 'AI assistants', icon: Bot, visible: () => true, panel: AssistantsPanel, help: ['admin/ai-assistants', 'AI models and assistants'] },
+    { group: 'Connections', key: 'todo-apps', label: 'To-do apps', icon: ListTodo, visible: () => isAdmin(), panel: ToDoAppsPanel, help: ['admin/to-do-apps', 'To-do apps'] },
+    { group: 'Connections', key: 'notifications', label: 'Notifications', icon: Bell, visible: () => isAdmin() && app.notifications, panel: NotificationsPanel, help: ['admin/notifications', 'Notifications and Home Assistant'] },
+    { group: 'System', key: 'https', label: 'HTTPS', icon: Lock, visible: () => true, panel: HttpsPanel, heading: 'Secure connection (HTTPS)', help: ['admin/https-and-certificates', 'HTTPS and certificates'] },
+    { group: 'System', key: 'backups', label: 'Backups', icon: Archive, visible: () => isAdmin() && app.backups, panel: BackupsPanel, help: ['admin/backups-and-restore', 'Backups and restore'] },
+    { group: 'System', key: 'logs', label: 'Logs', icon: ScrollText, visible: () => isAdmin(), panel: LogsPanel, wide: true, help: ['admin/monitoring-and-logs', 'Monitoring and logs'] },
+    { group: 'System', key: 'advanced', label: 'Advanced', icon: SlidersHorizontal, visible: () => isAdmin(), panel: AdvancedPanel, help: ['admin/settings#advanced', 'Advanced settings'] },
   ];
 
   const sections = $derived(SECTIONS.filter((section) => section.visible()));
   const current = $derived(sections.find((section) => section.key === app.settingsSection) ?? sections[0]);
+  /** The groups that have a section this person can see, each with its sections. */
+  const groups = $derived(GROUPS
+    .map((name) => ({ name, sections: sections.filter((section) => section.group === name) }))
+    .filter((group) => group.sections.length));
 
   let body = $state();
   let drawer = $state();
@@ -90,9 +99,14 @@
   }
 </script>
 
-{#snippet links()}
-  {#each sections as section (section.key)}
-    <a href="/settings/{section.key}" aria-current={section === current ? 'page' : undefined} onclick={open}><section.icon size={16} />{section.label}</a>
+{#snippet links(where)}
+  {#each groups as group (group.name)}
+    <div class="group" role="group" aria-labelledby="settings-{where}-{group.name}">
+      <span class="group-name" id="settings-{where}-{group.name}">{group.name}</span>
+      {#each group.sections as section (section.key)}
+        <a href="/settings/{section.key}" aria-current={section === current ? 'page' : undefined} onclick={open}><section.icon size={16} />{section.label}</a>
+      {/each}
+    </div>
   {/each}
 {/snippet}
 
@@ -106,10 +120,10 @@
         <h2 id="settings-drawer-title">Settings</h2>
         <button type="button" class="icon" aria-label="Close" onclick={closeMenu}><X size={20} /></button>
       </header>
-      <nav class="side-nav" aria-label="Settings">{@render links()}</nav>
+      <nav class="side-nav" aria-label="Settings">{@render links('drawer')}</nav>
     </dialog>
   {:else}
-    <nav class="side-nav" aria-label="Settings">{@render links()}</nav>
+    <nav class="side-nav" aria-label="Settings">{@render links('side')}</nav>
   {/if}
   <div class="settings-body" class:wide={current.wide} id="settings-body" tabindex="-1" bind:this={body}>
     {#if current.heading}<h2>{current.heading}</h2>{/if}
@@ -121,7 +135,10 @@
 <style>
   /* A sidebar of sections, one section shown at a time. On narrow screens a menu button opens it as a drawer. */
   .settings { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 1.75rem; align-items: start; margin-top: 1.25rem; }
-  .side-nav { display: grid; gap: .15rem; position: sticky; top: 1rem; }
+  .side-nav { display: grid; gap: .9rem; position: sticky; top: 1rem; }
+  .group { display: grid; gap: .15rem; }
+  .group-name { padding: 0 .8rem .15rem calc(.8rem + 3px); color: var(--muted); font-size: .72rem; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; }
   .side-nav a { display: flex; align-items: center; gap: .5rem; border-left: 3px solid transparent; border-radius: 0 .4rem .4rem 0;
     color: var(--muted); text-decoration: none; padding: .5rem .8rem; }
   .side-nav a :global(svg) { flex: none; color: var(--area-settings); }

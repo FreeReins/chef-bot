@@ -66,3 +66,6 @@ export function searchParams({ page, pageSize, query, course, favourites, tags, 
   if (readyWithin) params.set('readyWithin', readyWithin);
   return params;
 }
+
+/** The Recipe health report: what recipes are missing, recipes that share a name, and tags only one recipe uses. */
+export const loadRecipeHealth = () => api('GET', '/api/recipes/health');

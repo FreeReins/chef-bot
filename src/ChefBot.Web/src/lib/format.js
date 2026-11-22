@@ -97,3 +97,19 @@ export function owners(names) {
 
 /** "Jamie and Sam's favourite", from names in the order they favourited it. */
 export const favouriteOf = (names) => `${owners(names)} favourite`;
+
+/**
+ * What a recipe can be missing (RecipeIssue): a heading for the Recipe health report, the words for one recipe's
+ * page ("Missing a photo and times"), and how to fix it.
+ */
+export const RECIPE_ISSUES = {
+  NoPhoto: { title: 'No photo', words: 'a photo', fix: 'Add one from the recipe page, or from its ⋯ menu.' },
+  NoDescription: { title: 'No description', words: 'a description', fix: 'A sentence or two helps choose between recipes.' },
+  NoTimes: { title: 'No times', words: 'times', fix: 'Without a time, the recipe is left out of the Ready within filter.' },
+  NoTags: { title: 'No tags', words: 'tags', fix: 'Tags make recipes easier to find and filter.' },
+  ThinSteps: { title: 'Short or missing steps', words: 'clear steps', fix: 'Cooking mode needs steps to walk through.' },
+  MissingAmounts: { title: 'Ingredients without amounts', words: 'ingredient amounts', fix: 'Lines without an amount can\'t be added up on the shopping list.' },
+};
+
+/** Words joined the way a sentence lists them: "a, b and c". */
+export const listWords = (words) => (words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`);

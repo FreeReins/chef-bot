@@ -104,6 +104,28 @@ suggestions on every recipe at once: see
 [Complete sparse recipes](../admin/ai-assistants.md#complete-sparse-recipes). If the recipe is edited before the
 suggestions are applied, they no longer fit; ask again.
 
+## Recipe health
+
+**Settings → Recipe health** shows how complete the library is, for everyone signed in. It counts the recipes that
+have everything, then lists each check that some recipes fail. Open a check to see those recipes and go to one.
+
+| Check | Why it matters |
+|---|---|
+| **No photo** | Photos make the recipe list easier to browse |
+| **No description** | A sentence or two helps choose between recipes |
+| **No times** | A recipe without a time is left out of the **Ready within** filter |
+| **No tags** | Tags make recipes easier to find and filter |
+| **Short or missing steps** | [Cooking mode](cooking-mode.md) needs steps to walk through |
+| **Ingredients without amounts** | Lines without an amount can't be added up on the shopping list. Lines such as `salt, to taste` or `parsley, to garnish` don't count |
+
+Checks every recipe passes share one line at the end. Under **Tidy up**, the report also lists **Recipes with the same
+name** (ignoring case and punctuation) and **Tags only one recipe uses**, which are often a near copy of another tag.
+
+A recipe's own page says what it is missing under its buttons, such as "Missing a description and times", with a
+link to **Edit** it and, when an AI model is set up, to **Improve with AI** (see
+[Make a recipe more complete](#make-a-recipe-more-complete)). A missing photo isn't repeated there, since the photo
+space already offers **Add a photo**.
+
 ## Make it for more or fewer people
 
 The ingredients are shown for the servings the recipe makes. To change that:

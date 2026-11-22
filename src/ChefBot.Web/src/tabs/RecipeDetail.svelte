@@ -9,7 +9,7 @@
   import { app, run, loadRecipes, toast, loadRecipePage, watchRecipe } from '../lib/app.svelte.js';
   import { closeDialog } from '../lib/addresses.js';
   import { api } from '../lib/api.js';
-  import { duration } from '../lib/format.js';
+  import { duration, RECIPE_ISSUES, listWords } from '../lib/format.js';
   import { rise } from '../lib/motion.js';
   import { scaledLines, servesFrom } from '../lib/scaling.js';
   import Modal from '../components/Modal.svelte';
@@ -56,6 +56,8 @@
   const base = $derived(`/recipes/${id}`);
   const query = $derived(chosen == null ? '' : `?serves=${chosen}`);
   const link = (dialog) => `${base}/${dialog}${query}`;
+  // What the recipe is missing, in words. A missing photo is left out: the empty photo already offers to add one.
+  const missing = $derived((recipe?.issues ?? []).filter((issue) => issue !== 'NoPhoto' && RECIPE_ISSUES[issue]).map((issue) => RECIPE_ISSUES[issue].words));
   const serves = $derived(chosen ?? recipe?.servings ?? 1);
   const images = $derived(recipe?.images ?? []);
   const shown = $derived(images.find((image) => image.id === shownId) ?? images[0]);
@@ -192,6 +194,8 @@
 
         {#if recipe.hasSuggestion}
           <p class="suggested"><a class="with-icon" href={link('improve')}><Sparkles size={16} />Suggestions are ready to review</a></p>
+        {:else if missing.length}
+          <p class="missing muted">Missing {listWords(missing)} · <a href={link('edit')}>Edit</a>{#if app.aiFeatures?.recipeDetails} · <a href={link('improve')}>Improve with AI</a>{/if}</p>
         {/if}
 
         {#if recipe.tags.length}
@@ -257,6 +261,7 @@
 <style>
   .back-row { margin: 1rem 0 0; }
   .suggested { margin: .75rem 0 0; }
+  .missing { margin: .75rem 0 0; font-size: .9rem; }
   .suggested a { display: inline-flex; align-items: center; gap: .4rem; font-weight: 600; }
 
   /* The photo beside the name and what to do with it; stacked on narrow screens. Without a photo, a small tile stands in. */

@@ -23,6 +23,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="FavouredBy">The people who have it as a favourite, oldest favourite first.</param>
 /// <param name="Rating">The average of its reviews, or null when it has none.</param>
 /// <param name="HasSuggestion">True when AI suggestions for the recipe are waiting to be looked at.</param>
+/// <param name="Issues">What the recipe is missing, empty when it is complete.</param>
 public sealed record RecipeResponse(
     Guid Id,
     string Name,
@@ -45,4 +46,5 @@ public sealed record RecipeResponse(
     IReadOnlyList<RecipeStepResponse> StepDetails,
     IReadOnlyList<FavouriteResponse> FavouredBy,
     RecipeRating? Rating,
-    bool HasSuggestion = false);
+    bool HasSuggestion = false,
+    IReadOnlyList<RecipeIssue>? Issues = null);

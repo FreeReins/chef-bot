@@ -230,6 +230,7 @@ const VIEWS = [
     },
   },
   { name: 'a recipe', path: `/recipes/${data.ids.tacos}` },
+  { name: 'a recipe missing some details', path: `/recipes/${data.ids.curry}`, answers: AI },
   {
     name: 'a recipe with suggestions to review', path: `/recipes/${data.ids.stew}/improve`,
     answers: { ...AI, ...library(data.recipes().map((recipe) => (recipe.id === data.ids.stew ? { ...recipe, hasSuggestion: true } : recipe))),
@@ -372,6 +373,16 @@ const VIEWS = [
   { name: 'sign in, with the theme button', path: '/', answers: signedOut,
     act: (page) => page.getByRole('button', { name: /^Switch to (light|dark) mode$/ }).click() },
   { name: 'settings: https', path: '/settings/https' },
+  {
+    name: 'settings: recipe health, with a check open', path: '/settings/recipe-health', answers: AI,
+    act: async (page) => {
+      await page.getByText('No photo', { exact: true }).click();
+      await page.getByRole('button', { name: 'Show all 25' }).waitFor();
+    },
+  },
+  { name: 'settings: recipe health, every recipe complete', path: '/settings/recipe-health', answers: { 'GET /api/recipes/health': data.recipeHealth(true) } },
+  { name: 'settings: recipe health, no recipes', path: '/settings/recipe-health',
+    answers: { 'GET /api/recipes/health': { recipes: 0, complete: 0, checks: [], duplicates: [], rareTags: [] } } },
   { name: 'settings: plan styles', path: '/settings/styles' },
   {
     name: 'settings: a plan style open for editing, with every kind of rule', path: '/settings/styles',
@@ -538,6 +549,7 @@ const VIEWS = [
   { name: 'plan for a member, no recipes', path: '/plan', answers: { ...noPlan, ...library([]), 'GET /api/session': data.session(data.member()) } },
   { name: 'settings for a member', path: '/settings/https', answers: { 'GET /api/session': data.session(data.member()) } },
   { name: 'AI assistants for a member', path: '/settings/assistants', answers: { 'GET /api/session': data.session(data.member()) } },
+  { name: 'recipe health for a member', path: '/settings/recipe-health', answers: { 'GET /api/session': data.session(data.member()) } },
   { name: 'calendar for a member', path: '/settings/calendar',
     answers: { 'GET /api/session': data.session(data.member()), 'GET /api/calendar/feed': data.calendarFeed() } },
   // The food history is for everyone signed in, not only admins: a member stays on /history and sees it.

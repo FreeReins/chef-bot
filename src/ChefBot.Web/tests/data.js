@@ -186,7 +186,7 @@ export const ingredients = () => {
 const recipe = (id, name, course, extra = {}) => ({
   id, name, course, isSlowCooker: false, servings: 4, ingredients: ['oats', 'milk'],
   description: null, instructions: [], prepMinutes: null, cookMinutes: null, totalMinutes: null, sourceUrl: null,
-  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], stepDetails: [], favouredBy: [], rating: null, ...extra,
+  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], stepDetails: [], favouredBy: [], rating: null, issues: [], ...extra,
 });
 
 /** RecipeResponse[]: the first has everything filled in, for the recipe page. */
@@ -224,7 +224,10 @@ export const recipes = () => [
   recipe(ids.stew, 'Beef and Barley Stew', 'Main', {
     isSlowCooker: true, ingredients: ['beef chuck', 'barley', 'carrots'], favouredBy: [{ userId: '00000000-0000-4000-8000-000000000a01', name: 'James' }],
   }),
-  recipe(ids.curry, 'Chickpea Curry', 'Main', { ingredients: ['chickpeas', 'spinach', 'coconut milk'], tags: ['quick', 'vegetarian'], totalMinutes: 35 }),
+  recipe(ids.curry, 'Chickpea Curry', 'Main', {
+    ingredients: ['chickpeas', 'spinach', 'coconut milk'], tags: ['quick', 'vegetarian'], totalMinutes: 35,
+    issues: ['NoPhoto', 'NoDescription', 'ThinSteps', 'MissingAmounts'],
+  }),
   recipe(ids.oats, 'Overnight Oats', 'Breakfast'),
   recipe(ids.granola, 'Maple Granola', 'Snack', { ingredients: ['oats', 'maple syrup'] }),
   recipe(ids.crumble, 'Pear and Ginger Crumble', 'Sweet', { ingredients: ['pears', 'ginger', 'butter'] }),
@@ -550,4 +553,26 @@ export const suggestion = (recipeId, stale = false) => ({
     { id: 5, field: 'NewIngredient', current: [], suggested: ['4 cups beef stock'], line: null },
     { id: 6, field: 'Notes', current: [], suggested: ['Keeps four days in the fridge and freezes well.'], line: null },
   ],
+});
+
+const ref = (id, name) => ({ id, name });
+const HEALTH_ISSUES = ['NoPhoto', 'NoDescription', 'NoTimes', 'NoTags', 'ThinSteps', 'MissingAmounts'];
+
+/** RecipeHealthResponse: a library with gaps, a pair of recipes that share a name and a tag only one recipe uses; or all complete. */
+export const recipeHealth = (complete = false) => (complete ? {
+  recipes: 6, complete: 6, checks: HEALTH_ISSUES.map((issue) => ({ issue, recipes: [] })), duplicates: [], rareTags: [],
+} : {
+  recipes: 26, complete: 1,
+  checks: HEALTH_ISSUES.map((issue) => ({
+    issue,
+    recipes: {
+      NoPhoto: [ref(ids.stew, 'Beef and Barley Stew'), ref(ids.curry, 'Chickpea Curry'), ref(ids.oats, 'Overnight Oats'),
+        ...Array.from({ length: 22 }, (_, index) => ref(`00000000-0000-4000-8000-${String(900000000 + index).padStart(12, '0')}`, `Test Recipe ${String(index + 1).padStart(2, '0')}`))],
+      NoDescription: [ref(ids.curry, 'Chickpea Curry'), ref(ids.granola, 'Maple Granola')],
+      ThinSteps: [ref(ids.curry, 'Chickpea Curry')],
+      MissingAmounts: [ref(ids.crumble, 'Pear and Ginger Crumble')],
+    }[issue] ?? [],
+  })),
+  duplicates: [{ recipes: [ref(ids.oats, 'Overnight Oats'), ref('00000000-0000-4000-8000-0000000000c1', 'overnight oats!')] }],
+  rareTags: [{ tag: 'veggie', recipe: ref(ids.curry, 'Chickpea Curry') }],
 });

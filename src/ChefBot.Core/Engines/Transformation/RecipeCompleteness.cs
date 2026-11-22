@@ -20,9 +20,6 @@ internal static class RecipeCompleteness
 
     private const int MaxTags = 8;
 
-    /// <summary>Words on an ingredient line that mean it needs no amount, such as "salt, to taste".</summary>
-    private static readonly string[] NoAmountNeeded = ["taste", "needed", "serving", "garnish", "optional", "pinch", "dash", "spray", "drizzle"];
-
     private const string Instructions = """
         You help a household complete recipes in their meal planner. You get one recipe and a list of what it is
         missing. Fill in only what is listed as missing, in keeping with the recipe as written: the same dish, method,
@@ -72,25 +69,32 @@ internal static class RecipeCompleteness
         }
         """;
 
-    /// <summary>What makes the recipe sparse, in words for the model: empty when it has everything that matters.</summary>
+    /// <summary>
+    /// What makes the recipe sparse, in words for the model: empty when it has everything that matters. Photos aren't
+    /// asked about, since a model can't add one.
+    /// </summary>
     public static IReadOnlyList<string> Gaps(Recipe recipe)
     {
         var gaps = new List<string>();
-        if (string.IsNullOrWhiteSpace(recipe.Description)) gaps.Add("a description");
-        if (recipe.PrepMinutes is null && recipe.CookMinutes is null && recipe.TotalMinutes is null) gaps.Add("times");
-        if (recipe.Tags.Count == 0) gaps.Add("tags");
-        if (StepsAreThin(recipe.Instructions)) gaps.Add("clear steps (they are short or missing)");
-        var lines = LinesWithoutAmounts(recipe);
-        if (lines.Count > 0) gaps.Add($"amounts on ingredient lines {string.Join(", ", lines.Select(line => line + 1))}");
+        foreach (var issue in RecipeHealth.Issues(recipe))
+        {
+            switch (issue)
+            {
+                case RecipeIssue.NoDescription: gaps.Add("a description"); break;
+                case RecipeIssue.NoTimes: gaps.Add("times"); break;
+                case RecipeIssue.NoTags: gaps.Add("tags"); break;
+                case RecipeIssue.ThinSteps: gaps.Add("clear steps (they are short or missing)"); break;
+                case RecipeIssue.MissingAmounts:
+                    gaps.Add($"amounts on ingredient lines {string.Join(", ", RecipeHealth.LinesWithoutAmounts(recipe).Select(line => line + 1))}");
+                    break;
+            }
+        }
+
         return gaps;
     }
 
     /// <summary>True when the steps are missing or too short to cook from.</summary>
-    public static bool StepsAreThin(IReadOnlyList<string> steps)
-    {
-        var words = steps.Sum(step => step.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
-        return steps.Count == 0 || words < 25 || (steps.Count == 1 && words < 40);
-    }
+    public static bool StepsAreThin(IReadOnlyList<string> steps) => RecipeHealth.StepsAreThin(steps);
 
     /// <summary>
     /// A fingerprint of everything suggestions are based on, so suggestions can tell when the recipe has changed since.
@@ -247,16 +251,9 @@ internal static class RecipeCompleteness
         return text with { Ingredients = [.. lines, .. added] };
     }
 
-    private static List<string> Lines(Recipe recipe) =>
-        recipe.Ingredients.OrderBy(ingredient => ingredient.Position).Select(ingredient => ingredient.Text).ToList();
+    private static List<string> Lines(Recipe recipe) => RecipeHealth.Lines(recipe);
 
-    private static List<int> LinesWithoutAmounts(Recipe recipe) =>
-        Lines(recipe)
-            .Select((line, index) => (line, index))
-            .Where(item => IngredientLineParser.Parse(item.line).Quantity is null
-                && !NoAmountNeeded.Any(word => item.line.Contains(word, StringComparison.OrdinalIgnoreCase)))
-            .Select(item => item.index)
-            .ToList();
+    private static List<int> LinesWithoutAmounts(Recipe recipe) => RecipeHealth.LinesWithoutAmounts(recipe);
 
     private static IEnumerable<(int Line, string Text)> Amounts(JsonElement answer)
     {

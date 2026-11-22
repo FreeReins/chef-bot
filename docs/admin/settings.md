@@ -5,7 +5,8 @@ starts (the database, HTTPS, ports) are set in the environment instead. This pag
 
 ## In the web page
 
-Settings save by themselves as you change them. **Admin** means only admins see or change that section.
+Settings save by themselves as you change them. **Admin** means only admins see or change that section. The sections
+are grouped in the sidebar under **You**, **Household**, **Recipes**, **Connections** and **System**.
 
 ### Login
 
@@ -57,6 +58,11 @@ sets the **Meal times**:
 | **Slow cooker reminder (hours before dinner)** | 8 | From 0 to 12. 0 turns it off |
 
 See [The meal plan in your calendar](../using/calendar.md).
+
+### Recipe health
+
+How complete the recipe library is: what recipes are missing, recipes that share a name, and tags only one recipe
+uses. Everyone signed in sees it. See [Recipe health](../using/recipes.md#recipe-health).
 
 ### AI assistants
 

@@ -21,6 +21,12 @@ public interface IRecipeManager
     /// <summary>What the library can be filtered by: its tags, and the people who have favourites.</summary>
     Task<RecipeFiltersResponse> GetFiltersAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// How complete the recipes that can be planned are: each check with the recipes that fail it, recipes that share
+    /// a name, and tags only one recipe uses.
+    /// </summary>
+    Task<RecipeHealthResponse> GetHealthAsync(CancellationToken cancellationToken);
+
     /// <summary>One recipe that can be planned, in full.</summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
     Task<RecipeResponse> GetAsync(Guid id, CancellationToken cancellationToken);

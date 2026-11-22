@@ -1,6 +1,7 @@
 using System.Globalization;
 using ChefBot.Core.Engines;
 using ChefBot.Core.Engines.Contracts.Messages;
+using ChefBot.Core.Engines.Transformation;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.Utilities;
@@ -124,7 +125,8 @@ internal static partial class Mapping
             CookingSteps.Read(recipe.Instructions, ingredients.Select(ingredient => ingredient.DisplayName).ToList()),
             favouredBy,
             rating,
-            hasSuggestion);
+            hasSuggestion,
+            RecipeHealth.Issues(recipe));
     }
 
     /// <param name="recipe">The recipe.</param>

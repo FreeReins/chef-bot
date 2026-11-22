@@ -139,6 +139,7 @@ function defaults() {
     'GET /api/links': data.links(),
     'GET /api/setup/samples': data.samples(),
     'GET /api/recipes/import/formats': data.fileFormats(),
+    'GET /api/recipes/health': data.recipeHealth(),
     'GET /api/account/link': (request) =>
       data.linkDetails(new URL(request.url()).searchParams.get('token') === 'reset-token' ? 'PasswordReset' : 'Invite'),
     'GET /api/test-images/*': reply(200, data.png, 'image/png'),

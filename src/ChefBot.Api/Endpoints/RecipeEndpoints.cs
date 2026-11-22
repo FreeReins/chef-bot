@@ -58,6 +58,11 @@ public static class RecipeEndpoints
     public static Task<RecipeFiltersResponse> Filters([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.GetFiltersAsync(cancellationToken);
 
+    /// <summary>How complete the library is: what recipes are missing, recipes that share a name, and tags only one recipe uses.</summary>
+    [WolverineGet("/api/recipes/health")]
+    public static Task<RecipeHealthResponse> Health([FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.GetHealthAsync(cancellationToken);
+
     /// <summary>
     /// Every recipe that can be planned, as one file to download: schema.org JSON-LD unless <c>format</c> asks for
     /// <c>Pdf</c>, <c>Markdown</c> or <c>Text</c> (in any case). A format it doesn't know gives JSON-LD.
