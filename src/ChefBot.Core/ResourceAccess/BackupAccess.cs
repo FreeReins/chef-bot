@@ -171,6 +171,7 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
     [JsonSerializable(typeof(List<CalendarFeedEntity>))]
     [JsonSerializable(typeof(List<FoodMomentEntity>))]
     [JsonSerializable(typeof(List<RecipeFavouriteEntity>))]
+    [JsonSerializable(typeof(List<RecipeReviewEntity>))]
     [JsonSerializable(typeof(BackupOutline))]
     private sealed partial class BackupJson : JsonSerializerContext;
 }

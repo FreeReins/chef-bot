@@ -11,6 +11,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Dishes">The dishes of a week of plates or a recipe stampede, in order; empty for the rest.</param>
 /// <param name="At">The exact time of <paramref name="Date"/>, in UTC. Null when only the day is known.</param>
 /// <param name="FavouredBy">For a cook, whose favourite the recipe was when it was cooked, oldest favourite first; empty for the rest.</param>
+/// <param name="Review">For <see cref="HistoryMomentKind.Reviewed"/>, the review; null for the rest.</param>
 public sealed record HistoryMoment(
     DateOnly Date,
     HistoryMomentKind Kind,
@@ -19,4 +20,5 @@ public sealed record HistoryMoment(
     int? Count,
     IReadOnlyList<HistoryDish> Dishes,
     DateTimeOffset? At,
-    IReadOnlyList<string> FavouredBy);
+    IReadOnlyList<string> FavouredBy,
+    HistoryReview? Review = null);

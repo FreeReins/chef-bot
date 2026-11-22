@@ -10,13 +10,14 @@ using ChefBot.Core.Utilities;
 namespace ChefBot.Core.Managers;
 
 /// <inheritdoc cref="IRecipeManager"/>
-internal sealed class RecipeManager(
+internal sealed partial class RecipeManager(
     IRecipeAccess recipes,
     IImageSourceAccess images,
     IWebPageAccess web,
     ISampleRecipeAccess samples,
     IHistoryAccess history,
     IFavouriteAccess favourites,
+    IReviewAccess reviews,
     IMessageAccess messages,
     TransformationEngine transformation,
     HistoryEngine storyteller,
@@ -32,7 +33,8 @@ internal sealed class RecipeManager(
     {
         var library = await recipes.ListActiveAsync(cancellationToken);
         var favoured = await FavouredByAsync(library, cancellationToken);
-        return library.Select(recipe => recipe.ToResponse(favoured(recipe))).ToList();
+        var rated = await RatedAsync(library, cancellationToken);
+        return library.Select(recipe => recipe.ToResponse(favoured(recipe), rated(recipe))).ToList();
     }
 
     public async Task<RecipePageResponse> SearchAsync(RecipeSearchRequest request, CancellationToken cancellationToken)
@@ -62,8 +64,9 @@ internal sealed class RecipeManager(
         var found = await recipes.SearchActiveAsync(query, cancellationToken);
         var librarySize = await recipes.CountActiveAsync(cancellationToken);
         var favoured = await FavouredByAsync(found.Recipes, cancellationToken);
+        var rated = await RatedAsync(found.Recipes, cancellationToken);
         return new RecipePageResponse(
-            found.Recipes.Select(recipe => recipe.ToSummary(favoured(recipe))).ToList(), found.Total, page, pageSize, librarySize);
+            found.Recipes.Select(recipe => recipe.ToSummary(favoured(recipe), rated(recipe))).ToList(), found.Total, page, pageSize, librarySize);
     }
 
     public async Task<RecipeFiltersResponse> GetFiltersAsync(CancellationToken cancellationToken)
@@ -105,7 +108,7 @@ internal sealed class RecipeManager(
         await recipes.SaveAsync(recipe, cancellationToken);
         await RecordAsync(FoodMomentKind.RecipeAdded, recipe, cancellationToken);
         await messages.CommitAsync(cancellationToken);
-        return recipe.ToResponse([]);
+        return recipe.ToResponse([], null);
     }
 
     public async Task<RecipeResponse> UpdateAsync(Guid id, RecipeDraft draft, CancellationToken cancellationToken)
@@ -243,7 +246,7 @@ internal sealed class RecipeManager(
         await RecordAsync(FoodMomentKind.RecipeAdded, recipe, cancellationToken);
         await RequestImagesAsync(recipe);
         await messages.CommitAsync(cancellationToken);
-        return new WebImportResponse(recipe.ToResponse([]), reader.Name);
+        return new WebImportResponse(recipe.ToResponse([], null), reader.Name);
     }
 
     public async Task<IReadOnlyList<SampleRecipeResponse>> GetSamplesAsync(CancellationToken cancellationToken)
@@ -263,34 +266,12 @@ internal sealed class RecipeManager(
         return new AddSamplesResponse(await AddNewAsync(chosen, cancellationToken));
     }
 
-    public async Task<RecipeSummaryResponse> AddFavouriteAsync(Guid id, Guid userId, CancellationToken cancellationToken)
-    {
-        var recipe = await ActiveAsync(id, cancellationToken);
-        var user = await validation.UserAsync(userId, cancellationToken);
-        if (await favourites.FindAsync(recipe.Id, user.Id, cancellationToken) is null)
-        {
-            await favourites.AddAsync(
-                new RecipeFavourite { RecipeId = recipe.Id, UserId = user.Id, CreatedAt = clock.GetUtcNow() }, cancellationToken);
-            await messages.CommitAsync(cancellationToken);
-        }
-
-        return recipe.ToSummary((await FavouredByAsync([recipe], cancellationToken))(recipe));
-    }
-
-    public async Task<RecipeSummaryResponse> RemoveFavouriteAsync(Guid id, Guid userId, CancellationToken cancellationToken)
-    {
-        var recipe = await ActiveAsync(id, cancellationToken);
-        if (await favourites.FindAsync(recipe.Id, userId, cancellationToken) is { } favourite)
-        {
-            await favourites.RemoveAsync(favourite.Id, cancellationToken);
-            await messages.CommitAsync(cancellationToken);
-        }
-
-        return recipe.ToSummary((await FavouredByAsync([recipe], cancellationToken))(recipe));
-    }
-
     public async Task<HistoryResponse> GetHistoryAsync(HistoryRequest request, CancellationToken cancellationToken) =>
-        storyteller.Tell(await history.ListAsync(cancellationToken), await recipes.ListAllAsync(cancellationToken), request);
+        storyteller.Tell(
+            await history.ListAsync(cancellationToken),
+            await reviews.ListAllAsync(cancellationToken),
+            await recipes.ListAllAsync(cancellationToken),
+            request);
 
     /// <summary>Adds the recipes whose names aren't in the library yet.</summary>
     /// <returns>How many were added.</returns>
@@ -363,18 +344,9 @@ internal sealed class RecipeManager(
             new FoodMoment { OccurredOn = clock.Today(), OccurredAt = clock.GetUtcNow(), Kind = kind, RecipeId = recipe.Id, Title = recipe.Name },
             cancellationToken);
 
-    /// <summary>A recipe in full, with who has it as a favourite.</summary>
+    /// <summary>A recipe in full, with who has it as a favourite and how it is rated.</summary>
     private async Task<RecipeResponse> ResponseAsync(Recipe recipe, CancellationToken cancellationToken) =>
-        recipe.ToResponse((await FavouredByAsync([recipe], cancellationToken))(recipe));
-
-    /// <summary>Loads the favourites of <paramref name="shown"/> at once, and returns who has each one.</summary>
-    private async Task<Func<Recipe, IReadOnlyList<FavouriteResponse>>> FavouredByAsync(
-        IReadOnlyCollection<Recipe> shown, CancellationToken cancellationToken)
-    {
-        var byRecipe = (await favourites.ListForRecipesAsync(shown.Select(recipe => recipe.Id).ToList(), cancellationToken))
-            .ToLookup(favourite => favourite.RecipeId, favourite => new FavouriteResponse(favourite.UserId, favourite.UserName));
-        return recipe => byRecipe[recipe.Id].ToList();
-    }
+        recipe.ToResponse((await FavouredByAsync([recipe], cancellationToken))(recipe), (await RatedAsync([recipe], cancellationToken))(recipe));
 
     /// <summary>A recipe that can be planned.</summary>
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>

@@ -37,6 +37,16 @@ const VIEWS = [
   // The plan
   { name: 'plan, confirmed week', path: '/plan' },
   {
+    name: 'plan, a dinner just marked cooked asks how it was', path: '/plan',
+    act: async (page, api) => {
+      const cooked = data.plan();
+      cooked.meals.find((meal) => meal.title === 'Beef and Barley Stew').status = 'Cooked';
+      api.set({ 'POST /api/plans/*/meals/*/status': cooked });
+      await page.getByRole('button', { name: 'Cooked: Beef and Barley Stew' }).click();
+      await page.getByText('How was it?').waitFor();
+    },
+  },
+  {
     name: 'plan, draft to review with its shopping list open', path: '/plan', answers: staged,
     act: (page) => page.getByText(/items? to buy/).click(),
   },
@@ -200,6 +210,10 @@ const VIEWS = [
   },
   { name: 'a recipe, printed', path: `/recipes/${data.ids.tacos}`, act: (page) => page.emulateMedia({ media: 'print' }) },
   { name: 'a recipe without photos', path: `/recipes/${data.ids.stew}` },
+  {
+    name: 'a recipe, changing your review', path: `/recipes/${data.ids.tacos}`,
+    act: (page) => page.getByRole('button', { name: /^Change your review/ }).click(),
+  },
   { name: 'editing a recipe', path: `/recipes/${data.ids.tacos}/edit` },
   { name: 'a recipe\'s photos', path: `/recipes/${data.ids.tacos}/photos` },
   { name: 'cooking mode, gathering the ingredients', path: `/recipes/${data.ids.tacos}/cook` },
@@ -231,6 +245,16 @@ const VIEWS = [
     name: 'cooking mode, the last page', path: `/recipes/${data.ids.tacos}/cook`,
     act: (page) => page.getByRole('combobox', { name: 'Go to' }).selectOption('Done')
       .then(() => page.getByRole('heading', { name: 'That\'s every step' }).waitFor()),
+  },
+  {
+    name: 'cooking mode, the last page, rated with a note being written', path: `/recipes/${data.ids.tacos}/cook`,
+    act: async (page) => {
+      const cooking = page.getByRole('dialog', { name: 'Slaw Fish Tacos' });
+      await cooking.getByRole('combobox', { name: 'Go to' }).selectOption('Done');
+      await cooking.getByRole('button', { name: '4 stars' }).click();
+      await cooking.getByText('Saved, 4 stars.').waitFor();
+      await cooking.getByRole('button', { name: 'Add a note' }).click();
+    },
   },
   { name: 'cooking mode, a recipe with no steps', path: `/recipes/${data.ids.stew}/cook` },
   { name: 'a recipe that is not in the library', path: '/recipes/00000000-0000-4000-8000-00000000ffff' },

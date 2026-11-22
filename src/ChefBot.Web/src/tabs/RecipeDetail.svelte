@@ -1,5 +1,5 @@
-<!-- One recipe on its own page, /recipes/{id}, so it can be bookmarked: its photos, ingredients and steps to read.
-     Editing it (/recipes/{id}/edit) and managing its photos (/recipes/{id}/photos) open in dialogs over the page,
+<!-- One recipe on its own page, /recipes/{id}, so it can be bookmarked: its photos, ingredients, steps and reviews
+     (RecipeReviews.svelte, with their average beside its name). Editing it (/recipes/{id}/edit) and managing its photos (/recipes/{id}/photos) open in dialogs over the page,
      and cooking mode (/recipes/{id}/cook, RecipeCook.svelte) over the whole screen; sharing it as text, printing it, downloading it
      (as a PDF, Markdown, text or a schema.org file, RecipeDownloads.svelte) and archiving it are in the ⋯ menu. -->
 <script>
@@ -7,7 +7,7 @@
   import { app, run, loadRecipes, toast, ask } from '../lib/app.svelte.js';
   import { go, closeDialog } from '../lib/addresses.js';
   import { api } from '../lib/api.js';
-  import { duration, favouriteOf } from '../lib/format.js';
+  import { duration } from '../lib/format.js';
   import { canShare, share, recipeText } from '../lib/exporting.js';
   import Chip from '../components/Chip.svelte';
   import Modal from '../components/Modal.svelte';
@@ -15,7 +15,8 @@
   import RecipeCook from './RecipeCook.svelte';
   import RecipeDownloads from '../components/RecipeDownloads.svelte';
   import FavouriteButton from '../components/FavouriteButton.svelte';
-  import Heart from '@lucide/svelte/icons/heart';
+  import RecipeBadges from '../components/RecipeBadges.svelte';
+  import RecipeReviews from './RecipeReviews.svelte';
   import CookingPot from '@lucide/svelte/icons/cooking-pot';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ExternalLink from '@lucide/svelte/icons/external-link';
@@ -65,6 +66,7 @@
     { key: 'ingredients', label: 'Ingredients' },
     { key: 'steps', label: 'Steps' },
     ...(hasMore ? [{ key: 'more', label: 'Notes and source' }] : []),
+    { key: 'reviews', label: 'Reviews' },
   ]);
 
   /** Shows a recipe the server sent back, and names the browser tab after it. */
@@ -264,9 +266,7 @@
       {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
       {#each recipe.tags as tag (tag)}<Chip>#{tag}</Chip>{/each}
     </div>
-    {#if recipe.favouredBy?.length}
-      <p class="favoured"><Heart size={15} fill="currentColor" aria-hidden="true" />{favouriteOf(recipe.favouredBy.map((favourite) => favourite.name))}</p>
-    {/if}
+    <RecipeBadges {recipe} large />
 
     {#if recipe.description}<p class="description">{recipe.description}</p>{/if}
     {#if !shown}
@@ -314,6 +314,7 @@
         {/if}
       </section>
     {/if}
+    <RecipeReviews {recipe} onrating={(rating) => (recipe.rating = rating)} />
   </article>
 
   {#if app.recipeDialog === 'cook'}
@@ -352,7 +353,6 @@
 
 <style>
   .back-row { margin: 1rem 0 0; }
-  .favoured { display: flex; align-items: center; gap: .35rem; margin: .5rem 0 0; color: var(--bad); font-size: .9rem; }
 
   .hero { margin-top: .75rem; }
   .hero-ghost { margin-top: .75rem; height: min(26rem, 56vw); border-radius: .6rem; }

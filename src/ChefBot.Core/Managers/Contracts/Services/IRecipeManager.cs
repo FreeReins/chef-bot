@@ -97,9 +97,39 @@ public interface IRecipeManager
     /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
     Task<RecipeSummaryResponse> RemoveFavouriteAsync(Guid id, Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>A recipe's reviews, newest first, with the rating they add up to.</summary>
+    /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
+    Task<RecipeReviewsResponse> ListReviewsAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Adds a person's review of a recipe. A person can review a recipe as often as they like.</summary>
+    /// <returns>The recipe's reviews and rating, with the new review.</returns>
+    /// <exception cref="RuleViolationException">The stars aren't from 1 to 5, or the notes are too long.</exception>
+    /// <exception cref="NotFoundException">There is no such recipe or person, or the recipe has been archived.</exception>
+    Task<RecipeReviewsResponse> AddReviewAsync(Guid id, Guid userId, RecipeReviewRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Changes the stars and notes of a person's own review.</summary>
+    /// <returns>The recipe's reviews and rating, with the change.</returns>
+    /// <exception cref="RuleViolationException">The stars aren't from 1 to 5, or the notes are too long.</exception>
+    /// <exception cref="NotAllowedException">The review is someone else's.</exception>
+    /// <exception cref="NotFoundException">There is no such recipe or review, or the recipe has been archived.</exception>
+    Task<RecipeReviewsResponse> UpdateReviewAsync(
+        Guid id, Guid reviewId, Guid userId, RecipeReviewRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Deletes a review.</summary>
+    /// <param name="id">The recipe.</param>
+    /// <param name="reviewId">The review to delete.</param>
+    /// <param name="userId">Who is deleting it.</param>
+    /// <param name="mayRemoveAnyone">True when they may delete anyone's review, not only their own.</param>
+    /// <param name="cancellationToken">Stops the request.</param>
+    /// <returns>The recipe's reviews and rating, without it.</returns>
+    /// <exception cref="NotAllowedException">The review is someone else's, and <paramref name="mayRemoveAnyone"/> is false.</exception>
+    /// <exception cref="NotFoundException">There is no such recipe or review, or the recipe has been archived.</exception>
+    Task<RecipeReviewsResponse> RemoveReviewAsync(
+        Guid id, Guid reviewId, Guid userId, bool mayRemoveAnyone, CancellationToken cancellationToken);
+
     /// <summary>
     /// The household's food history, newest month first: recipes that joined or retired, what was cooked, with
-    /// debuts, fan favourites, comebacks and milestone dinners picked out, big shopping hauls and people joining.
+    /// debuts, fan favourites, comebacks and milestone dinners picked out, reviews, big shopping hauls and people joining.
     /// </summary>
     Task<HistoryResponse> GetHistoryAsync(HistoryRequest request, CancellationToken cancellationToken);
 

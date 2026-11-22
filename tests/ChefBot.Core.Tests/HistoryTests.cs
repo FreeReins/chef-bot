@@ -17,7 +17,7 @@ public class HistoryTests
         new() { Kind = FoodMomentKind.RecipeAdded, RecipeId = Guid.NewGuid(), Title = name, OccurredOn = on };
 
     private static HistoryResponse Tell(IEnumerable<FoodMoment> moments, int months = HistoryEngine.MaxMonths, DateOnly? before = null) =>
-        Storyteller.Tell(moments.ToList(), TestData.Library, new HistoryRequest(before, months));
+        Storyteller.Tell(moments.ToList(), [], TestData.Library, new HistoryRequest(before, months));
 
     private static List<HistoryMoment> All(HistoryResponse history) => history.Chapters.SelectMany(chapter => chapter.Moments).ToList();
 
@@ -95,6 +95,7 @@ public class HistoryTests
 
         var history = Storyteller.Tell(
             [Cooked(TestData.Stew, March.AddMonths(-1)), Cooked(tagged, March), Cooked(soupy, March.AddDays(1)), Cooked(tagged, March.AddDays(9))],
+            [],
             recipes,
             new HistoryRequest(null, 0));
 
@@ -128,7 +129,7 @@ public class HistoryTests
         var retired = TestData.NewRecipe("Beige Casserole", RecipeCourse.Main, false, "1 can soup");
         retired.IsArchived = true;
 
-        var history = Storyteller.Tell([Cooked(retired, March)], [retired], new HistoryRequest(null, 0));
+        var history = Storyteller.Tell([Cooked(retired, March)], [], [retired], new HistoryRequest(null, 0));
 
         var debut = All(history).Single();
         await Assert.That(debut.Title).IsEqualTo("Beige Casserole");

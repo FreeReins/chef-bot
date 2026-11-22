@@ -9,6 +9,9 @@ import { plural, owners } from './format.js';
  */
 const dish = (moment) => ({ dish: moment.title, recipeId: moment.recipeId });
 
+/** A review's stars in words: "4 stars", or "a perfect 5 stars". */
+const stars = (moment) => (moment.review.stars === 5 ? 'a perfect 5 stars' : plural(moment.review.stars, 'star'));
+
 const CAPTIONS = {
   Debut: [
     (m) => [dish(m), ' made its dinner-table debut.'],
@@ -53,6 +56,11 @@ const CAPTIONS = {
     (m) => [dish(m), ' retired to a nice farm upstate.'],
     (m) => [dish(m), ' left the cookbook to pursue other interests.'],
   ],
+  Reviewed: [
+    (m) => [`${m.review.reviewedBy} gave `, dish(m), ` ${stars(m)}.`],
+    (m) => [`The verdict on `, dish(m), ` from ${m.review.reviewedBy}: ${stars(m)}.`],
+    (m) => [dish(m), ` earned ${stars(m)} from ${m.review.reviewedBy}.`],
+  ],
   Haul: [
     (m) => [`A heroic grocery haul: ${plural(m.count, 'thing')} carried home.`],
     (m) => [`The great shop: ${plural(m.count, 'item')} bagged in one go.`],
@@ -69,7 +77,7 @@ const CAPTIONS = {
 /** The picture on each kind's plate. */
 const EMOJI = {
   Debut: '🎉', FanFavourite: '🏆', FavouriteCooked: '❤️', Comeback: '🪃', DinnerMilestone: '🎂', WeekOfPlates: '🍽️', RecipeAdded: '📖',
-  RecipeStampede: '🐘', RecipeRetired: '🏖️', Haul: '🛒', KitchenOpened: '🔥', PersonJoined: '🪑',
+  RecipeStampede: '🐘', RecipeRetired: '🏖️', Haul: '🛒', KitchenOpened: '🔥', PersonJoined: '🪑', Reviewed: '⭐',
 };
 
 /** A small, steady number from text, so the same moment always picks the same wording. */

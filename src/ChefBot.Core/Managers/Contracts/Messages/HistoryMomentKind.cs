@@ -44,4 +44,7 @@ public enum HistoryMomentKind
 
     /// <summary>Everything left on the shopping list was bought at once. <see cref="HistoryMoment.Count"/> is how many things.</summary>
     Haul,
+
+    /// <summary>Someone reviewed a recipe. <see cref="HistoryMoment.Review"/> has the stars, notes and who wrote it.</summary>
+    Reviewed,
 }

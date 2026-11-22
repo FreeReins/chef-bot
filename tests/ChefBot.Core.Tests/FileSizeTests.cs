@@ -21,8 +21,8 @@ public class FileSizeTests
         ["src/ChefBot.Core/Engines/Transformation/RecipePdfWriter.cs"] = 426,
 
         // Screens with their markup and styles; their logic could move to src/lib/.
-        ["src/ChefBot.Web/src/tabs/RecipeCook.svelte"] = 500,
-        ["src/ChefBot.Web/src/tabs/Recipes.svelte"] = 428,
+        ["src/ChefBot.Web/src/tabs/RecipeCook.svelte"] = 499,
+        ["src/ChefBot.Web/src/tabs/Recipes.svelte"] = 422,
         ["src/ChefBot.Web/src/tabs/RecipeDetail.svelte"] = 425,
     };
 

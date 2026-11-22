@@ -1,5 +1,5 @@
 <!-- The Recipes tab: the library across the full width, as photo cards or a compact list, found a page at a time by
-     words, and under "Filters" by course, favourites, tags, slow cooker and time. Each recipe has a heart to make it a favourite, and says whose favourite it is. Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
+     words, and under "Filters" by course, favourites, tags, slow cooker and time. Each recipe has a heart to make it a favourite, and shows its rating and whose favourite it is (RecipeBadges.svelte). Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
 <script>
   import { untrack } from 'svelte';
   import { app, run, isAdmin } from '../lib/app.svelte.js';
@@ -17,9 +17,9 @@
   import RecipeDownloads from '../components/RecipeDownloads.svelte';
   import TagFilter from '../components/TagFilter.svelte';
   import FavouriteButton from '../components/FavouriteButton.svelte';
-  import { favouriteOf, possessive } from '../lib/format.js';
+  import RecipeBadges from '../components/RecipeBadges.svelte';
+  import { possessive } from '../lib/format.js';
   import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
-  import Heart from '@lucide/svelte/icons/heart';
   import X from '@lucide/svelte/icons/x';
 
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
@@ -155,10 +155,6 @@
     listTop?.scrollIntoView({ block: 'start' });
   }
 </script>
-
-{#snippet favoured(recipe)}
-  <span class="favoured"><Heart size={13} fill="currentColor" aria-hidden="true" />{favouriteOf(recipe.favouredBy.map((favourite) => favourite.name))}</span>
-{/snippet}
 
 {#if app.recipeId}
   {#key app.recipeId}<RecipeDetail id={app.recipeId} />{/key}
@@ -301,7 +297,7 @@
                 {/if}
                 <span class="text">
                   <strong>{recipe.name}</strong>
-                  {#if recipe.favouredBy?.length}{@render favoured(recipe)}{/if}
+                  <RecipeBadges {recipe} />
                   {#if recipe.description?.trim()}<span class="blurb">{recipe.description}</span>{/if}
                 </span>
               </a>
@@ -327,7 +323,7 @@
               <div class="text">
                 <a href="/recipes/{recipe.id}"><strong>{recipe.name}</strong></a>
                 {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
-                {#if recipe.favouredBy?.length}<p class="row-favoured">{@render favoured(recipe)}</p>{/if}
+                <RecipeBadges {recipe} />
                 {#if recipe.description?.trim()}<p class="muted blurb">{recipe.description}</p>{/if}
               </div>
               <FavouriteButton {recipe} class="icon" onchange={(list) => favouriteChanged(recipe, list)} />
@@ -408,8 +404,6 @@
   /* The heart sits on the cover's top corner, outside the card's link so it can be pressed on its own. */
   .cards :global(.on-cover) { position: absolute; top: .45rem; right: .45rem; padding: .4rem; border-radius: 999px;
     border-color: transparent; background: color-mix(in srgb, var(--panel) 88%, transparent); box-shadow: 0 1px 4px var(--shadow); }
-  .favoured { display: inline-flex; align-items: center; gap: .3rem; color: var(--bad); font-size: .8rem; }
-  .row-favoured { margin: .1rem 0 0; }
   .cards .chips { padding: 0 .8rem; }
   .cards li::after { content: ""; padding-bottom: .7rem; }
   /* The empty tiles shown while the first page loads don't react to the pointer. */

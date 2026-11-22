@@ -56,6 +56,9 @@ internal sealed partial class BackupAccess
 
         // Who has which recipe as a favourite. Empty in backups made before favourites.
         new BackupTable<RecipeFavouriteEntity>("recipeFavourites", BackupJson.Default.ListRecipeFavouriteEntity),
+
+        // Everyone's ratings and notes on recipes. Empty in backups made before reviews.
+        new BackupTable<RecipeReviewEntity>("recipeReviews", BackupJson.Default.ListRecipeReviewEntity),
     ];
 
     /// <summary>A planned meal points at its recipe by id; the recipe itself is written once, under recipes.

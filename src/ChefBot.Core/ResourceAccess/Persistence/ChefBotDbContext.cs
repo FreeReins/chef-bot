@@ -32,6 +32,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     public DbSet<RecipeFavouriteEntity> RecipeFavourites => Set<RecipeFavouriteEntity>();
 
+    public DbSet<RecipeReviewEntity> RecipeReviews => Set<RecipeReviewEntity>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<decimal>().HavePrecision(12, 3);
@@ -120,6 +122,11 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
             favourite.ToTable("RecipeFavourites");
             favourite.HasIndex(f => new { f.RecipeId, f.UserId }).IsUnique();
             favourite.HasIndex(f => f.UserId);
+        });
+        modelBuilder.Entity<RecipeReviewEntity>(review =>
+        {
+            review.ToTable("RecipeReviews");
+            review.HasIndex(r => r.RecipeId);
         });
 
         StoreEnumsByName(modelBuilder);

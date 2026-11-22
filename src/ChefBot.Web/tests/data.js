@@ -164,7 +164,7 @@ export const ingredients = () => {
 const recipe = (id, name, course, extra = {}) => ({
   id, name, course, isSlowCooker: false, servings: 4, ingredients: ['oats', 'milk'],
   description: null, instructions: [], prepMinutes: null, cookMinutes: null, totalMinutes: null, sourceUrl: null,
-  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], stepDetails: [], favouredBy: [], ...extra,
+  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], stepDetails: [], favouredBy: [], rating: null, ...extra,
 });
 
 /** RecipeResponse[]: the first has everything filled in, for the recipe page. */
@@ -180,6 +180,7 @@ export const recipes = () => [
     prepMinutes: 20, cookMinutes: 10, totalMinutes: 30, sourceUrl: 'https://example.com/slaw-fish-tacos',
     author: 'Jo Park', yieldText: '8 tacos', notes: 'Any firm white fish works.', tags: ['quick', 'fish'],
     favouredBy: [{ userId: ids.admin, name: 'Alex Rivera' }, { userId: ids.sam, name: 'Sam Rivera' }],
+    rating: { average: 4.5, count: 2 },
     images: [
       { id: '00000000-0000-4000-8000-000000000401', url: '/api/test-images/1.png' },
       { id: '00000000-0000-4000-8000-000000000402', url: '/api/test-images/2.png' },
@@ -353,7 +354,7 @@ export const issuedApiToken = (name = 'Kitchen tablet') => ({
 
 /** HistoryMoment */
 const moment = (date, kind, extra = {}) => ({
-  date, kind, title: null, recipeId: null, count: null, dishes: [], at: null, favouredBy: [], ...extra,
+  date, kind, title: null, recipeId: null, count: null, dishes: [], at: null, favouredBy: [], review: null, ...extra,
 });
 
 /** HistoryResponse: two months of a household's food story, with older months still to load. */
@@ -367,6 +368,8 @@ export const history = () => ({
           { title: 'Chickpea Curry', recipeId: ids.curry, date: '2026-11-05' },
           { title: 'Pizza night', recipeId: null, date: '2026-11-07' },
         ] }),
+        moment('2026-11-06', 'Reviewed', { title: 'Slaw Fish Tacos', recipeId: ids.tacos,
+          review: { stars: 5, notes: 'Crispier than last time. Double the slaw.', reviewedBy: 'Sam Rivera' } }),
         moment('2026-11-06', 'FanFavourite', { title: 'Slaw Fish Tacos', recipeId: ids.tacos, count: 5 }),
         moment('2026-11-05', 'FavouriteCooked', { title: 'Beef and Barley Stew', recipeId: ids.stew, favouredBy: ['Sam', 'James'] }),
         moment('2026-11-04', 'Haul', { count: 23 }),
@@ -403,3 +406,14 @@ export const olderHistory = () => ({
   }],
   olderBefore: null, since: '2026-09-14', totalDinners: 128,
 });
+
+/** RecipeReviewsResponse for a recipe: the tacos have two, one the signed-in admin's own; others have none. */
+export const reviews = (recipeId) => (recipeId === ids.tacos ? {
+  rating: { average: 4.5, count: 2 },
+  reviews: [
+    { id: '00000000-0000-4000-8000-000000000601', userId: ids.sam, reviewedBy: 'Sam Rivera', stars: 5,
+      notes: 'Crispier than last time. Double the slaw.', at: '2026-11-06T19:30:00Z', edited: false },
+    { id: '00000000-0000-4000-8000-000000000602', userId: ids.admin, reviewedBy: 'Alex Rivera', stars: 4,
+      notes: null, at: '2026-10-20T19:10:00Z', edited: true },
+  ],
+} : { rating: null, reviews: [] });

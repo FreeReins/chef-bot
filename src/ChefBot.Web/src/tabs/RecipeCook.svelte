@@ -3,11 +3,12 @@
      long waits) when the steps ask for any, then each step on its own page with the ingredients it names, then done.
      Times in a step are buttons that start a timer; timers ring and vibrate when they end. The screen is kept awake
      where the browser allows it. Back and Next, the arrow and Page keys (and page-turner pedals that send them) and a
-     swipe move between pages. This browser remembers the page, the ticked ingredients and the timers for half a day,
-     so a reload or a closed tab picks up where it was. -->
+     swipe move between pages. The last page asks how it was, a review in one tap (QuickReview.svelte). This browser
+     remembers the page, the ticked ingredients and the timers for half a day, so a reload or a closed tab picks up where it was. -->
 <script>
   import { onDestroy, untrack } from 'svelte';
   import { ask } from '../lib/app.svelte.js';
+  import QuickReview from '../components/QuickReview.svelte';
   import X from '@lucide/svelte/icons/x';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
@@ -261,10 +262,7 @@
   }
 
   // Escape would close the dialog by itself; leave() decides instead, so the address stays in step.
-  function cancel(event) {
-    event.preventDefault();
-    leave();
-  }
+  const cancel = (event) => { event.preventDefault(); leave(); };
 </script>
 
 {#snippet timerButton(stepIndex, timer)}
@@ -395,6 +393,7 @@
             <Check size={48} />
             <h3 class="page-title">That's every step</h3>
             <p class="lead">Enjoy {recipe.name}.</p>
+            <QuickReview {recipe} />
             {#if recipe.notes}<p class="muted notes">{recipe.notes}</p>{/if}
           </div>
         {/if}

@@ -1,12 +1,15 @@
 <!-- One meal on the week board: what it is, and what can be done with it now. A planned dinner or breakfast can be
      dragged to another day, or moved with its Move menu, which also works from the keyboard and on touch screens.
-     Swap opens a dialog of replacements (SwapDialog.svelte). In a draft, meals can be kept for the next shuffle; once confirmed, they are marked as cooked or skipped. -->
+     Swap opens a dialog of replacements (SwapDialog.svelte). In a draft, meals can be kept for the next shuffle; once confirmed, they are marked as cooked or skipped.
+     A recipe just marked cooked asks how it was, a review in one tap (QuickReview.svelte); it is never required, and
+     the prompt goes once answered or closed, or when the page reloads. -->
 <script>
   import { tick } from 'svelte';
   import { app, openSwap, toggleKeep, moveMeal, planAction } from '../lib/app.svelte.js';
   import { pendingClick } from '../lib/pending.js';
   import { celebrate, popIn } from '../lib/motion.js';
   import Chip from '../components/Chip.svelte';
+  import QuickReview from '../components/QuickReview.svelte';
   import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
   import Pin from '@lucide/svelte/icons/pin';
   import GripVertical from '@lucide/svelte/icons/grip-vertical';
@@ -25,10 +28,12 @@
   const label = $derived(meal.isLeftover ? 'Lunch, leftovers' : meal.slot);
 
   let card = $state();
+  let asking = $state(false); // just marked cooked here, so it asks how it was
 
   /** Marks the meal, and celebrates once the week's last meal is done. */
   const setStatus = (status) => pendingClick(async () => {
     await planAction(`meals/${meal.id}/status`, { status });
+    asking = status === 'Cooked' && meal.status === 'Cooked' && Boolean(meal.recipeId) && !meal.isLeftover;
     const meals = app.plan?.meals.filter((other) => !other.isOptional) ?? [];
     if (status === 'Cooked' && meals.length && meals.every((other) => other.status !== 'Planned')) celebrate(card, { count: 18 });
   });
@@ -63,6 +68,10 @@
       {#if kept}<span class="chip-wrap" in:popIn><Chip tone="good">Kept</Chip></span>{/if}
       {#if !planned}<span class="chip-wrap" in:popIn><Chip>{meal.status}</Chip></span>{/if}
     </div>
+  {/if}
+
+  {#if asking && !planned}
+    <QuickReview compact recipe={{ id: meal.recipeId, name: meal.title }} ondismiss={() => (asking = false)} />
   {/if}
 
   <div class="row-actions">

@@ -5,7 +5,7 @@ namespace ChefBot.Core.Engines;
 
 /// <summary>
 /// Tells the household's food history from the stored moments: picks out debuts, fan favourites, comebacks and
-/// milestone dinners and someone's favourite being cooked, folds the everyday cooking of each week into one moment and a day of many new recipes into a
+/// milestone dinners and someone's favourite being cooked, tells each review, folds the everyday cooking of each week into one moment and a day of many new recipes into a
 /// stampede, and groups it all into monthly chapters. Reads and saves nothing.
 /// </summary>
 internal sealed class HistoryEngine
@@ -29,9 +29,11 @@ internal sealed class HistoryEngine
 
     /// <summary>The chapters <paramref name="request"/> asks for.</summary>
     /// <param name="moments">Every stored moment, in any order.</param>
+    /// <param name="reviews">Every review of a recipe, in any order.</param>
     /// <param name="recipes">Every recipe, archived ones included, for links and tags.</param>
     /// <param name="request">Which months to tell.</param>
-    public HistoryResponse Tell(IReadOnlyList<FoodMoment> moments, IReadOnlyList<Recipe> recipes, HistoryRequest request)
+    public HistoryResponse Tell(
+        IReadOnlyList<FoodMoment> moments, IReadOnlyList<RecipeReview> reviews, IReadOnlyList<Recipe> recipes, HistoryRequest request)
     {
         var library = recipes.ToDictionary(recipe => recipe.Id);
         var ordered = moments.OrderBy(moment => moment.OccurredOn).ThenBy(moment => moment.Id).ToList();
@@ -40,6 +42,7 @@ internal sealed class HistoryEngine
         var told = new List<HistoryMoment>();
         var totalDinners = TellCooking(cooks, library, told);
         TellArrivals(ordered.Where(moment => moment.Kind == FoodMomentKind.RecipeAdded), library, told);
+        TellReviews(reviews, library, told);
         foreach (var moment in ordered)
         {
             if (Plain(moment) is { } plain)
@@ -149,6 +152,20 @@ internal sealed class HistoryEngine
 
             told.AddRange(arrivals.Select(moment => new HistoryMoment(
                 moment.OccurredOn, HistoryMomentKind.RecipeAdded, moment.Title, Linked(moment.RecipeId, library), null, [], moment.OccurredAt, [])));
+        }
+    }
+
+    /// <summary>Adds a moment for each review, under the recipe's name. A recipe gone from the database keeps no name, so its reviews are left out.</summary>
+    private static void TellReviews(IReadOnlyList<RecipeReview> reviews, Dictionary<Guid, Recipe> library, List<HistoryMoment> told)
+    {
+        foreach (var review in reviews.OrderBy(review => review.CreatedAt).ThenBy(review => review.Id))
+        {
+            if (library.TryGetValue(review.RecipeId, out var recipe))
+            {
+                told.Add(new HistoryMoment(
+                    review.ReviewedOn, HistoryMomentKind.Reviewed, recipe.Name, Linked(recipe.Id, library), null, [], review.CreatedAt, [],
+                    new HistoryReview(review.Stars, review.Notes, review.ReviewerName)));
+            }
         }
     }
 

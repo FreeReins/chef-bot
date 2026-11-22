@@ -21,6 +21,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="IngredientDetails">The same ingredients as <paramref name="Ingredients"/>, as ChefBot understood them for shopping.</param>
 /// <param name="StepDetails">The same steps as <paramref name="Instructions"/>, as ChefBot read them for cooking mode.</param>
 /// <param name="FavouredBy">The people who have it as a favourite, oldest favourite first.</param>
+/// <param name="Rating">The average of its reviews, or null when it has none.</param>
 public sealed record RecipeResponse(
     Guid Id,
     string Name,
@@ -41,4 +42,5 @@ public sealed record RecipeResponse(
     IReadOnlyList<RecipeImageResponse> Images,
     IReadOnlyList<RecipeIngredientResponse> IngredientDetails,
     IReadOnlyList<RecipeStepResponse> StepDetails,
-    IReadOnlyList<FavouriteResponse> FavouredBy);
+    IReadOnlyList<FavouriteResponse> FavouredBy,
+    RecipeRating? Rating);

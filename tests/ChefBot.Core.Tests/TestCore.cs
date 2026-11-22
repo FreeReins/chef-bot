@@ -39,6 +39,8 @@ internal sealed class TestCore
 
     public FakeFavourites Favourites { get; }
 
+    public FakeReviews Reviews { get; } = new();
+
     public FakeSettings Settings { get; } = new();
 
     public FakeImageSource Images { get; } = new();
@@ -83,6 +85,7 @@ internal sealed class TestCore
         services.AddSingleton<IAccountAccess>(Accounts);
         services.AddSingleton<IHistoryAccess>(History);
         services.AddSingleton<IFavouriteAccess>(Favourites);
+        services.AddSingleton<IReviewAccess>(Reviews);
         services.AddSingleton<ISettingsAccess>(Settings);
         services.AddSingleton<IImageSourceAccess>(Images);
         services.AddSingleton<IWebPageAccess>(Web);

@@ -88,7 +88,8 @@ internal static class Mapping
 
     /// <param name="recipe">The recipe.</param>
     /// <param name="favouredBy">Who has it as a favourite.</param>
-    public static RecipeResponse ToResponse(this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy)
+    /// <param name="rating">The average of its reviews, or null when it has none.</param>
+    public static RecipeResponse ToResponse(this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy, RecipeRating? rating)
     {
         var ingredients = recipe.Ingredients.OrderBy(ingredient => ingredient.Position).ToList();
         return new(
@@ -118,12 +119,14 @@ internal static class Mapping
                     Written(ingredient), ingredient.Quantity, ingredient.Unit, ingredient.DisplayName, ingredient.Note))
                 .ToList(),
             CookingSteps.Read(recipe.Instructions, ingredients.Select(ingredient => ingredient.DisplayName).ToList()),
-            favouredBy);
+            favouredBy,
+            rating);
     }
 
     /// <param name="recipe">The recipe.</param>
     /// <param name="favouredBy">Who has it as a favourite.</param>
-    public static RecipeSummaryResponse ToSummary(this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy) => new(
+    /// <param name="rating">The average of its reviews, or null when it has none.</param>
+    public static RecipeSummaryResponse ToSummary(this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy, RecipeRating? rating) => new(
         recipe.Id,
         recipe.Name,
         recipe.Course,
@@ -131,7 +134,15 @@ internal static class Mapping
         recipe.Ingredients.OrderBy(ingredient => ingredient.Position).Select(Written).ToList(),
         [.. recipe.Tags],
         recipe.Images.Where(image => image.IsStored).OrderBy(image => image.Position).Select(image => ImageUrl(recipe, image)).FirstOrDefault(),
-        favouredBy);
+        favouredBy,
+        rating);
+
+    /// <summary>A recipe's reviews as a rating: their average, to one decimal place.</summary>
+    public static RecipeRating ToRating(this ReviewTally tally) =>
+        new(Math.Round((decimal)tally.TotalStars / tally.Count, 1, MidpointRounding.AwayFromZero), tally.Count);
+
+    public static RecipeReviewResponse ToResponse(this RecipeReview review) => new(
+        review.Id, review.UserId, review.ReviewerName, review.Stars, review.Notes, review.CreatedAt, review.UpdatedAt is not null);
 
     public static RecipeText ToText(this RecipeDraft draft) => new(
         draft.Name,

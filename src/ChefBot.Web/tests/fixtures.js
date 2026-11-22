@@ -11,8 +11,8 @@ export const reply = (status, body = null, contentType = 'application/json') => 
 const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
 
 /** RecipeSummaryResponse, from a RecipeResponse. */
-const summary = ({ id, name, course, isSlowCooker, ingredients, tags, images, favouredBy }) =>
-  ({ id, name, course, isSlowCooker, ingredients, tags, coverUrl: images[0]?.url ?? null, favouredBy });
+const summary = ({ id, name, course, isSlowCooker, ingredients, tags, images, favouredBy, rating }) =>
+  ({ id, name, course, isSlowCooker, ingredients, tags, coverUrl: images[0]?.url ?? null, favouredBy, rating });
 
 /**
  * Answers for a recipe library, as the server gives them: the whole list, one recipe by id (404 when it isn't there),
@@ -32,6 +32,11 @@ export const library = (recipes) => ({
   // Favouriting answers as the signed-in admin would get it: the recipe with them added or taken off.
   'PUT /api/recipes/*/favourite': (request) => favourite(recipes, request, true),
   'DELETE /api/recipes/*/favourite': (request) => favourite(recipes, request, false),
+  // Reviews answer the recipe's reviews as they were: enough for the page to show what it was told.
+  'GET /api/recipes/*/reviews': (request) => data.reviews(new URL(request.url()).pathname.split('/')[3]),
+  'POST /api/recipes/*/reviews': (request) => reviewed(request),
+  'PUT /api/recipes/*/reviews/*': (request) => reviewed(request),
+  'DELETE /api/recipes/*/reviews/*': (request) => data.reviews(new URL(request.url()).pathname.split('/')[3]),
   'GET /api/recipes/search': (request) => {
     const params = new URL(request.url()).searchParams;
     const words = (params.get('query') ?? '').toLowerCase().split(/\s+/).filter(Boolean);
@@ -62,6 +67,17 @@ function favourite(recipes, request, add) {
   if (!recipe) return reply(404, { detail: 'There is no recipe with that id.' });
   const others = recipe.favouredBy.filter((favourite) => favourite.userId !== data.ids.admin);
   return summary({ ...recipe, favouredBy: add ? [...others, { userId: data.ids.admin, name: 'Alex Rivera' }] : others });
+}
+
+/** A review saved as the signed-in admin, on top of the recipe's others. */
+function reviewed(request) {
+  const [, , , recipeId, , reviewId] = new URL(request.url()).pathname.split('/');
+  const { stars, notes } = request.postDataJSON();
+  const before = data.reviews(recipeId).reviews.filter((review) => review.id !== reviewId);
+  const mine = { id: reviewId ?? '00000000-0000-4000-8000-000000000699', userId: data.ids.admin, reviewedBy: 'Alex Rivera',
+    stars, notes: notes ?? null, at: '2026-11-22T19:00:00Z', edited: Boolean(reviewId) };
+  const all = [mine, ...before];
+  return { rating: { average: Math.round((all.reduce((sum, review) => sum + review.stars, 0) / all.length) * 10) / 10, count: all.length }, reviews: all };
 }
 
 /** What every test starts with: an admin signed in, a confirmed plan for one week, and everything the Settings tab loads. */

@@ -63,6 +63,7 @@
                   {#if moment.kind !== 'FavouriteCooked' && moment.favouredBy?.length}
                     <p class="favoured">♥ {favouriteOf(moment.favouredBy)}</p>
                   {/if}
+                  {#if moment.review?.notes}<blockquote class="said">{moment.review.notes}</blockquote>{/if}
                   {#if moment.dishes.length > 0}
                     <ul class="dishes">
                       {#each moment.dishes as served, dishIndex (dishIndex)}
@@ -133,6 +134,9 @@
   .caption strong { font-weight: 600; }
   .when { margin: .3rem 0 0; font-size: .8rem; }
   .favoured { margin: .3rem 0 0; color: var(--bad); font-size: .85rem; }
+  /* A review's notes, in the reviewer's own words. */
+  .said { margin: .35rem 0 0; padding-left: .6rem; border-left: 3px solid var(--line); font-style: italic; white-space: pre-line;
+    overflow-wrap: anywhere; }
   .dishes { list-style: none; margin: .45rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .3rem; }
   .dishes li { background: var(--chip); border-radius: 999px; padding: .1rem .6rem; font-size: .85rem; }
   .dishes li.more { background: none; color: var(--muted); }
