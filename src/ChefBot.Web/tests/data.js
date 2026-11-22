@@ -147,6 +147,14 @@ export const pantry = () => [
   pantryItem('04', 'cream', { unit: 'cup', group: 'Dairy', expiresOn: '2026-11-19', daysLeft: -1, freshness: 'Expired' }),
 ];
 
+/** PantryItemResponse[]: the pantry with five items to use soon, more than the Pantry tab shows until asked. */
+export const pantryToUseSoon = () => [
+  ...pantry(),
+  pantryItem('05', 'spinach', { unit: 'bag', group: 'Vegetable', expiresOn: '2026-11-23', daysLeft: 1, freshness: 'ExpiringSoon' }),
+  pantryItem('06', 'yogurt', { unit: 'tub', group: 'Dairy', expiresOn: '2026-11-24', daysLeft: 2, freshness: 'ExpiringSoon' }),
+  pantryItem('07', 'chicken thighs', { quantity: 600, unit: 'g', group: 'Protein', expiresOn: '2026-11-22', daysLeft: 0, freshness: 'ExpiringSoon' }),
+];
+
 /** ManualShoppingItemResponse[]: things put on the shopping list by hand, one at a store and one without. */
 export const manualItems = () => [
   { id: '00000000-0000-4000-8000-000000000401', name: 'milk', quantity: 2, unit: 'l', store: 'Corner Market', group: 'Dairy' },

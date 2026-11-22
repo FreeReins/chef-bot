@@ -148,7 +148,7 @@
 {/if}
 
 <style>
-  .weeks { margin: 0 0 .5rem; }
+  .weeks { margin: 1rem 0 .5rem; }
   .review { display: grid; gap: .5rem; padding: 1rem 1.1rem; }
   .title-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
   .review h2 { margin: 0; }

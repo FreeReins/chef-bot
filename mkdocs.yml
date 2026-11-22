@@ -113,6 +113,7 @@ nav:
       - HTTPS and certificates: admin/https-and-certificates.md
       - Your own certificate: admin/own-certificate.md
       - Behind a reverse proxy: admin/reverse-proxy.md
+      - Reach it over Tailscale: admin/tailscale.md
       - Settings reference: admin/settings.md
       - Notifications: admin/notifications.md
       - To-do apps: admin/to-do-apps.md

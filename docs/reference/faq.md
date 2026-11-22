@@ -35,7 +35,7 @@ take them elsewhere.
 ## Can I reach ChefBot away from home?
 
 Use a VPN such as WireGuard or Tailscale, or put it behind a reverse proxy with a real certificate. See
-[Behind a reverse proxy](../admin/reverse-proxy.md).
+[Reach ChefBot over Tailscale](../admin/tailscale.md) and [Behind a reverse proxy](../admin/reverse-proxy.md).
 
 ## Does it work with Home Assistant?
 

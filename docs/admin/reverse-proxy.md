@@ -94,7 +94,7 @@ expose it:
 
 - use a strong password for every account;
 - keep the [lockout](people-and-accounts.md#lockout) on;
-- consider a VPN (WireGuard, Tailscale) or your proxy's own sign-in in front of it instead.
+- consider a VPN (WireGuard, [Tailscale](tailscale.md)) or your proxy's own sign-in in front of it instead.
 
 Exposing it does let Google Calendar and Outlook on the web reach the [calendar feed](../using/calendar.md), and
 cloud AI assistants reach [MCP](ai-assistants.md).

@@ -110,6 +110,12 @@ const VIEWS = [
   { name: 'recipes, offline', path: '/recipes', act: goOffline },
   { name: 'pantry with a plan', path: '/pantry' },
   { name: 'pantry without a plan', path: '/pantry', answers: noPlan },
+  { name: 'pantry, many items to use soon', path: '/pantry', answers: { ...noPlan, 'GET /api/pantry': data.pantryToUseSoon() } },
+  {
+    name: 'pantry, all items to use soon shown', path: '/pantry', answers: { ...noPlan, 'GET /api/pantry': data.pantryToUseSoon() },
+    act: (page) => page.getByRole('button', { name: 'Show 2 more' }).click()
+      .then(() => page.getByRole('button', { name: 'Show fewer' }).waitFor()),
+  },
   {
     name: 'pantry, correcting an item', path: '/pantry',
     act: (page) => page.getByRole('button', { name: 'Change the amount or date of eggs' }).click()
@@ -348,6 +354,14 @@ const VIEWS = [
   { name: 'settings: login', path: '/settings/login' },
   { name: 'settings: appearance', path: '/settings/appearance' },
   {
+    // Phones only: the sidebar opened from the menu button. Wide screens show it all the time.
+    name: 'settings: the sections menu open', path: '/settings/login',
+    act: async (page) => {
+      const menu = page.getByRole('button', { name: /^Settings sections/ });
+      if (await menu.isVisible()) await menu.click();
+    },
+  },
+  {
     name: 'dark mode chosen with the sun and moon button', path: '/plan',
     act: async (page) => {
       const before = await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches);
@@ -409,7 +423,7 @@ const VIEWS = [
   },
   {
     name: 'settings: backups with one opened', path: '/settings/backups',
-    act: (page) => page.getByRole('button', { expanded: false }).first().click()
+    act: (page) => page.locator('#settings-body').getByRole('button', { expanded: false }).first().click()
       .then(() => page.getByText('Recipe photos').waitFor()),
   },
   { name: 'settings: to-do apps', path: '/settings/todo-apps', answers: { 'GET /api/shopping/targets': data.shoppingTargets() } },

@@ -4,7 +4,8 @@
      works from the keyboard and on touch screens; a planned dinner or breakfast can also be dragged to another day.
      Swap opens a dialog of replacements (SwapDialog.svelte). A recipe just marked cooked asks how it was, a review in
      one tap (QuickReview.svelte); it is never required, and the prompt goes once answered or closed, or when the page
-     reloads. -->
+     reloads. A meal with no recipe, such as a plate from Swap's "Or make up a plate", has a lightbulb after its
+     title, so the week shows which meals are creative ideas. -->
 <script>
   import { tick } from 'svelte';
   import { app, openSwap, toggleKeep, moveMeal, planAction } from '../lib/app.svelte.js';
@@ -15,6 +16,7 @@
   import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
   import Pin from '@lucide/svelte/icons/pin';
   import CookingPot from '@lucide/svelte/icons/cooking-pot';
+  import Lightbulb from '@lucide/svelte/icons/lightbulb';
   import Check from '@lucide/svelte/icons/check';
   import Minus from '@lucide/svelte/icons/minus';
 
@@ -29,6 +31,7 @@
   const planned = $derived(meal.status === 'Planned');
   const movable = $derived(planned && Boolean(meal.date) && !meal.isLeftover);
   const kept = $derived(app.keep.includes(meal.id));
+  const creative = $derived(!meal.recipeId && !meal.isLeftover); // made up from ingredients, not a recipe
   const label = $derived(`${meal.isLeftover ? 'Leftovers' : meal.slot}${meal.isOptional ? ', optional' : ''}`);
   const targets = $derived(movable ? days.filter((day) => day.date !== meal.date) : []);
 
@@ -68,6 +71,7 @@
     <h4>
       {#if meal.recipeId && !meal.isLeftover}<a href="/recipes/{meal.recipeId}" class="quiet" draggable="false">{meal.title}</a>{:else}{meal.title}{/if}
       {#if meal.isSlowCooker}<span class="slow" title="Slow cooker"><CookingPot size={14} aria-hidden="true" /><span class="sr-only">, slow cooker</span></span>{/if}
+      {#if creative}<span class="mark" title="Creative idea"><Lightbulb size={14} aria-hidden="true" /><span class="sr-only">, creative idea</span></span>{/if}
       {#if kept}<span class="sr-only">, kept</span>{/if}
     </h4>
 
@@ -130,7 +134,7 @@
   .meal.done h4 { font-weight: 400; }
   .quiet { color: inherit; text-decoration: none; }
   .quiet:hover { text-decoration: underline; }
-  .slow { display: inline-flex; vertical-align: -2px; margin-left: .3rem; color: var(--muted); }
+  .slow, .mark { display: inline-flex; vertical-align: -2px; margin-left: .3rem; color: var(--muted); }
   .buttons { display: flex; align-items: center; gap: .35rem; margin-left: auto; }
   .status { display: inline-flex; align-items: center; gap: .2rem; font-size: .85rem; color: var(--muted); }
   .keep { display: inline-flex; align-items: center; gap: .25rem; }

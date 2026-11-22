@@ -53,11 +53,26 @@ test('the sample course tabs move with the arrow keys', async ({ page }) => {
   await expect(tab('Dinners')).toHaveAttribute('aria-selected', 'true');
 });
 
-test('a Settings section link moves focus to the section', async ({ page }) => {
+test('a Settings section link moves focus to the section', async ({ page, isMobile }) => {
   await open(page, '/settings/login');
+  if (isMobile) await page.getByRole('button', { name: 'Settings sections, Login open' }).click();
   await page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Backups' }).click();
   await expect(page.getByRole('heading', { name: 'Backups' })).toBeVisible();
   await expect(page.locator('#settings-body')).toBeFocused();
+  if (isMobile) await expect(page.getByRole('dialog', { name: 'Settings' })).toBeHidden();
+});
+
+test('on a phone the Settings menu opens a drawer that Escape closes', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'Wide screens show the Settings sidebar all the time.');
+  await open(page, '/settings/login');
+  const menu = page.getByRole('button', { name: 'Settings sections, Login open' });
+  await menu.click();
+  await expect(menu).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('dialog', { name: 'Settings' }).getByRole('link', { name: 'Login' })).toHaveAttribute('aria-current', 'page');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Settings' })).toBeHidden();
+  await expect(menu).toBeFocused();
+  await expect(menu).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('every control in the header and the tabs shows where focus is', async ({ page }) => {
@@ -126,6 +141,14 @@ test('Keep marks a meal, and Shuffle sends the kept meals', async ({ page, api }
   await expect(page.getByRole('button', { name: 'Keep Beef and Barley Stew' })).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('a meal with no recipe is marked as a creative idea, and a recipe is not', async ({ page }) => {
+  await open(page, '/plan');
+  await expect(page.getByRole('heading', { name: /^Grain bowl: farro, eggs and kale\s*, creative idea$/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chickpea Curry', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Slaw Fish Tacos', exact: true })).toHaveCount(2); // the dinner and its leftovers
+  await expect(page.getByRole('heading', { name: /creative idea/ })).toHaveCount(2); // the grain bowl and the lemonade
+});
+
 test('the plan and the plan style editor fit the window without scrolling sideways', async ({ page, api }) => {
   const fits = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
   api.set(staged);
@@ -189,11 +212,12 @@ test('a settings change saves by itself, once, without a Save button', async ({ 
   expect(api.requests.filter((request) => request === 'PUT /api/system/notifications')).toHaveLength(1);
 });
 
-test('a change waiting to be saved is saved when another section opens', async ({ page, api }) => {
+test('a change waiting to be saved is saved when another section opens', async ({ page, api, isMobile }) => {
   await open(page, '/settings/backups');
   await page.getByLabel(/^Keep this many backups/).fill('7');
   await page.getByLabel(/^Keep this many backups/).press('Tab');
   // Straight to another section, before the pause before saving is over.
+  if (isMobile) await page.getByRole('button', { name: /^Settings sections/ }).click();
   await page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Login' }).click();
   await expect.poll(() => api.requests.filter((request) => request === 'PUT /api/system/backups').length).toBe(1);
 });
@@ -207,6 +231,37 @@ test('Escape closes a pantry correction and puts focus back on its button', asyn
   await expect(page.getByRole('button', { name: 'Save' })).toHaveCount(0);
   await expect(button).toBeFocused();
   expect(api.requests.filter((request) => request.startsWith('PATCH') || request.startsWith('PUT'))).toEqual([]);
+});
+
+test('Use soon shows the first three items, and the rest on request', async ({ page, api }) => {
+  api.set({ 'GET /api/plans': [], 'GET /api/pantry': data.pantryToUseSoon() });
+  await open(page, '/pantry');
+  const soon = page.locator('#use-soon > li');
+  await expect(soon).toHaveCount(3);
+  // The ones expiring first: cream (expired), chicken thighs (today) and spinach (tomorrow).
+  await expect(soon.first()).toContainText('cream');
+  const more = page.getByRole('button', { name: 'Show 2 more' });
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+
+  await more.click();
+  await expect(soon).toHaveCount(5);
+  const fewer = page.getByRole('button', { name: 'Show fewer' });
+  await expect(fewer).toHaveAttribute('aria-expanded', 'true');
+  await expect(fewer).toBeFocused();
+
+  await fewer.press('Enter');
+  await expect(soon).toHaveCount(3);
+  await expect(page.getByRole('button', { name: 'Show 2 more' })).toBeFocused();
+});
+
+test('an item to use soon is corrected on its Use soon row', async ({ page }) => {
+  await open(page, '/pantry');
+  const button = page.locator('#use-soon').getByRole('button', { name: 'Change the amount or date of cabbage' });
+  await button.click();
+  await expect(page.locator('#use-soon').getByRole('button', { name: 'Save' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save' })).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(button).toBeFocused();
 });
 
 test('Back to recipes is a link to the list, and returns to it', async ({ page }) => {

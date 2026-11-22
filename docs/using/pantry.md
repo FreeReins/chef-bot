@@ -26,7 +26,9 @@ Items about to expire are flagged: within 3 days to start with (an admin can cha
 - can send a reminder about it (see [Notifications](../admin/notifications.md));
 - lists what no planned meal uses yet, so you can decide what to do with it.
 
-**Buy more** puts an item back on the shopping list in one click.
+They're listed first, under **Use soon**: the three that expire soonest, then **Show more** for the rest (and
+**Show fewer** to fold them away again). Each row there has the same buttons as the rest of the pantry: correct its
+amount or date, put it on the shopping list to buy more (**+**), or remove it.
 
 ## Swap a meal to use food up
 
@@ -37,6 +39,6 @@ On the Plan tab, press **Swap** on any meal. ChefBot shows:
   and is marked **Uses up** when it would use food that expires soon. Open **What's needed** to see the
   ingredients you have and the ones you'd buy.
 - **Or make up a plate:** simple plates it invents from what you have, a whole grain, a protein and a vegetable or
-  fruit.
+  fruit. On the plan, a plate you choose has a lightbulb after its name, so you can tell it apart from a recipe.
 
 Press **Use this**. The plan, leftover lunches and shopping list update together.

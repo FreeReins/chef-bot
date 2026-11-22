@@ -44,6 +44,23 @@ starts ChefBot at boot and restarts it if it stops.
 
 If 8080 or 8443 is already used on the NAS, change the left-hand port numbers in the compose file.
 
+## UGREEN NAS (UGOS Pro)
+
+1. Install **Docker** from the **App Center**.
+2. In **Files**, make a folder such as `docker/chefbot`.
+3. Open Docker, go to **Project** and press **Create**. Name it `chefbot`, choose the folder as its storage path, and
+   paste the compose file. Change the password and `TZ`.
+4. Press **Deploy now**. Docker downloads the images and starts both containers.
+5. Open `http://<your NAS>:8080`.
+
+If 8080 or 8443 is already used on the NAS, change the left-hand port numbers in the compose file. To keep the keys
+and backups in folders under `docker/chefbot` instead of named volumes, see
+[Use host folders instead of volumes](install-docker-compose.md#use-host-folders-instead-of-volumes): the folders must
+be writable by user id 1654.
+
+To reach ChefBot away from home, UGOS Pro's **App Center** also has Tailscale. See
+[Reach ChefBot over Tailscale](../admin/tailscale.md).
+
 ## Unraid
 
 The simplest way is the **Docker Compose Manager** plugin from Community Applications:
@@ -91,7 +108,8 @@ then follow [Install with Docker Compose](install-docker-compose.md).
 ## After installing
 
 Continue with [First run](first-run.md). For problems, see
-[Install and startup problems](../troubleshooting/install-and-startup.md).
+[Install and startup problems](../troubleshooting/install-and-startup.md). To reach ChefBot away from home, see
+[Reach ChefBot over Tailscale](../admin/tailscale.md) or [Behind a reverse proxy](../admin/reverse-proxy.md).
 
 Got ChefBot running on a platform that isn't here, or found a step that has changed?
 [Suggest an edit](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/edit/main/docs/getting-started/install-other-platforms.md).

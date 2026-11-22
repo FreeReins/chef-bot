@@ -12,9 +12,12 @@
   import Pencil from '@lucide/svelte/icons/pencil';
   import Refrigerator from '@lucide/svelte/icons/refrigerator';
   import Plus from '@lucide/svelte/icons/plus';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
 
   /** Above this many items, a box to find one by name is shown. */
   const FILTER_FROM = 8;
+  /** How many of the items to use soon are shown until the rest are asked for: the ones expiring first. */
+  const SOON_SHOWN = 3;
 
   // With a plan, the pantry comes with its ingredients view; without one, it is loaded on its own. Only the plan
   // is tracked, so a toast shown by run() doesn't load it again.
@@ -28,6 +31,18 @@
   const soon = $derived(pantry.filter((line) => freshness(line.item))
     .sort((a, b) => (a.item.daysLeft ?? 0) - (b.item.daysLeft ?? 0)));
   const unusedCount = $derived(pantry.filter((line) => !line.usedByPlan).length);
+
+  let soonOpen = $state(false);
+  const soonShown = $derived(soonOpen ? soon : soon.slice(0, SOON_SHOWN));
+
+  /** Shows all the items to use soon, or only the first few; a correction on a row that is hidden is closed. */
+  function toggleSoon() {
+    soonOpen = !soonOpen;
+    if (!soonOpen && editing?.startsWith('soon-')
+        && !soon.slice(0, SOON_SHOWN).some((line) => editing === `soon-${line.item.id}`)) {
+      editing = null;
+    }
+  }
 
   let filter = $state('');
   const shown = $derived(filter.trim()
@@ -58,27 +73,28 @@
     }
   }
 
-  // The item whose amount and date are being corrected, if any.
+  // The row whose amount and date are being corrected, if any, as "<list>-<item id>": an item to use soon is listed
+  // twice, under Use soon ("soon") and in its food group ("all"), and only the row pressed opens.
   let editing = $state(null);
 
-  async function edit(item) {
-    editing = item.id;
+  async function edit(item, where) {
+    editing = `${where}-${item.id}`;
     await tick();
-    document.getElementById(`edit-quantity-${item.id}`)?.focus();
+    document.getElementById(`edit-quantity-${where}-${item.id}`)?.focus();
   }
 
   /** Closes the item's edit form and puts focus back on its pencil button. */
-  async function stopEditing(item) {
+  async function stopEditing(item, where) {
     editing = null;
     await tick();
-    document.getElementById(`edit-${item.id}`)?.focus();
+    document.getElementById(`edit-${where}-${item.id}`)?.focus();
   }
 
-  function save(event, item) {
+  function save(event, item, where) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const quantity = data.get('quantity');
-    stopEditing(item);
+    stopEditing(item, where);
     updatePantryItem(item.id, {
       quantity: quantity === '' ? null : Number(quantity),
       expiresOn: data.get('expiresOn') || null,
@@ -133,29 +149,31 @@
   </div>
 {/snippet}
 
-{#snippet items(lines)}
-  <ul class="plain">
+<!-- The rows of one list, each with buttons to correct, restock or remove its item. `where` names the list, so ids
+     stay unique when an item is in both. -->
+{#snippet items(lines, where, id = undefined)}
+  <ul class="plain" {id}>
     {#each lines as { item, usedFor } (item.id)}
       <li>
-        {#if editing === item.id}
-          {@const escape = (event) => { if (event.key === 'Escape') { event.preventDefault(); stopEditing(item); } }}
-          <form class="inline" onsubmit={(event) => save(event, item)}>
+        {#if editing === `${where}-${item.id}`}
+          {@const escape = (event) => { if (event.key === 'Escape') { event.preventDefault(); stopEditing(item, where); } }}
+          <form class="inline" onsubmit={(event) => save(event, item, where)}>
             <strong class="edit-name">{item.name}</strong>
             <label>Amount{item.unit ? ` (${item.unit})` : ''}
-              <input id="edit-quantity-{item.id}" onkeydown={escape} name="quantity" type="number" min="0" step="any" value={item.quantity ?? ''}>
+              <input id="edit-quantity-{where}-{item.id}" onkeydown={escape} name="quantity" type="number" min="0" step="any" value={item.quantity ?? ''}>
             </label>
             <label>Expires <input name="expiresOn" type="date" onkeydown={escape} value={item.expiresOn ?? ''}></label>
             <div class="row-actions">
               <button type="submit" class="small primary">Save</button>
-              <button type="button" class="small" onclick={() => stopEditing(item)}>Cancel</button>
+              <button type="button" class="small" onclick={() => stopEditing(item, where)}>Cancel</button>
             </div>
           </form>
         {:else}
           <div class="row item">
             {@render summary(item, usedFor)}
             <div class="row-actions">
-              <button class="icon" id="edit-{item.id}" aria-label="Change the amount or date of {item.name}" title="Change the amount or date"
-                      disabled={app.offline} onclick={() => edit(item)}><Pencil size={16} /></button>
+              <button class="icon" id="edit-{where}-{item.id}" aria-label="Change the amount or date of {item.name}" title="Change the amount or date"
+                      disabled={app.offline} onclick={() => edit(item, where)}><Pencil size={16} /></button>
               <button class="icon" aria-label="Add {item.name} to the shopping list" title="Add to the shopping list"
                       onclick={pendingClick(() => restock(item))}><Plus size={16} /></button>
               <button class="icon remove" aria-label="Remove {item.name}" title="Remove"
@@ -190,16 +208,12 @@
     {#if soon.length}
       <h2>Use soon ({soon.length})</h2>
       <div class="card soon">
-        <ul class="plain">
-          {#each soon as { item, usedFor } (item.id)}
-            <li class="row item">
-              {@render summary(item, usedFor)}
-              {#if item.freshness === 'Expired'}
-                <button class="small" aria-label="Buy more {item.name}" onclick={pendingClick(() => restock(item))}>Buy more</button>
-              {/if}
-            </li>
-          {/each}
-        </ul>
+        {@render items(soonShown, 'soon', 'use-soon')}
+        {#if soon.length > SOON_SHOWN}
+          <button type="button" class="small with-icon toggle" aria-expanded={soonOpen} aria-controls="use-soon" onclick={toggleSoon}>
+            {soonOpen ? 'Show fewer' : `Show ${soon.length - SOON_SHOWN} more`}<ChevronDown class="chevron" size={16} />
+          </button>
+        {/if}
       </div>
     {/if}
 
@@ -219,7 +233,7 @@
       {#each byGroup(shown) as section (section.group)}
         <div class="group" style="--group: var(--group-{section.group.toLowerCase()})">
           <h3><span class="swatch" aria-hidden="true"></span>{section.title} <span class="count">{section.lines.length}</span></h3>
-          {@render items(section.lines)}
+          {@render items(section.lines, 'all')}
         </div>
       {:else}
         <p class="muted">Nothing in the pantry matches "{filter}".</p>
@@ -263,6 +277,10 @@
   .detail:empty { display: none; }
   .uses { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
   .soon { border-left: 4px solid var(--warn); }
+  .toggle { margin-top: .4rem; }
+  .toggle :global(.chevron) { flex: none; }
+  .toggle[aria-expanded='true'] :global(.chevron) { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: no-preference) { .toggle :global(.chevron) { transition: transform .15s; } }
   .list-head { align-items: center; }
   .list-head h2 { flex: 1 1 auto; }
   .filter { flex: 0 1 14rem; }

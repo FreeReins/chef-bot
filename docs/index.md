@@ -34,6 +34,7 @@ in any text editor, or inside ChefBot itself: press the **?** button at the top 
 - [Invite people, reset passwords and unlock accounts](admin/people-and-accounts.md)
 - [Set up HTTPS](admin/https-and-certificates.md), [use my own certificate](admin/own-certificate.md) or
   [run it behind a reverse proxy](admin/reverse-proxy.md)
+- [Reach it away from home over Tailscale](admin/tailscale.md)
 - [Look up any setting](admin/settings.md)
 - [Send reminders to Home Assistant or anywhere else](admin/notifications.md)
 - [Send the shopping list to a to-do app](admin/to-do-apps.md)

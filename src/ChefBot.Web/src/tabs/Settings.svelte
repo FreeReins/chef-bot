@@ -1,4 +1,4 @@
-<!-- A sidebar of sections, one section shown at a time. -->
+<!-- A sidebar of sections, one section shown at a time. On phones the sidebar is a drawer opened from a menu button. -->
 <script>
   import { tick } from 'svelte';
   import { app, isAdmin } from '../lib/app.svelte.js';
@@ -30,6 +30,8 @@
   import ScrollText from '@lucide/svelte/icons/scroll-text';
   import CalendarClock from '@lucide/svelte/icons/calendar-clock';
   import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
+  import Menu from '@lucide/svelte/icons/menu';
+  import X from '@lucide/svelte/icons/x';
 
   /**
    * The Settings sidebar: key, label, icon, who sees it, and what it shows. A wide section uses the full width; help is
@@ -55,21 +57,60 @@
   const current = $derived(sections.find((section) => section.key === app.settingsSection) ?? sections[0]);
 
   let body = $state();
+  let drawer = $state();
+  let menuOpen = $state(false);
 
-  // Each section has its own address, /settings/{key}. Following one moves focus to the section it opens.
+  // Phones (the same width as the page's other phone layouts) get the sidebar as a drawer.
+  const narrowQuery = globalThis.matchMedia?.('(max-width: 40rem)');
+  let narrow = $state(narrowQuery?.matches ?? false);
+  $effect(() => {
+    if (!narrowQuery) return;
+    const changed = () => { narrow = narrowQuery.matches; };
+    narrowQuery.addEventListener('change', changed);
+    return () => narrowQuery.removeEventListener('change', changed);
+  });
+  $effect(() => { if (!narrow) menuOpen = false; });
+
+  function openMenu() {
+    menuOpen = true;
+    drawer?.showModal();
+  }
+  function closeMenu() {
+    if (drawer?.open) drawer.close();
+    menuOpen = false;
+  }
+  const clickedOutside = (event) => { if (event.target === drawer) closeMenu(); };
+
+  // Each section has its own address, /settings/{key}. Following one closes the drawer and moves focus to the section.
   async function open(event) {
     if (!followLink(event)) return;
+    closeMenu();
     await tick();
     body?.focus();
   }
 </script>
 
+{#snippet links()}
+  {#each sections as section (section.key)}
+    <a href="/settings/{section.key}" aria-current={section === current ? 'page' : undefined} onclick={open}><section.icon size={16} />{section.label}</a>
+  {/each}
+{/snippet}
+
 <div class="settings">
-  <nav class="side-nav" aria-label="Settings">
-    {#each sections as section (section.key)}
-      <a href="/settings/{section.key}" aria-current={section === current ? 'page' : undefined} onclick={open}><section.icon size={16} />{section.label}</a>
-    {/each}
-  </nav>
+  {#if narrow}
+    <button type="button" class="menu-button" aria-haspopup="dialog" aria-expanded={menuOpen} aria-label="Settings sections, {current.label} open" onclick={openMenu}>
+      <Menu size={18} /><current.icon size={16} /><span>{current.label}</span>
+    </button>
+    <dialog class="drawer" bind:this={drawer} aria-labelledby="settings-drawer-title" onclose={() => { menuOpen = false; }} onclick={clickedOutside}>
+      <header>
+        <h2 id="settings-drawer-title">Settings</h2>
+        <button type="button" class="icon" aria-label="Close" onclick={closeMenu}><X size={20} /></button>
+      </header>
+      <nav class="side-nav" aria-label="Settings">{@render links()}</nav>
+    </dialog>
+  {:else}
+    <nav class="side-nav" aria-label="Settings">{@render links()}</nav>
+  {/if}
   <div class="settings-body" class:wide={current.wide} id="settings-body" tabindex="-1" bind:this={body}>
     {#if current.heading}<h2>{current.heading}</h2>{/if}
     <current.panel />
@@ -78,7 +119,7 @@
 </div>
 
 <style>
-  /* A sidebar of sections, one section shown at a time. On narrow screens the sidebar becomes wrapping chips. */
+  /* A sidebar of sections, one section shown at a time. On narrow screens a menu button opens it as a drawer. */
   .settings { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 1.75rem; align-items: start; margin-top: 1.25rem; }
   .side-nav { display: grid; gap: .15rem; position: sticky; top: 1rem; }
   .side-nav a { display: flex; align-items: center; gap: .5rem; border-left: 3px solid transparent; border-radius: 0 .4rem .4rem 0;
@@ -94,8 +135,22 @@
   .section-help { margin: 1.5rem 0 0; padding-top: .75rem; border-top: 1px solid var(--line); }
   @media (max-width: 40rem) {
     .settings { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
-    .side-nav { display: flex; flex-wrap: wrap; gap: .35rem; position: static; }
-    .side-nav a { border: 1px solid var(--line); border-radius: 999px; padding: .35rem .75rem; white-space: nowrap; }
-    .side-nav a[aria-current="page"] { border-color: var(--accent); background: var(--accent-bg); }
   }
+
+  /* Phones: a button naming the open section, and the sidebar in a drawer from the left. */
+  .menu-button { display: flex; align-items: center; gap: .55rem; width: 100%; text-align: left; padding: .6rem .8rem; font-weight: 600; }
+  .menu-button :global(svg:nth-child(2)) { color: var(--area-settings); }
+  .drawer { margin: 0; padding: 0; border: 0; border-right: 1px solid var(--line); border-radius: 0 .6rem .6rem 0;
+    width: min(18rem, 85vw); max-width: none; height: 100dvh; max-height: 100dvh; background: var(--bg); color: var(--ink);
+    box-shadow: 0 10px 40px rgb(0 0 0 / .3); }
+  .drawer[open] { display: flex; flex-direction: column; }
+  .drawer::backdrop { background: rgb(0 0 0 / .45); }
+  .drawer header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1rem .5rem 1.1rem; }
+  .drawer h2 { margin: 0; font-size: 1.2rem; }
+  .drawer .side-nav { position: static; overflow-y: auto; padding: 0 .6rem calc(1rem + env(safe-area-inset-bottom)) 0; }
+  .drawer .side-nav a { padding: .75rem 1rem; }
+  @media (prefers-reduced-motion: no-preference) {
+    .drawer[open] { animation: drawer-in .25s cubic-bezier(.2, .8, .3, 1); }
+  }
+  @keyframes drawer-in { from { transform: translateX(-100%); } }
 </style>
