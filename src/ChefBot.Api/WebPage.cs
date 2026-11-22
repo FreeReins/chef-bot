@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.AspNetCore.ResponseCompression;
 
 namespace ChefBot.Api;
@@ -9,6 +10,10 @@ namespace ChefBot.Api;
 public static class WebPage
 {
     private const string NotBuilt = "The web page hasn't been built yet. Run ./dev.sh web, then restart ChefBot.";
+
+    private const string HelpNotBuilt =
+        "The help pages aren't built into this copy of ChefBot. Read them in the docs folder of the repository, or at " +
+        "https://jamiethenextkevinbaconhamm.github.io/chef-bot/.";
 
     /// <summary>
     /// Only the page's own files are compressed. API answers are left alone: compressing them over HTTPS next to
@@ -46,12 +51,18 @@ public static class WebPage
             compression.MimeTypes = CompressedTypes;
         });
 
-    /// <summary>Serves the page's files, compressed, with index.html for "/".</summary>
+    /// <summary>
+    /// Serves the page's files, compressed, with index.html for "/", and the documentation under /help (see
+    /// <see cref="UseHelp"/>).
+    /// </summary>
     public static void UseChefBotWebPage(this WebApplication app)
     {
         app.UseResponseCompression();
+        var helpNotFound = HelpNotFoundPage(app);
+        app.Use(ForgetEndpointForHelp);
         app.UseDefaultFiles();
         app.UseStaticFiles(Files);
+        UseHelp(app, helpNotFound);
     }
 
     /// <summary>
@@ -72,5 +83,61 @@ public static class WebPage
         }
 
         app.MapFallback("/api/{**rest}", () => Results.NotFound()).AllowAnonymous().ExcludeFromDescription();
+    }
+
+    /// <summary>
+    /// The documentation, built into the image under wwwroot/help (the Dockerfile's docs stage), is its own site: its
+    /// pages are folders with an index.html, which the web page's fallback would otherwise answer with the app. Static
+    /// files aren't served once an endpoint has matched, so the matched endpoint is dropped for /help before they run.
+    /// </summary>
+    private static Task ForgetEndpointForHelp(HttpContext context, RequestDelegate next)
+    {
+        if (context.Request.Path.StartsWithSegments("/help"))
+        {
+            context.SetEndpoint(null);
+        }
+
+        return next(context);
+    }
+
+    /// <summary>
+    /// Answers a /help address the static files didn't find. No sign-in is needed anywhere under /help, so the
+    /// troubleshooting pages are there for someone who can't sign in. A missing page gets the site's own 404 page,
+    /// never the web page; a copy without the docs built (dotnet run, ./dev.sh) says where to read them instead.
+    /// </summary>
+    private static void UseHelp(WebApplication app, string? notFound) =>
+        app.Use(async (context, next) =>
+        {
+            if (!context.Request.Path.StartsWithSegments("/help"))
+            {
+                await next(context);
+                return;
+            }
+
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            if (notFound is null)
+            {
+                await Results.Text(HelpNotBuilt, statusCode: StatusCodes.Status404NotFound).ExecuteAsync(context);
+            }
+            else
+            {
+                await Results.Content(notFound, "text/html; charset=utf-8", Encoding.UTF8, StatusCodes.Status404NotFound).ExecuteAsync(context);
+            }
+        });
+
+    /// <summary>The documentation's 404 page, with its addresses moved under /help; null when the docs aren't built.</summary>
+    private static string? HelpNotFoundPage(WebApplication app)
+    {
+        var file = app.Environment.WebRootFileProvider.GetFileInfo("help/404.html");
+        if (!file.Exists || file.PhysicalPath is not { } path)
+        {
+            return null;
+        }
+
+        // MkDocs writes the 404 page's addresses from the site's root ("/assets/..."), which is /help/ here.
+        return File.ReadAllText(path)
+            .Replace("href=\"/", "href=\"/help/", StringComparison.Ordinal)
+            .Replace("src=\"/", "src=\"/help/", StringComparison.Ordinal)
+            .Replace("\"base\": \"/\"", "\"base\": \"/help/\"", StringComparison.Ordinal);
     }
 }

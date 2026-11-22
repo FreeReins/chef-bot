@@ -1,0 +1,63 @@
+# Security
+
+ChefBot is built for a home network, and guards the things that matter there: passwords, sessions, and requests it
+makes on someone else's behalf. This page describes each part. To report a problem privately, see
+[SECURITY.md](https://github.com/Jamiethenextkevinbaconhamm/chef-bot/blob/main/SECURITY.md).
+
+## Accounts and passwords
+
+- Passwords are hashed with ASP.NET Core Identity's hasher (`IdentityPasswordHasher`), and need at least 8 characters.
+- **Lockout:** after a number of wrong passwords in a row (5 to start with), an account is locked for a while (15
+  minutes). Sign-ins sent at once count too.
+- **Invite and reset links** are random tokens stored as SHA-256 hashes. Invites last 7 days and resets 24 hours, and
+  each works once.
+
+## Sessions
+
+- A cookie, `chefbot.session`: HttpOnly and `SameSite=Strict`, marked Secure when the request came over HTTPS. It
+  lasts 30 days, renewed as it is used.
+- Cookies are encrypted with ASP.NET Core Data Protection keys kept in `/app/keys`, so sessions survive restarts.
+  Losing the keys signs everyone out.
+- Changing a password, or restoring a backup, ends older sessions.
+
+## Roles
+
+There are two roles: admin and everyone else. Admin-only endpoints carry
+`[Authorize(Policy = Sessions.AdminPolicy)]`. The core never checks roles, so a rule can't be forgotten in one of two
+places.
+
+## API tokens
+
+- Only for `/mcp`, never for `/api`. Stored as SHA-256 hashes, shown once.
+- A token acts as the person who made it, and stops when it's revoked or the account is removed.
+- Left out of backups, so a leaked backup can't be used to reach MCP.
+
+## HTTPS
+
+- Self-signed by default (`Https/`), with a two-year certificate renewed in its last 30 days.
+- **Always use HTTPS** redirects plain HTTP. `Strict-Transport-Security` is sent only with a real certificate.
+- Behind a proxy, forwarded headers are believed only from `Https:TrustedProxies`.
+
+## Browser rules
+
+Every response carries a strict Content-Security-Policy: scripts, styles, images and API calls only from ChefBot
+itself, no inline scripts, no framing. Also `X-Content-Type-Options: nosniff` (a stored photo is only ever shown as an
+image) and `Referrer-Policy: same-origin`. The Swagger page at `/docs` and the help pages at `/help` get their own,
+looser policy, because their bundled scripts aren't ChefBot's.
+
+Page files are compressed, but API answers aren't: compressing them over HTTPS next to the sign-in cookie would expose
+them to BREACH-style attacks.
+
+## Requests ChefBot makes for someone
+
+Recipe pages and photos come from addresses someone typed in. `PublicWeb.Handler` refuses private, loopback and
+reserved addresses, after resolving the name, so a link can't reach the database or the home network. Any new
+download of an address someone else chose must go through it.
+
+The webhook and to-do apps are set by an admin, and may be on the home network.
+
+## Secrets at rest
+
+- The database password is a Podman secret, given to the app as `PGPASSWORD`.
+- To-do app tokens are in the database and in backups, and are never sent back to the page.
+- Backups hold password hashes, so downloaded copies should be kept private.

@@ -438,3 +438,6 @@ src/ChefBot.Web/test-results/
 src/ChefBot.Web/playwright-report/
 # Screenshots from ./dev.sh web-shot
 src/ChefBot.Web/shots/
+# The documentation site built locally (mkdocs build / mkdocs serve) and its Python environment
+/site/
+/.venv/

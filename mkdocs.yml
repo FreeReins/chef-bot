@@ -1,0 +1,150 @@
+# The documentation site, built from docs/ with MkDocs Material. Published to GitHub Pages by
+# .github/workflows/docs.yml and built into the container image at /help (Dockerfile, docs stage).
+# Build locally: pip install -r docs/requirements.txt && mkdocs serve
+site_name: ChefBot
+site_description: >-
+  ChefBot is a free, self-hosted meal planner: weekly meal plans, a smart grocery list and a pantry tracker that
+  helps you waste less food. Install, use, run and troubleshoot it.
+# The in-app copy (Dockerfile) builds with SITE_URL empty, so every address in it stays relative to /help.
+site_url: !ENV [SITE_URL, 'https://jamiethenextkevinbaconhamm.github.io/chef-bot/']
+repo_url: https://github.com/Jamiethenextkevinbaconhamm/chef-bot
+repo_name: chef-bot
+edit_uri: edit/main/docs/
+copyright: ChefBot is free software under the GNU GPL v3.0
+
+docs_dir: docs
+# The offline zip attached to each release builds with USE_DIRECTORY_URLS=false, so pages open from a folder.
+use_directory_urls: !ENV [USE_DIRECTORY_URLS, true]
+# Notes for whoever edits the docs, and the build's own inputs: not pages.
+exclude_docs: |
+  AGENTS.md
+  requirements.txt
+
+theme:
+  name: material
+  language: en
+  # No Google Fonts: the site must work with no internet when served by ChefBot at /help.
+  font: false
+  icon:
+    logo: material/chef-hat
+    repo: fontawesome/brands/github
+  favicon: images/favicon.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: green
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: green
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+
+plugins:
+  - search
+  # Downloads outside assets at build time, Mermaid included, and adds it to each page by a relative path, so the
+  # built site makes no outside requests, also under /help.
+  - privacy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - github-callouts
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+validation:
+  omitted_files: warn
+  absolute_links: info
+  unrecognized_links: warn
+  anchors: warn
+  links:
+    not_found: warn
+    anchors: warn
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - What ChefBot does: getting-started/what-is-chefbot.md
+      - What you need: getting-started/requirements.md
+      - Install with Podman: getting-started/install-podman.md
+      - Install with Docker Compose: getting-started/install-docker-compose.md
+      - Other platforms: getting-started/install-other-platforms.md
+      - First run: getting-started/first-run.md
+  - Using ChefBot:
+      - The weekly routine: using/weekly-routine.md
+      - Plan styles: using/plan-styles.md
+      - Recipes: using/recipes.md
+      - Cooking mode: using/cooking-mode.md
+      - The shopping list: using/shopping-list.md
+      - The pantry: using/pantry.md
+      - Offline on your phone: using/offline-on-your-phone.md
+      - Calendar: using/calendar.md
+      - History and achievements: using/history-and-achievements.md
+  - Running it:
+      - People and accounts: admin/people-and-accounts.md
+      - HTTPS and certificates: admin/https-and-certificates.md
+      - Your own certificate: admin/own-certificate.md
+      - Behind a reverse proxy: admin/reverse-proxy.md
+      - Settings reference: admin/settings.md
+      - Notifications: admin/notifications.md
+      - To-do apps: admin/to-do-apps.md
+      - AI assistants: admin/ai-assistants.md
+      - Backups and restore: admin/backups-and-restore.md
+      - Upgrading: admin/upgrading.md
+      - Monitoring and logs: admin/monitoring-and-logs.md
+      - Customising the catalogs: admin/customising-catalogs.md
+      - Uninstall: admin/uninstall.md
+  - Troubleshooting:
+      - troubleshooting/index.md
+      - Install and startup: troubleshooting/install-and-startup.md
+      - Signing in: troubleshooting/signing-in.md
+      - HTTPS and certificates: troubleshooting/https-and-certificates.md
+      - Planning: troubleshooting/planning.md
+      - Recipe imports: troubleshooting/recipe-imports.md
+      - Notifications and integrations: troubleshooting/notifications-and-integrations.md
+      - Backups: troubleshooting/backups.md
+  - Reference:
+      - HTTP API: reference/api.md
+      - Limits worth knowing: reference/limits.md
+      - FAQ: reference/faq.md
+      - Glossary: reference/glossary.md
+  - Developers:
+      - developers/index.md
+      - Architecture: developers/architecture.md
+      - Request lifecycle: developers/request-lifecycle.md
+      - Messaging and scheduling: developers/messaging-and-scheduling.md
+      - The planner: developers/planner.md
+      - Data model: developers/data-model.md
+      - Security: developers/security.md
+      - The web page: developers/web-client.md
+      - Testing: developers/testing.md
+      - Building and releasing: developers/building-and-releasing.md
+      - Adding a recipe site: developers/adding-a-recipe-site.md

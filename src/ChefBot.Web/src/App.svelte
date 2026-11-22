@@ -34,7 +34,7 @@
   import ScrollText from '@lucide/svelte/icons/scroll-text';
   import Users from '@lucide/svelte/icons/users';
   import SettingsIcon from '@lucide/svelte/icons/settings';
-  import CodeXml from '@lucide/svelte/icons/code-xml';
+  import CircleHelp from '@lucide/svelte/icons/circle-help';
   import Sprout from '@lucide/svelte/icons/sprout';
   import WifiOff from '@lucide/svelte/icons/wifi-off';
 
@@ -103,6 +103,9 @@
   </div>
   <div class="actions account">
     {#if inApp}<RankBadge />{/if}
+    <!-- Help is on every screen, sign-in and setup included: the documentation is built in and needs no sign-in. -->
+    <a class="icon help" href="/help/" target="_blank" rel="noopener" aria-label="Help: open the ChefBot guide"
+       title="Help"><CircleHelp size={20} /></a>
     <ThemeToggle />
     {#if inApp}
       <span class="muted name">{app.session.user.displayName}</span>
@@ -159,27 +162,22 @@
   {/if}
 </main>
 
-<!-- Pinned to the bottom of the window. Add a link by adding an <li>; the | between items comes from the CSS.
-     Icons are drawn in the text colour. The GitHub mark is inline SVG from GitHub's Octicons (MIT licence), since
-     Lucide has no brand logos; the rest come from Lucide like the other icons on the page. -->
+<!-- Pinned to the bottom of the window (at the end of the page on phones). Add a link by adding an <li>; the | between
+     items comes from the CSS. Each link has an icon and a short name, so none can be mistaken for another. The GitHub
+     mark is inline SVG from GitHub's Octicons (MIT licence), since Lucide has no brand logos; the rest come from
+     Lucide like the other icons on the page. The API reference for developers is linked from Settings, AI assistants. -->
 <footer class="site-footer">
   <ul class="footer-links">
     <li>
-      <a href="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" target="_blank" rel="noopener"
-         aria-label="ChefBot on GitHub" title="ChefBot on GitHub">
-        <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+      <a href="/help/" target="_blank" rel="noopener"><CircleHelp size={16} /><span>Help</span></a>
+    </li>
+    <li>
+      <a href="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg><span>GitHub</span>
       </a>
     </li>
     <li>
-      <a href="https://buymeacoffee.com/strifer.btw" target="_blank" rel="noopener"
-         aria-label="Support ChefBot on Buy Me a Coffee" title="Support ChefBot on Buy Me a Coffee">
-        <Sprout size={18} />
-      </a>
-    </li>
-    <li hidden={!inApp}>
-      <a href="/docs" aria-label="API reference" title="API reference">
-        <CodeXml size={18} />
-      </a>
+      <a href="https://buymeacoffee.com/strifer.btw" target="_blank" rel="noopener"><Sprout size={16} /><span>Support ChefBot</span></a>
     </li>
   </ul>
 </footer>
@@ -194,6 +192,10 @@
   .mark { grid-row: 1 / span 2; display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: .7rem;
     color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 14%, var(--panel)); }
   .account { align-items: center; }
+  /* Sits beside the theme toggle and looks like it. */
+  a.help { display: inline-grid; place-items: center; width: 2.4rem; height: 2.4rem; padding: 0; border-radius: 50%;
+    color: var(--muted); }
+  a.help:hover { color: var(--ink); background: var(--chip); }
   .name { align-self: center; }
   .busy-bar { position: fixed; inset: 0 0 auto 0; z-index: 30; height: 3px; overflow: hidden; pointer-events: none;
     background: color-mix(in srgb, var(--accent) 25%, transparent); animation: appear .3s step-end; }
@@ -217,7 +219,8 @@
     align-items: center; flex-wrap: wrap; }
   .footer-links li { display: flex; align-items: center; }
   .footer-links li + li:not([hidden])::before { content: "|"; color: var(--line); padding: 0 .6rem; }
-  .footer-links a { display: inline-flex; padding: .3rem; border-radius: .4rem; color: var(--muted); }
+  .footer-links a { display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .4rem; border-radius: .4rem;
+    color: var(--muted); font-size: .875rem; text-decoration: none; }
   .footer-links a:hover { color: var(--ink); background: var(--chip); }
   .footer-links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   /* The first load: the logo mark bobs like a lid on a simmering pot, and a line appears if it takes a moment. */
@@ -255,6 +258,9 @@
     .mark { width: 2.2rem; height: 2.2rem; }
     .account { grid-area: account; }
     .account .name { display: none; }
+    /* Room for the title beside the award, Help, the theme button and Sign out. */
+    .account { flex-wrap: nowrap; gap: .2rem; }
+    a.help { width: 2.1rem; height: 2.1rem; }
     .tabs { position: fixed; inset: auto 0 0 0; z-index: 10; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
       gap: 0; margin: 0; overflow: visible; background: var(--bg); border-bottom: 0; border-top: 1px solid var(--line);
       padding-bottom: env(safe-area-inset-bottom); }

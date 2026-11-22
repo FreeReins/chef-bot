@@ -68,6 +68,11 @@
   </p>
 </div>
 
+<p class="muted">
+  Building your own tools? Everything ChefBot does is also a JSON API, described in the
+  <a href="/docs" target="_blank" rel="noopener">API reference</a>. Scripts sign in with a password rather than a token.
+</p>
+
 <h3>Your tokens</h3>
 {#if issued}
   <div class="card stack issued" role="status">

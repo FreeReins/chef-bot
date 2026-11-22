@@ -1,4 +1,5 @@
 <script>
+  import HelpLink from '../components/HelpLink.svelte';
   import { app, run, enterApp } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { pending } from '../lib/pending.js';
@@ -21,4 +22,5 @@
     <button type="submit" class="primary">Sign in</button>
   </form>
   <p class="muted">No account, or forgot your password? Ask an admin for an invite or a password reset link.</p>
+  <p class="muted"><HelpLink page="troubleshooting/signing-in">Trouble signing in?</HelpLink></p>
 </section>

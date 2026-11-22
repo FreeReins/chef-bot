@@ -16,6 +16,7 @@
   import BackupsPanel from '../settings/BackupsPanel.svelte';
   import LogsPanel from '../settings/LogsPanel.svelte';
   import AppearancePanel from '../settings/AppearancePanel.svelte';
+  import HelpLink from '../components/HelpLink.svelte';
   import Palette from '@lucide/svelte/icons/palette';
   import KeyRound from '@lucide/svelte/icons/key-round';
   import Lock from '@lucide/svelte/icons/lock';
@@ -30,21 +31,24 @@
   import CalendarClock from '@lucide/svelte/icons/calendar-clock';
   import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 
-  /** The Settings sidebar: key, label, icon, who sees it, and what it shows. A wide section uses the full width. */
+  /**
+   * The Settings sidebar: key, label, icon, who sees it, and what it shows. A wide section uses the full width; help is
+   * the guide in the documentation (a page under docs/, and what it is about), linked at the end of the section.
+   */
   const SECTIONS = [
-    { key: 'login', label: 'Login', icon: KeyRound, visible: () => true, panel: LoginPanel },
+    { key: 'login', label: 'Login', icon: KeyRound, visible: () => true, panel: LoginPanel, help: ['admin/people-and-accounts#passwords', 'Passwords and lockout'] },
     { key: 'appearance', label: 'Appearance', icon: Palette, visible: () => true, panel: AppearancePanel },
-    { key: 'https', label: 'HTTPS', icon: Lock, visible: () => true, panel: HttpsPanel, heading: 'Secure connection (HTTPS)' },
-    { key: 'planning', label: 'Planning', icon: CalendarClock, visible: () => Boolean(app.planning), panel: PlanningPanel },
-    { key: 'styles', label: 'Plan styles', icon: ListChecks, visible: () => Boolean(app.styles), panel: PlanStylesPanel },
-    { key: 'stores', label: 'Stores', icon: Store, visible: () => isAdmin() && app.stores, panel: StoresPanel },
-    { key: 'calendar', label: 'Calendar', icon: CalendarDays, visible: () => true, panel: CalendarPanel },
-    { key: 'assistants', label: 'AI assistants', icon: Bot, visible: () => true, panel: AssistantsPanel },
-    { key: 'todo-apps', label: 'To-do apps', icon: ListTodo, visible: () => isAdmin(), panel: ToDoAppsPanel },
-    { key: 'notifications', label: 'Notifications', icon: Bell, visible: () => isAdmin() && app.notifications, panel: NotificationsPanel },
-    { key: 'backups', label: 'Backups', icon: Archive, visible: () => isAdmin() && app.backups, panel: BackupsPanel },
-    { key: 'logs', label: 'Logs', icon: ScrollText, visible: () => isAdmin(), panel: LogsPanel, wide: true },
-    { key: 'advanced', label: 'Advanced', icon: SlidersHorizontal, visible: () => isAdmin(), panel: AdvancedPanel },
+    { key: 'https', label: 'HTTPS', icon: Lock, visible: () => true, panel: HttpsPanel, heading: 'Secure connection (HTTPS)', help: ['admin/https-and-certificates', 'HTTPS and certificates'] },
+    { key: 'planning', label: 'Planning', icon: CalendarClock, visible: () => Boolean(app.planning), panel: PlanningPanel, help: ['admin/settings#planning', 'Planning settings'] },
+    { key: 'styles', label: 'Plan styles', icon: ListChecks, visible: () => Boolean(app.styles), panel: PlanStylesPanel, help: ['using/plan-styles', 'Plan styles'] },
+    { key: 'stores', label: 'Stores', icon: Store, visible: () => isAdmin() && app.stores, panel: StoresPanel, help: ['using/shopping-list#stores', 'Stores'] },
+    { key: 'calendar', label: 'Calendar', icon: CalendarDays, visible: () => true, panel: CalendarPanel, help: ['using/calendar', 'The meal plan in your calendar'] },
+    { key: 'assistants', label: 'AI assistants', icon: Bot, visible: () => true, panel: AssistantsPanel, help: ['admin/ai-assistants', 'Connecting an AI assistant'] },
+    { key: 'todo-apps', label: 'To-do apps', icon: ListTodo, visible: () => isAdmin(), panel: ToDoAppsPanel, help: ['admin/to-do-apps', 'To-do apps'] },
+    { key: 'notifications', label: 'Notifications', icon: Bell, visible: () => isAdmin() && app.notifications, panel: NotificationsPanel, help: ['admin/notifications', 'Notifications and Home Assistant'] },
+    { key: 'backups', label: 'Backups', icon: Archive, visible: () => isAdmin() && app.backups, panel: BackupsPanel, help: ['admin/backups-and-restore', 'Backups and restore'] },
+    { key: 'logs', label: 'Logs', icon: ScrollText, visible: () => isAdmin(), panel: LogsPanel, wide: true, help: ['admin/monitoring-and-logs', 'Monitoring and logs'] },
+    { key: 'advanced', label: 'Advanced', icon: SlidersHorizontal, visible: () => isAdmin(), panel: AdvancedPanel, help: ['admin/settings#advanced', 'Advanced settings'] },
   ];
 
   const sections = $derived(SECTIONS.filter((section) => section.visible()));
@@ -69,6 +73,7 @@
   <div class="settings-body" class:wide={current.wide} id="settings-body" tabindex="-1" bind:this={body}>
     {#if current.heading}<h2>{current.heading}</h2>{/if}
     <current.panel />
+    {#if current.help}<p class="section-help muted"><HelpLink page={current.help[0]}>Guide: {current.help[1]}</HelpLink></p>{/if}
   </div>
 </div>
 
@@ -86,6 +91,7 @@
   .settings-body { max-width: 40rem; outline: none; }
   .settings-body.wide { max-width: none; }
   .settings-body > h2:first-child { margin-top: 0; }
+  .section-help { margin: 1.5rem 0 0; padding-top: .75rem; border-top: 1px solid var(--line); }
   @media (max-width: 40rem) {
     .settings { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
     .side-nav { display: flex; flex-wrap: wrap; gap: .35rem; position: static; }

@@ -9,7 +9,13 @@ Each release is published as a container image for 64-bit x86 and ARM at
 
 ## Install
 
-1. Make a folder for ChefBot and save this as `compose.yaml` in it:
+1. Make a folder for ChefBot and download the compose file into it:
+
+   ```sh
+   curl -O https://raw.githubusercontent.com/Jamiethenextkevinbaconhamm/chef-bot/main/deploy/compose/compose.yaml
+   ```
+
+   Or save this as `compose.yaml`:
 
    ```yaml
    services:

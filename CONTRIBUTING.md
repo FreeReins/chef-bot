@@ -1,6 +1,8 @@
 # Contributing to ChefBot
 
-Thanks for helping. This page covers how the code is organized and what a change needs.
+Thanks for helping. This page covers how the code is organized and what a change needs. The
+[developer guide](docs/developers/index.md) explains the design behind it: the layers, messaging, the planner, the
+data model and security.
 
 ## Build and test
 
@@ -13,8 +15,9 @@ deploy/podman/uninstall.sh        # stop and remove them again, keeping the data
 ```
 
 The Quadlet units in `deploy/podman/` are the supported way to run ChefBot. A new setting that people should
-be able to change goes in `chefbot.env.example`; a new volume or port goes in the units, with a note in the
-README.
+be able to change goes in `chefbot.env.example` and the [settings reference](docs/admin/settings.md); a new volume
+or port goes in the units and `deploy/compose/compose.yaml`, with a note in the install guides under
+`docs/getting-started/`.
 
 To see changes as you make them, with the .NET 10 SDK and Podman installed:
 
@@ -116,7 +119,7 @@ Rules of thumb:
   `Engines/Contracts/Services/`) in `ChefBot.Core/Engines/Transformation/` and register it in `CoreRegistration.cs`; `TransformationEngine` picks
   it by file name ending and the web page's file picker lists it automatically.
 - Recipe web pages are pluggable the same way. `SchemaOrgPage` reads any site from its schema.org data; a site
-  that needs more gets its own `IRecipePageReader` (see [Adding a recipe site](#adding-a-recipe-site)). Pages
+  that needs more gets its own `IRecipePageReader` (see [Adding a recipe site](docs/developers/adding-a-recipe-site.md)). Pages
   and photos are downloaded through `PublicWeb.Handler`, which refuses private network addresses, so a link
   can't reach the database or the home network. Keep any new download of an address someone else chose on it.
 - Something new to store: add the entity in `ResourceAccess/Persistence/`, the data contract in
@@ -130,23 +133,7 @@ Rules of thumb:
 
 ## Adding a recipe site
 
-`SchemaOrgPage` reads the JSON-LD or microdata most recipe sites include for search engines, so most sites need
-nothing. Add a reader when a site's data is missing or wrong: ingredients run together, the servings are
-missing, or the recipe is only in the HTML.
-
-1. Save the page in `tests/ChefBot.Core.Tests/Pages/<site>.html`, trimmed to the parts the reader looks at:
-   the JSON-LD script and the HTML around the recipe. Leave out the site's own text, photos and scripts.
-2. Write `src/ChefBot.Core/Engines/Transformation/Sites/<Site>Page.cs`, implementing `IRecipePageReader`:
-   - `Name` is shown after an import ("read with: ..."), so use the site's name.
-   - `Handles` matches the site's host, including subdomains such as `www.`.
-   - `PageToFetch` is optional: return the site's print or AMP version when it is easier to read.
-   - `Read` gets an AngleSharp `IDocument`. Start from `SchemaRecipe.FromPage(page)` and fix only what the
-     site gets wrong, with `recipe with { ... }` and `page.QuerySelectorAll(...)`. Pass text taken from the
-     HTML through `SchemaRecipe.PageText`. Return null when there is no recipe, so the person is told so.
-   - It is a reader, not an engine: take `SchemaRecipe` in the constructor and nothing else.
-3. Register it in `CoreRegistration.cs` before `SchemaOrgPage`.
-4. Add a test in `WebRecipeTests.cs` that reads the saved page and checks the fields the reader fixes.
-   `FakeSitePage` in the tests shows the shape.
+See [Adding a recipe site](docs/developers/adding-a-recipe-site.md) in the developer guide.
 
 ## Tests
 
@@ -268,6 +255,13 @@ into `src/ChefBot.Web/shots/` (`tests/screenshot.spec.js`, which normal runs ski
   version pinned in `package.json`. Bump both together. The container is Ubuntu, and `node_modules` in the
   source folder may come from the Alpine Node container, so the tests keep their own copy in the
   `chefbot-web-test-modules` volume. `podman volume rm chefbot-web-test-modules` starts it afresh.
+
+## Documentation
+
+User and developer documentation lives in `docs/` as Markdown, and is published to the
+[documentation site](https://jamiethenextkevinbaconhamm.github.io/chef-bot/) and built into the image at `/help`. A
+change people will notice needs a docs change in the same pull request. [docs/AGENTS.md](docs/AGENTS.md) has the
+writing rules and says which page covers what.
 
 ## Style
 

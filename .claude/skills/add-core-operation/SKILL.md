@@ -1,6 +1,6 @@
 ---
 name: add-core-operation
-description: "Add a ChefBot use case end to end: manager method, request/response records, JSON context, endpoint, README, TestCore tests. USE FOR: new endpoint, new API call, new manager method, new query or report. DO NOT USE FOR: new tables (add-stored-entity), handlers between managers, web UI (add-web-screen)."
+description: "Add a ChefBot use case end to end: manager method, request/response records, JSON context, endpoint, API docs, TestCore tests. USE FOR: new endpoint, new API call, new manager method, new query or report. DO NOT USE FOR: new tables (add-stored-entity), handlers between managers, web UI (add-web-screen)."
 ---
 
 # Add a core operation
@@ -20,7 +20,7 @@ description: "Add a ChefBot use case end to end: manager method, request/respons
 6. **Endpoint** in `src/ChefBot.Api/Endpoints/<Area>Endpoints.cs`: a static method with
    `[WolverineGet("/api/...")]`, query values as nullable parameters, the manager as `[FromServices]`. Add
    `[Authorize(Policy = Sessions.AdminPolicy)]` only for admin-only operations.
-7. **Docs**: add a line to the API section of `README.md`. Release builds need regenerated Wolverine code
+7. **Docs**: add a row to `docs/reference/api.md`, and update the user page in `docs/` the change affects (`docs/AGENTS.md` maps features to pages). Release builds need regenerated Wolverine code
    (CONTRIBUTING.md, "Code made at build time"); Debug needs nothing.
 8. **Tests**: engines directly, managers through `new TestCore().<Area>Manager()`. Assertions are awaited.
    Compare ordered lists as `string.Join(", ", ...)`; TUnit's `IsEquivalentTo` won't take `int?`

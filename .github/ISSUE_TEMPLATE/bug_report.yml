@@ -1,0 +1,60 @@
+name: Something isn't working
+description: Report a bug or a problem running ChefBot.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Many problems have a quick fix in
+        [Troubleshooting](https://jamiethenextkevinbaconhamm.github.io/chef-bot/troubleshooting/).
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Before you start
+      options:
+        - label: I looked in Troubleshooting and the FAQ, and they don't cover this.
+          required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Screenshots help.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ChefBot version
+      description: The release tag or image tag, or `git log -1 --oneline` if you installed with Podman.
+      placeholder: v1.2.3
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How is ChefBot installed?
+      options:
+        - Podman (install.sh)
+        - Docker Compose
+        - Synology, Unraid, TrueNAS or another NAS
+        - Portainer
+        - Something else
+    validations:
+      required: true
+  - type: dropdown
+    id: https
+    attributes:
+      label: How do you reach it?
+      options:
+        - ChefBot's own certificate (the default)
+        - My own certificate
+        - Behind a reverse proxy
+        - Plain HTTP
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log
+      description: |
+        The log around the time of the problem, from Settings → Logs, `journalctl --user -u chefbot` or
+        `docker compose logs chefbot`. Remove any passwords or tokens first.
+      render: text

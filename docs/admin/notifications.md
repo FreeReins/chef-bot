@@ -22,7 +22,7 @@ Assistant, turns into phone notifications or announcements.
 | Food to use soon | `expiring_food` | At the daily time, when pantry food is about to expire | `items` (name, expiresOn, daysLeft, usedByPlan) |
 | Confirm the plan or finish shopping | `shopping` | At the daily time, the day before a week starts and on its first day | `status`, `toBuy` |
 | Today's meals | `meals_today` | At the daily time (off to start with) | `meals` (slot, title, optional, leftover) |
-| New achievements | `achievement` | When the household earns a badge tier or a new rank | `achievements` (id, kind, tier, name) |
+| New achievements | `achievement` | When the household reaches a new badge tier, first step or chef rank | `achievements` (id, kind, tier, name) |
 | Test | `test` | From **Send a test** | |
 
 ## What ChefBot sends
@@ -81,7 +81,8 @@ through an automation tool. Use `title` and `message` for the text.
 - Notifications go one way. ChefBot posts to the webhook. Home Assistant can't call ChefBot's API by itself, but it
   can add to the [shopping list](to-do-apps.md) or show the [calendar](../using/calendar.md).
 - Webhook addresses can be on your home network.
-- A reminder that can't be delivered is tried again for a while, then logged under **Settings → Logs**.
+- A webhook that's down is tried again over the next half hour. A reminder that still can't be delivered is logged
+  under **Settings → Logs**.
 
 ## If something goes wrong
 

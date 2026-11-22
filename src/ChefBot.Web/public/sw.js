@@ -3,6 +3,7 @@
 //   /assets/*   named after their content by Vite, so a stored copy is good for ever: stored first, network second.
 //   pages       network first, so an upgrade shows straight away; the stored index.html when ChefBot can't be reached.
 //   /api/*      never stored here: private data stays out of the cache, and requests go straight to ChefBot.
+//   /help/*     the documentation, a separate site: left to the browser, so it never gets the app's index.html.
 // Registered by src/main.js, only in a build served over HTTPS (or localhost).
 const CACHE = 'chefbot-page-v1';
 const SHELL = ['/', '/theme.js', '/manifest.webmanifest', '/icon.svg'];
@@ -21,7 +22,7 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== location.origin) return;
-  if (/^\/(api|openapi|docs|health|mcp)(\/|$)/.test(url.pathname)) return;
+  if (/^\/(api|openapi|docs|help|health|mcp)(\/|$)/.test(url.pathname)) return;
 
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(caches.match(request).then((stored) => stored ?? fetchAndStore(request)));

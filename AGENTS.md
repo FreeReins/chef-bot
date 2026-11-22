@@ -2,7 +2,8 @@
 
 ChefBot is a self-hosted .NET 10 meal planner: Wolverine HTTP API, EF Core on PostgreSQL, and a Svelte 5 page
 in `src/ChefBot.Web/`. [CONTRIBUTING.md](CONTRIBUTING.md) is the full guide; read its "Where things go" before
-adding a class. Before changing the web page, read [src/ChefBot.Web/AGENTS.md](src/ChefBot.Web/AGENTS.md).
+adding a class. Before changing the web page, read [src/ChefBot.Web/AGENTS.md](src/ChefBot.Web/AGENTS.md); before
+changing the docs in `docs/`, read [docs/AGENTS.md](docs/AGENTS.md).
 
 ## Check your work
 
@@ -17,8 +18,8 @@ A change is done when the build has no warnings and the tests pass. Don't run `.
 
 ## Checklists
 
-For a new stored table, a new manager operation or endpoint, or a new web screen, follow
-`.claude/skills/add-stored-entity`, `add-core-operation` or `add-web-screen` (`SKILL.md` in each).
+For a new stored table, a new manager operation or endpoint, a new web screen, or a docs change, follow
+`.claude/skills/add-stored-entity`, `add-core-operation`, `add-web-screen` or `update-docs` (`SKILL.md` in each).
 
 ## Rules the code doesn't make obvious
 
@@ -41,7 +42,9 @@ For a new stored table, a new manager operation or endpoint, or a new web screen
 - The schema comes from `EnsureCreated` and is never upgraded: after changing an entity, tell the user to run
   `./dev.sh reset`. Don't add migrations unless asked. A new stored entity also goes in `BackupAccess.Tables`.
 - A setting people should change goes in `deploy/podman/chefbot.env.example`. A volume or port: update the
-  units in `deploy/podman/` and add a note to `README.md`. An HTTP API change: update the API section of `README.md`.
+  units in `deploy/podman/` and `deploy/compose/compose.yaml`, and the install guides in `docs/getting-started/`. An
+  HTTP API change: update `docs/reference/api.md`. A user-visible change: update its page in `docs/` (see
+  `docs/AGENTS.md`, which maps features to pages).
 - User-facing messages are plain sentences saying what happened and what to do next.
 
 ## Tests
@@ -52,7 +55,8 @@ accessors through `TestCore` (`new TestCore().PlanManager()`). Assertions are aw
 
 ## Reading the code cheaply
 
-- Skip `README.md` unless editing it. Skip `node_modules/`, `bin/`, `obj/` and `TestResults/`.
+- Skip `README.md` and `docs/` unless editing them; `docs/AGENTS.md` says which page covers what. Skip
+  `node_modules/`, `bin/`, `obj/` and `TestResults/`.
 - In Core, start from the manager interface in `Managers/Contracts/Services/`, then open only the engines and
   accessors that manager uses. Big classes are split by area into `<Type>.<Area>.cs` partial files
   (`PlanManager.Shopping.cs`): open only the area you need. Files stay under 400 lines (`FileSizeTests`).

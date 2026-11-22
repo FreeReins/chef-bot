@@ -200,6 +200,15 @@ public static class ServiceRegistration
     private const string DocsContentSecurityPolicy = "frame-ancestors 'none'; object-src 'none'";
 
     /// <summary>
+    /// For the help pages at /help, built by MkDocs Material, whose theme uses inline scripts and styles. Everything still
+    /// comes from ChefBot itself: the pages are static files built into the image, with no outside requests.
+    /// </summary>
+    private const string HelpContentSecurityPolicy =
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+        "font-src 'self'; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; " +
+        "form-action 'self'; frame-ancestors 'none'";
+
+    /// <summary>
     /// Adds the security headers to every response: the Content-Security-Policy above, no guessing at file types
     /// (so a stored photo is only ever shown as an image), no framing by other sites, and no addresses sent to
     /// other sites when a link is followed.
@@ -209,7 +218,9 @@ public static class ServiceRegistration
         app.Use(async (context, next) =>
         {
             var headers = context.Response.Headers;
-            headers.ContentSecurityPolicy = context.Request.Path.StartsWithSegments("/docs") ? DocsContentSecurityPolicy : ContentSecurityPolicy;
+            headers.ContentSecurityPolicy = context.Request.Path.StartsWithSegments("/docs") ? DocsContentSecurityPolicy
+                : context.Request.Path.StartsWithSegments("/help") ? HelpContentSecurityPolicy
+                : ContentSecurityPolicy;
             headers.XContentTypeOptions = "nosniff";
             headers.XFrameOptions = "DENY"; // for browsers that predate frame-ancestors
             headers["Referrer-Policy"] = "same-origin";

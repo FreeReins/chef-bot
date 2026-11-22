@@ -10,6 +10,17 @@ RUN npm ci --no-audit --no-fund
 COPY src/ChefBot.Web/ ./
 RUN npm run build
 
+# The documentation (docs/, MkDocs Material) is built here for /help, so it is there on a home network with no
+# internet. SITE_URL is empty so every address in it stays relative to /help; the privacy plugin downloads the few
+# outside assets (Mermaid) now, so the pages make no outside requests later.
+FROM docker.io/library/python:3.13-slim AS docs
+WORKDIR /source
+COPY docs/requirements.txt docs/
+RUN pip install --no-cache-dir -r docs/requirements.txt
+COPY mkdocs.yml ./
+COPY docs/ docs/
+RUN SITE_URL= mkdocs build --strict --site-dir /site
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /source
 
@@ -41,14 +52,20 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 # Links the published image to its repository on the GitHub Container Registry.
 LABEL org.opencontainers.image.source="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" \
       org.opencontainers.image.title="ChefBot" \
-      org.opencontainers.image.description="Plans a week of meals around shared ingredients, the season and the pantry."
+      org.opencontainers.image.description="Self-hosted meal planner: weekly meal plans, a smart shopping list and a pantry tracker that helps you waste less food." \
+      org.opencontainers.image.documentation="https://jamiethenextkevinbaconhamm.github.io/chef-bot/" \
+      org.opencontainers.image.url="https://github.com/Jamiethenextkevinbaconhamm/chef-bot" \
+      org.opencontainers.image.licenses="GPL-3.0-only"
 WORKDIR /app
 COPY --from=publish /app ./
 # The app serves the page from wwwroot next to it (WebPage.Folder).
 COPY --from=web /source/src/ChefBot.Web/dist/ ./wwwroot/
+# The documentation, served at /help without sign-in (WebPage.MapChefBotWebPage).
+COPY --from=docs /site/ ./wwwroot/help/
 # Session keys, the HTTPS certificate and backups live in these folders. They are created with the
 # app's user so mounted volumes are writable. Declared as volumes so they survive even when nobody mounts
-# them; give them named volumes (see the README) so they also survive replacing the container.
+# them; give them named volumes (docs/getting-started/install-docker-compose.md) so they also survive replacing the
+# container.
 RUN mkdir -p /app/keys /app/backups && chown $APP_UID /app/keys /app/backups
 VOLUME ["/app/keys", "/app/backups"]
 USER $APP_UID

@@ -28,6 +28,12 @@ The History tab: `src/tabs/History.svelte`, `src/lib/history.js`, `history()` in
 Run `./dev.sh web-shot /<tab>` and read `src/ChefBot.Web/shots/<tab>-{desktop-light,desktop-dark,phone}.png`.
 The page is answered from the test stubs, so add those first. Delete `shots/` afterwards.
 
+## Docs
+
+Document the screen in its page under `docs/` (the table in `docs/AGENTS.md` says which), following the
+`update-docs` skill. A new Settings section gets a `help` entry in `SECTIONS` (`src/tabs/Settings.svelte`) pointing at
+its guide; elsewhere use `<HelpLink page="…">` from `src/components/HelpLink.svelte`.
+
 ## Troubleshooting
 
 - Svelte drops a space before `{#if}`; put the separator inside an expression: ``{` · ${text}`}``.

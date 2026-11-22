@@ -1,0 +1,49 @@
+# Checks the links in every Markdown file. On pull requests: links and anchors inside the repository only, so the check
+# is fast and never fails because another site is down. Weekly: outside links too, opening an issue when one breaks.
+name: Links
+
+on:
+  pull_request:
+    paths: ["**/*.md", ".github/workflows/links.yml"]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  internal:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --include-fragments --no-progress --exclude-path node_modules --exclude-path evals './**/*.md'
+          fail: true
+
+  external:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - id: lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # Example addresses in the docs, and the docs site itself before its first deploy, aren't real links.
+          args: >-
+            --include-fragments --no-progress --exclude-path node_modules --exclude-path evals
+            --exclude '^https?://(localhost|127\.0\.0\.1|chefbot\.(local|example\.com)|homeassistant\.local|example\.com)'
+            --exclude '^https?://[^/]*:(8080|8443|8123)'
+            './**/*.md'
+          fail: false
+      - if: steps.lychee.outputs.exit_code != 0
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: Broken links in the documentation
+          content-filepath: ./lychee/out.md
+          labels: documentation

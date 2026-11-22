@@ -41,10 +41,11 @@ HTTPS, the listed address doesn't match the proxy.
 - **Pass the original `Host` header**, so links ChefBot makes (invites, the calendar feed) use your public name.
 - **Send `X-Forwarded-For` and `X-Forwarded-Proto`.**
 - **Allow large uploads:** a Mealie backup can be up to 200 MB.
-- **Don't buffer `/api/live`.** It's a live stream that tells open pages when something changes. ChefBot sends a
-  ping every 25 seconds to keep it open.
+- **Don't buffer `/api/live`.** It's a live stream that tells open pages when something changes on another device.
+  ChefBot sends `X-Accel-Buffering: no` for nginx and a ping every 25 seconds to keep it open. Without it, pages
+  still work, but changes from other devices only show after a reload.
 
-Caddy and Traefik do all of this by themselves. nginx needs the lines below.
+Caddy and Traefik do all of this by themselves. nginx needs the `Host`, forwarded-header and upload-size lines below.
 
 ## Caddy
 
@@ -69,15 +70,6 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /api/live {
-        proxy_pass http://chefbot:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_buffering off;
-        proxy_read_timeout 1h;
     }
 }
 ```

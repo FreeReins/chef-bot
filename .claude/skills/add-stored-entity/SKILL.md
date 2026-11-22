@@ -32,7 +32,8 @@ Edit these instead of reading them first; each step names the line to copy.
 ## Finish
 
 Build and run the tests (AGENTS.md), then tell the user to run `./dev.sh reset`. The schema comes from
-`EnsureCreated`, so don't add a migration.
+`EnsureCreated`, so don't add a migration. Add the table to `docs/developers/data-model.md`, and a line under
+"Versions that needed this" in `docs/admin/upgrading.md`, since existing installs need a fresh database.
 
 ## Troubleshooting
 
