@@ -56,6 +56,14 @@ const VIEWS = [
       await page.getByRole('button', { name: 'Keep Beef and Barley Stew' }).click();
       await page.getByRole('button', { name: 'Swap Chickpea Curry' }).click();
       await page.getByText('Recipes that use what you have').waitFor();
+      await page.getByText("What's needed").first().click();
+    },
+  },
+  {
+    name: 'plan, a meal\'s ⋯ menu open', path: '/plan',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'More for Beef and Barley Stew' }).click();
+      await page.getByRole('button', { name: 'Skip Beef and Barley Stew' }).waitFor();
     },
   },
   { name: 'plan, nothing planned', path: '/plan', answers: noPlan },

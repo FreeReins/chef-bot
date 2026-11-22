@@ -33,7 +33,10 @@ Items about to expire are flagged: within 3 days to start with (an admin can cha
 On the Plan tab, press **Swap** on any meal. ChefBot shows:
 
 - **Recipes that use what you have,** ranked by how much of the pantry they use, favouring food that expires
-  soonest;
-- **Creative ideas:** simple plates it invents from what you have, a whole grain, a protein and a vegetable or fruit.
+  soonest. The top one is marked **Best fit**. Each says how much comes from your pantry and how much is to buy,
+  and is marked **Uses up** when it would use food that expires soon. Open **What's needed** to see the
+  ingredients you have and the ones you'd buy.
+- **Or make up a plate:** simple plates it invents from what you have, a whole grain, a protein and a vegetable or
+  fruit.
 
 Press **Use this**. The plan, leftover lunches and shopping list update together.

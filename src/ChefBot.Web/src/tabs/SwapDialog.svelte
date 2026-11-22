@@ -38,7 +38,9 @@
   dialog { padding: 0; border: 1px solid var(--line); border-radius: .6rem; background: var(--panel); color: var(--ink);
     width: min(36rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); box-shadow: 0 10px 40px rgb(0 0 0 / .3); }
   dialog::backdrop { background: rgb(0 0 0 / .45); }
-  .box { padding: 1.1rem 1.25rem 1rem; }
-  .head { display: flex; gap: 1rem; align-items: flex-start; justify-content: space-between; margin-bottom: .75rem; }
+  .box { padding: 0 1.25rem 1rem; }
+  /* The heading stays in view while a long list of options scrolls under it. */
+  .head { position: sticky; top: 0; z-index: 1; display: flex; gap: 1rem; align-items: flex-start; justify-content: space-between;
+    margin: 0 -1.25rem .75rem; padding: 1.1rem 1.25rem .6rem; background: var(--panel); border-bottom: 1px solid var(--line); }
   h2 { margin: 0 0 .2rem; }
 </style>

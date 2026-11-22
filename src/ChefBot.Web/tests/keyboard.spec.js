@@ -79,16 +79,16 @@ test('every control in the header and the tabs shows where focus is', async ({ p
   }
 });
 
-test('a meal moves to another day from its Move menu, and focus stays on that menu', async ({ page, api }) => {
+test('a meal moves to another day from its ⋯ menu, and focus goes to that menu in the new day', async ({ page, api }) => {
   api.set(staged);
   await open(page, '/plan');
-  const menu = page.getByRole('combobox', { name: 'Move Beef and Barley Stew to another day' });
-  await menu.focus();
-  await menu.selectOption('2026-11-25');
+  const more = page.getByRole('button', { name: 'More for Beef and Barley Stew' });
+  await more.click();
+  await page.getByRole('button', { name: 'Move to Wednesday' }).click();
 
-  await expect(page.locator('section', { has: page.getByRole('heading', { name: /^Wednesday/ }) })).toContainText('Beef and Barley Stew');
-  await expect(menu).toBeFocused();
-  await expect(menu).toHaveValue('2026-11-25');
+  const wednesday = page.locator('section', { has: page.getByRole('heading', { name: /^Wednesday/ }) });
+  await expect(wednesday).toContainText('Beef and Barley Stew');
+  await expect(wednesday.getByRole('button', { name: 'More for Beef and Barley Stew' })).toBeFocused();
   expect(api.requests).toContain(`POST /api/plans/${data.ids.plan}/meals/${stew.id}/move`);
 });
 

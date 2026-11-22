@@ -20,14 +20,14 @@ ChefBot picks recipes that:
 
 ## 2. Review the draft
 
-The Plan tab shows the week day by day. On each meal you can:
+The Plan tab shows the week as a list, one row per day, with each meal on its own line. A coloured stripe marks
+the kind of meal: dinner, breakfast, lunch or leftovers. On each meal you can:
 
 | Button | What it does |
 |---|---|
-| **Swap** | Choose another recipe for that meal. Suggestions that use what you have come first |
-| **Move** (or drag it) | Put the meal on another day. A meal already there swaps places with it |
+| **Swap** (the arrows) | Choose another recipe for that meal. Suggestions that use what you have come first |
 | **Keep** | Keep this meal when you shuffle |
-| **Skip** | Leave this meal out |
+| **Move to** a day, in the meal's **⋯** menu (or drag the meal) | Put the meal on another day. A meal already there swaps places with it |
 
 - **Shuffle** plans the meals you haven't kept again. Keep the ones you like and shuffle until the week looks right.
 - **Discard draft** throws the draft away.
@@ -55,7 +55,10 @@ The list works with no signal. See [Offline on your phone](offline-on-your-phone
 
 - Open a meal's recipe and press **Start cooking** for big text and timers. See [Cooking mode](cooking-mode.md).
 - When it's done, mark it **Cooked**. Its ingredients come out of the pantry. Leftover lunches are marked **Eaten**.
-- Plans changed? **Swap** or **Move** the meal. ChefBot suggests recipes that use up expiring food first, and the
+  Today's row is highlighted, and the top of the Plan tab shows how many meals are done.
+- Didn't make it? Choose **Skip** in the meal's **⋯** menu. **Undo** is in the same menu if you marked a meal by
+  mistake.
+- Plans changed? **Swap** the meal, or move it with **Move to** in its **⋯** menu. ChefBot suggests recipes that use up expiring food first, and the
   leftovers and shopping list follow.
 
 When this week is confirmed, the Plan tab offers to plan the week after. A switch at the top moves between the two.

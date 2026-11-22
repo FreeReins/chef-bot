@@ -88,8 +88,8 @@
       <ol class="steps">
         <li>
           <strong>Check the meals.</strong>
-          <span class="muted">Drag a meal to another day, or use its Move menu. Swap any you don't want, and press Keep on
-            the ones you like before shuffling the rest.</span>
+          <span class="muted">Keep the ones you like, swap the rest, or shuffle. Move a meal to another day from its ⋯ menu,
+            or drag it.</span>
         </li>
         <li>
           <strong>Check the shopping list.</strong>
@@ -124,10 +124,11 @@
         <h2 id="plan-heading">{name}: {range}</h2>
         <span class="pill confirmed">Confirmed</span>
       </div>
-      <p class="muted">
-        {done} of {meals.length} meals done. Mark each meal as cooked or skipped as you go: cooking takes its
-        ingredients out of the pantry.
-      </p>
+      <div class="progress">
+        <span class="bar" aria-hidden="true"><span style:width="{meals.length ? (done / meals.length) * 100 : 0}%"></span></span>
+        <strong>{done} of {meals.length} meals done</strong>
+      </div>
+      <p class="muted">Press Cooked as you go: cooking takes its ingredients out of the pantry. Skip is in each meal's ⋯ menu.</p>
       <ShoppingSummary />
       <div class="actions">
         <button title="Plan the rest of this week again around what is already in your pantry" onclick={replanFromPantry}>Replan from pantry</button>
@@ -152,6 +153,9 @@
   .title-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
   .review h2 { margin: 0; }
   .review p { margin: 0; }
+  .progress { display: flex; align-items: center; gap: .6rem; font-size: .95rem; }
+  .progress .bar { flex: 0 1 10rem; height: .45rem; border-radius: 1rem; background: var(--chip); overflow: hidden; }
+  .progress .bar span { display: block; height: 100%; background: var(--good); border-radius: inherit; }
   .steps { margin: 0; padding-left: 1.4rem; display: grid; gap: .4rem; }
   .steps li > strong { display: block; }
   .actions { align-items: center; margin-top: .25rem; }
