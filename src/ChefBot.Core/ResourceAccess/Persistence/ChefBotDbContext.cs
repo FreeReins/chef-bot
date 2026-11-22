@@ -32,6 +32,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     public DbSet<FoodMomentEntity> FoodMoments => Set<FoodMomentEntity>();
 
+    public DbSet<RecipeFavouriteEntity> RecipeFavourites => Set<RecipeFavouriteEntity>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // Enums are stored by name so the tables stay readable and survive reordering.
@@ -122,6 +124,12 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
             moment.ToTable("FoodMoments");
             moment.HasIndex(m => m.OccurredOn);
             moment.HasIndex(m => m.MealId);
+        });
+        modelBuilder.Entity<RecipeFavouriteEntity>(favourite =>
+        {
+            favourite.ToTable("RecipeFavourites");
+            favourite.HasIndex(f => new { f.RecipeId, f.UserId }).IsUnique();
+            favourite.HasIndex(f => f.UserId);
         });
 
         UseKeysGeneratedInCode(modelBuilder);

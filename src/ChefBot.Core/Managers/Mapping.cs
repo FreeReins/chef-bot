@@ -86,7 +86,9 @@ internal static class Mapping
         store,
         catalog.Get(item.CatalogName)?.Group ?? IngredientGroup.Other);
 
-    public static RecipeResponse ToResponse(this Recipe recipe)
+    /// <param name="recipe">The recipe.</param>
+    /// <param name="favouredBy">Who has it as a favourite.</param>
+    public static RecipeResponse ToResponse(this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy)
     {
         var ingredients = recipe.Ingredients.OrderBy(ingredient => ingredient.Position).ToList();
         return new(
@@ -115,17 +117,21 @@ internal static class Mapping
                 .Select(ingredient => new RecipeIngredientResponse(
                     Written(ingredient), ingredient.Quantity, ingredient.Unit, ingredient.DisplayName, ingredient.Note))
                 .ToList(),
-            CookingSteps.Read(recipe.Instructions, ingredients.Select(ingredient => ingredient.DisplayName).ToList()));
+            CookingSteps.Read(recipe.Instructions, ingredients.Select(ingredient => ingredient.DisplayName).ToList()),
+            favouredBy);
     }
 
-    public static RecipeSummaryResponse ToSummary(this Recipe recipe) => new(
+    /// <param name="recipe">The recipe.</param>
+    /// <param name="favouredBy">Who has it as a favourite.</param>
+    public static RecipeSummaryResponse ToSummary(this Recipe recipe, IReadOnlyList<FavouriteResponse> favouredBy) => new(
         recipe.Id,
         recipe.Name,
         recipe.Course,
         recipe.IsSlowCooker,
         recipe.Ingredients.OrderBy(ingredient => ingredient.Position).Select(Written).ToList(),
         [.. recipe.Tags],
-        recipe.Images.Where(image => image.IsStored).OrderBy(image => image.Position).Select(image => ImageUrl(recipe, image)).FirstOrDefault());
+        recipe.Images.Where(image => image.IsStored).OrderBy(image => image.Position).Select(image => ImageUrl(recipe, image)).FirstOrDefault(),
+        favouredBy);
 
     public static RecipeText ToText(this RecipeDraft draft) => new(
         draft.Name,

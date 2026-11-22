@@ -7,7 +7,8 @@
   import { untrack } from 'svelte';
   import { app, isConfirmed, run, loadPantry, addToShoppingList, buyEverything, toast } from '../lib/app.svelte.js';
   import { FOOD_GROUPS, shortDate, weekName, freshness, plural, todayIso } from '../lib/format.js';
-  import { pending } from '../lib/pending.js';
+  import { pending, pendingClick } from '../lib/pending.js';
+  import { celebrate } from '../lib/motion.js';
   import { canShare, share, download, shoppingText, shoppingCsv } from '../lib/exporting.js';
   import Chip from '../components/Chip.svelte';
   import IngredientLine from './IngredientLine.svelte';
@@ -122,9 +123,24 @@
   }
 
   // Puts a pantry item running out, or a staple that has run out, on the list by name.
-  async function addByName(item) {
+  const addByName = (item) => pendingClick(async () => {
     if (await addToShoppingList({ name: item.name, unit: item.unit || null })) toast(`${item.name} was added to the list.`);
-  }
+  });
+
+  const buyAll = pendingClick(() => buyEverything(buyable));
+
+  // Buying the last thing on the list is worth a moment: the cart hops and a few sprinkles fly.
+  let emptyIcon = $state();
+  let cleared = $state(false);
+  let lastCount = untrack(() => toBuy.length);
+  $effect(() => {
+    const count = toBuy.length;
+    if (lastCount > 0 && count === 0 && emptyIcon) {
+      cleared = true;
+      celebrate(emptyIcon, { count: 16 });
+    }
+    lastCount = count;
+  });
 </script>
 
 <section>
@@ -151,7 +167,7 @@
   {#if toBuy.length}
     <div class="row-actions export">
       {#if buyable}
-        <button class="small with-icon" onclick={() => buyEverything(buyable)}>
+        <button class="small with-icon" onclick={buyAll}>
           <CheckCheck size={14} />{isConfirmed() || planToBuy.length === 0 ? 'Mark all as bought' : 'Mark hand-added items as bought'}
         </button>
       {/if}
@@ -179,11 +195,11 @@
 
   {#if toBuy.length === 0}
     <div class="card empty-list">
-      <span class="empty-icon" style="--area: var(--area-shopping)" aria-hidden="true"><ShoppingCart size={24} /></span>
+      <span class="empty-icon" class:hop={cleared} style="--area: var(--area-shopping)" aria-hidden="true" bind:this={emptyIcon}><ShoppingCart size={24} /></span>
       <p class="muted">
-        {app.plan
-          ? 'Nothing left to buy for this plan. Add anything else you need above.'
-          : 'Your shopping list is empty. Add an item above, or add pantry items that are running out below.'}
+        {#if app.plan && bought.length}<strong class="all-bought">Everything is bought. Time to cook.</strong> Add anything else you need above.
+        {:else if app.plan}Nothing left to buy for this plan. Add anything else you need above.
+        {:else}Your shopping list is empty. Add an item above, or add pantry items that are running out below.{/if}
       </p>
     </div>
   {/if}
@@ -208,7 +224,7 @@
             <div>
               <strong>{item.name}</strong> <Chip tone={warning.tone}>{warning.text}</Chip>
             </div>
-            <button class="small" aria-label="Add to list: {item.name}" onclick={() => addByName(item)}>Add to list</button>
+            <button class="small" aria-label="Add to list: {item.name}" onclick={addByName(item)}>Add to list</button>
           </li>
         {/each}
       </ul>
@@ -227,7 +243,7 @@
               {#if group.addable}
                 <IngredientLine {line}>
                   {#snippet actions()}
-                    <button class="small" aria-label="Add to list: {line.name}" onclick={() => addByName(line)}>Add to list</button>
+                    <button class="small" aria-label="Add to list: {line.name}" onclick={addByName(line)}>Add to list</button>
                   {/snippet}
                 </IngredientLine>
               {:else}
@@ -248,6 +264,9 @@
   .add { padding: .6rem 1rem; }
   .empty-list { display: flex; gap: .9rem; align-items: center; padding: 1rem; }
   .empty-list .empty-icon { flex: none; margin: 0; }
+  .all-bought { color: var(--ink); }
+  @media (prefers-reduced-motion: no-preference) { .empty-icon.hop :global(svg) { animation: hop .6s cubic-bezier(.3, 1.6, .5, 1); } }
+  @keyframes hop { 30% { transform: translateY(-6px) rotate(-8deg); } 60% { transform: translateY(0) rotate(4deg); } }
   h3 { margin-bottom: .25rem; }
   .count { color: var(--muted); font-weight: 400; font-size: .9rem; }
   .folds details { border-top: 1px solid var(--line); padding: .4rem 0; }

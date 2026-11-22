@@ -5,7 +5,7 @@
   import { onMount } from 'svelte';
   import { run } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
-  import { shortDate, plural } from '../lib/format.js';
+  import { shortDate, fullDate, plural, favouriteOf } from '../lib/format.js';
   import { tell, captionText, chapterTitle, monthName } from '../lib/history.js';
   import ScrollText from '@lucide/svelte/icons/scroll-text';
 
@@ -60,6 +60,9 @@
                       {#if typeof part === 'string'}{part}{:else if part.recipeId}<a href="/recipes/{part.recipeId}">{part.dish}</a>{:else}<strong>{part.dish}</strong>{/if}
                     {/each}
                   </p>
+                  {#if moment.kind !== 'FavouriteCooked' && moment.favouredBy?.length}
+                    <p class="favoured">♥ {favouriteOf(moment.favouredBy)}</p>
+                  {/if}
                   {#if moment.dishes.length > 0}
                     <ul class="dishes">
                       {#each moment.dishes as served, dishIndex (dishIndex)}
@@ -70,7 +73,7 @@
                       {/if}
                     </ul>
                   {/if}
-                  <p class="when muted"><time datetime={moment.date}>{shortDate(moment.date)}</time></p>
+                  <p class="when muted"><time datetime={moment.at ?? moment.date} title={fullDate(moment.date, moment.at)}>{shortDate(moment.date)}</time></p>
                 </article>
               </li>
             {/each}
@@ -122,6 +125,7 @@
   .caption { margin: 0; }
   .caption strong { font-weight: 600; }
   .when { margin: .3rem 0 0; font-size: .8rem; }
+  .favoured { margin: .3rem 0 0; color: var(--bad); font-size: .85rem; }
   .dishes { list-style: none; margin: .45rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .3rem; }
   .dishes li { background: var(--chip); border-radius: 999px; padding: .1rem .6rem; font-size: .85rem; }
   .dishes li.more { background: none; color: var(--muted); }

@@ -13,6 +13,7 @@ internal sealed class AccountManager(
     IAccountAccess accounts,
     ISettingsAccess settings,
     IHistoryAccess history,
+    IFavouriteAccess favourites,
     IMessageAccess messages,
     ValidationEngine validation,
     SecurityEngine security,
@@ -145,6 +146,7 @@ internal sealed class AccountManager(
             await accounts.RemoveApiTokenAsync(token.Id, cancellationToken);
         }
 
+        await favourites.RemoveForUserAsync(user.Id, cancellationToken);
         await accounts.RemoveUserAsync(user.Id, cancellationToken);
         await messages.CommitAsync(cancellationToken);
     }
@@ -324,5 +326,5 @@ internal sealed class AccountManager(
 
     /// <summary>Notes in the food history that someone arrived in the kitchen today.</summary>
     private Task RecordArrivalAsync(FoodMomentKind kind, UserAccount user, CancellationToken cancellationToken) =>
-        history.AddAsync(new FoodMoment { OccurredOn = clock.Today(), Kind = kind, Title = user.DisplayName }, cancellationToken);
+        history.AddAsync(new FoodMoment { OccurredOn = clock.Today(), OccurredAt = clock.GetUtcNow(), Kind = kind, Title = user.DisplayName }, cancellationToken);
 }

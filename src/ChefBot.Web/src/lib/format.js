@@ -44,6 +44,15 @@ export const dayMonth = (date) => date.toLocaleDateString(undefined, { month: 's
 
 export const shortDate = (iso) => (iso ? dayMonth(parseDate(iso)) : '');
 
+/**
+ * A date in full, with the time when it is known: "Saturday, November 21, 2026 at 6:42 PM", or
+ * "Saturday, November 21, 2026" when there is only a yyyy-mm-dd date.
+ */
+export function fullDate(iso, at) {
+  if (at) return new Date(at).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' });
+  return iso ? parseDate(iso).toLocaleDateString(undefined, { dateStyle: 'full' }) : '';
+}
+
 export function amount(quantity, unit) {
   if (quantity == null) return '';
   const rounded = Math.round(quantity * 100) / 100;
@@ -75,3 +84,16 @@ export function freshness(item) {
 
 /** "3 items", "1 item". */
 export const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+
+/** "Jamie's", or "James'" for a name that ends in s. */
+export const possessive = (name) => (/s$/i.test(name) ? `${name}'` : `${name}'s`);
+
+/** Whose something is, for several people: "Jamie's", "Jamie and Sam's", "Jamie, Sam and Chris'". */
+export function owners(names) {
+  if (names.length === 0) return '';
+  const last = possessive(names[names.length - 1]);
+  return names.length === 1 ? last : `${names.slice(0, -1).join(', ')} and ${last}`;
+}
+
+/** "Jamie and Sam's favourite", from names in the order they favourited it. */
+export const favouriteOf = (names) => `${owners(names)} favourite`;

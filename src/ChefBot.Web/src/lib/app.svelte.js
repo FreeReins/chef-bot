@@ -42,6 +42,9 @@ export const app = $state({
   toasts: [],          // { id, text, kind: 'note' | 'error', action?: { label, run } } shown in the corner by Toasts.svelte
   confirmation: null,  // { title, message, confirmLabel, danger } while ConfirmDialog.svelte is asking
   busy: 0,             // actions run() has started and not finished; App.svelte shows a progress bar while above 0
+  importing: 0,        // recipe files being sent by FileImport.svelte; setup can't move on until they are in
+  setupDirection: 1,
+  dealt: 0,            // when a week was last planned or shuffled (Date.now()), so the board deals its new meals in   // which way the last setup move went: 1 forward, -1 back, so the steps slide the right way
 });
 
 export const isConfirmed = () => app.plan?.status === 'Confirmed';
@@ -184,6 +187,7 @@ export function planWeek(style, weekStart = nextWeekStart()) {
   return run(async () => {
     const styleId = await styleIdFor(style);
     await applyPlan(await api('POST', '/api/plans/stage', { weekStart, styleId }));
+    app.dealt = Date.now();
   });
 }
 
@@ -198,6 +202,7 @@ export function replan(style = styleNamed(app.plan.styleName)) {
     const styleId = await styleIdFor(style);
     const next = await api('POST', '/api/plans/stage', { weekStart: plan.weekStart, styleId, keep: kept.map((meal) => meal.id) });
     await applyPlan(next);
+    app.dealt = Date.now();
     app.keep = next.meals
       .filter((meal) => kept.some((old) => old.slot === meal.slot && old.date === meal.date && old.title === meal.title))
       .map((meal) => meal.id);
@@ -223,7 +228,7 @@ export async function clearPlan() {
   if (!(await ask(draft
     ? { title: 'Discard this draft?', message: 'The proposed meals and their shopping list are removed. Your pantry is kept.', confirmLabel: 'Discard draft', danger: true }
     : { title: 'Clear this plan?', message: 'Meals and the shopping list are removed. Your pantry is kept.', confirmLabel: 'Clear plan', danger: true }))) return;
-  run(async () => {
+  return run(async () => {
     await api('DELETE', `/api/plans/${app.plan.id}`);
     await loadPlan(null);
     toast(draft ? 'The draft was discarded. Your pantry is unchanged.' : 'The plan was cleared. Your pantry is unchanged.');
@@ -234,7 +239,7 @@ export async function clearPlan() {
 export async function regenerate() {
   if (!(await ask({ title: 'Replan from your pantry?', message: 'This week is planned again around what is in your pantry, so you buy less. Meals already cooked are not kept.',
     confirmLabel: 'Replan' }))) return;
-  planAction('regenerate');
+  return planAction('regenerate');
 }
 
 export function openSwap(meal) {
@@ -395,6 +400,10 @@ export const setupSteps = () => SETUP_STEPS.filter((step) => step.screen !== 'se
 export function openSetupStep(screen) {
   return run(async () => {
     if (screen !== 'setup-account' && !app.session?.user) return;
+    const steps = setupSteps();
+    const from = steps.findIndex((step) => step.screen === app.screen);
+    const to = steps.findIndex((step) => step.screen === screen);
+    app.setupDirection = to < from ? -1 : 1;
     if (screen === 'setup-recipes') await openSetupRecipes();
     else if (screen === 'setup-styles') await openSetupStyles();
     else if (screen === 'setup-stores') await openSetupStores();

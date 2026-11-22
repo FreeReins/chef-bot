@@ -8,6 +8,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Ingredients">Its ingredient lines as written.</param>
 /// <param name="Tags">Its tags.</param>
 /// <param name="CoverUrl">The address of its first stored photo, for a card in the list, or null when it has none.</param>
+/// <param name="FavouredBy">The people who have it as a favourite, oldest favourite first.</param>
 public sealed record RecipeSummaryResponse(
     Guid Id,
     string Name,
@@ -15,4 +16,5 @@ public sealed record RecipeSummaryResponse(
     bool IsSlowCooker,
     IReadOnlyList<string> Ingredients,
     IReadOnlyList<string> Tags,
-    string? CoverUrl);
+    string? CoverUrl,
+    IReadOnlyList<FavouriteResponse> FavouredBy);

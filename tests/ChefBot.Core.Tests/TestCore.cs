@@ -17,6 +17,7 @@ internal sealed class TestCore
     public TestCore(WeeklyScheduleOptions? schedule = null, PlannerOptions? options = null)
     {
         Plans = new FakePlans(Recipes);
+        Favourites = new FakeFavourites(Accounts);
         Options = options ?? TestData.Options;
         Schedule = schedule ?? new WeeklyScheduleOptions();
         services = new(Register);
@@ -35,6 +36,8 @@ internal sealed class TestCore
     public FakeAccounts Accounts { get; } = new();
 
     public FakeHistory History { get; } = new();
+
+    public FakeFavourites Favourites { get; }
 
     public FakeSettings Settings { get; } = new();
 
@@ -79,6 +82,7 @@ internal sealed class TestCore
         services.AddSingleton<IShoppingListAccess>(ShoppingList);
         services.AddSingleton<IAccountAccess>(Accounts);
         services.AddSingleton<IHistoryAccess>(History);
+        services.AddSingleton<IFavouriteAccess>(Favourites);
         services.AddSingleton<ISettingsAccess>(Settings);
         services.AddSingleton<IImageSourceAccess>(Images);
         services.AddSingleton<IWebPageAccess>(Web);

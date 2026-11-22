@@ -9,6 +9,8 @@ internal sealed class FoodMomentEntity
 
     public DateOnly OccurredOn { get; set; }
 
+    public DateTimeOffset? OccurredAt { get; set; }
+
     public FoodMomentKind Kind { get; set; }
 
     public Guid? RecipeId { get; set; }
@@ -20,4 +22,6 @@ internal sealed class FoodMomentEntity
     public string Title { get; set; } = string.Empty;
 
     public int? Count { get; set; }
+
+    public List<string> FavouredBy { get; set; } = [];
 }

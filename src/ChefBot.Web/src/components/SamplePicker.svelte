@@ -1,14 +1,20 @@
-<!-- The sample recipes, one course at a time so the list stays short. Used by setup step three and by the
-     sample page reached from the Recipes tab. -->
+<!-- The sample recipes, one course at a time so the list stays short. While the chosen ones are being added, the
+     picker waits and the button says how many are on their way; the ones just added then pop their Added chips in
+     turn. Used by setup step three and by the sample page reached from the Recipes tab. -->
 <script>
   import { tick } from 'svelte';
   import { app, run, loadRecipes } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { SLOT_TITLES } from '../lib/format.js';
+  import { pendingClick } from '../lib/pending.js';
+  import { celebrate } from '../lib/motion.js';
   import Chip from './Chip.svelte';
 
-  /** onadded(count) runs after the chosen samples are saved and `app.recipeCount` has been reloaded. */
-  let { onadded } = $props();
+  /**
+   * onadded(count) runs after the chosen samples are saved and `app.recipeCount` has been reloaded.
+   * adding: true while they are being saved, for the parent to show.
+   */
+  let { onadded, adding = $bindable(false) } = $props();
 
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink'];
 
@@ -42,14 +48,25 @@
     for (const sample of shown.samples) if (!sample.alreadyAdded) chosen[sample.name] = checked;
   }
 
-  function add() {
+  let sending = $state(0);     // how many are being added, for the button
+  let justAdded = $state([]); // the names added last time, whose Added chips pop
+
+  const add = pendingClick((event) => {
+    const button = event.currentTarget;
     const names = picked.map((sample) => sample.name);
-    run(async () => {
+    sending = names.length;
+    adding = true;
+    return run(async () => {
       const result = await api('POST', '/api/setup/samples', { names });
       [app.samples] = await Promise.all([api('GET', '/api/setup/samples'), loadRecipes()]);
+      justAdded = names;
+      if (result.added) celebrate(button);
       await onadded(result.added);
-    });
-  }
+    }).finally(() => { sending = 0; adding = false; });
+  });
+
+  /** Where a just-added sample comes in its course, so the chips pop one after another. */
+  const popDelay = (sample) => `${Math.min(shown.samples.filter((other) => justAdded.includes(other.name)).indexOf(sample), 15) * 45}ms`;
 </script>
 
 {#if shown}
@@ -64,23 +81,26 @@
       {/each}
     </div>
     <div class="row-actions">
-      <button type="button" class="small" onclick={() => setShown(true)}>All {shown.title.toLowerCase()}</button>
-      <button type="button" class="small" onclick={() => setShown(false)}>None</button>
+      <button type="button" class="small" disabled={sending > 0} onclick={() => setShown(true)}>All {shown.title.toLowerCase()}</button>
+      <button type="button" class="small" disabled={sending > 0} onclick={() => setShown(false)}>None</button>
     </div>
   </div>
 
-  <div class="sample-grid" role="tabpanel" id="samples-panel" aria-labelledby="samples-tab-{shown.course}">
+  <div class="sample-grid" class:waiting={sending > 0} role="tabpanel" id="samples-panel" aria-labelledby="samples-tab-{shown.course}"
+       aria-busy={sending > 0 ? 'true' : undefined}>
     {#each shown.samples as sample (sample.name)}
       <label class="sample" class:added={sample.alreadyAdded}>
         {#if sample.alreadyAdded}
           <input type="checkbox" checked disabled>
         {:else}
-          <input type="checkbox" bind:checked={chosen[sample.name]}>
+          <input type="checkbox" bind:checked={chosen[sample.name]} disabled={sending > 0}>
         {/if}
         <span class="sample-text">
           <strong>{sample.name}</strong>
           {#if sample.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
-          {#if sample.alreadyAdded}<Chip>Added</Chip>{/if}
+          {#if sample.alreadyAdded}
+            <span class="added-chip" class:fresh={justAdded.includes(sample.name)} style:--delay={popDelay(sample)}><Chip tone={justAdded.includes(sample.name) ? 'good' : ''}>Added</Chip></span>
+          {/if}
           <span class="muted clip" title={sample.ingredients.join(', ')}>{sample.ingredients.join(', ')}</span>
         </span>
       </label>
@@ -88,8 +108,10 @@
   </div>
 
   <div class="row-actions" style="margin-top:.75rem">
-    <button type="button" class="primary" disabled={picked.length === 0} onclick={add}>
-      {available.length === 0 ? 'All samples added' : `Add ${picked.length} sample ${picked.length === 1 ? 'recipe' : 'recipes'}`}
+    <button type="button" class="primary" disabled={picked.length === 0 && !sending} onclick={add}>
+      {#if sending}Adding {sending} {sending === 1 ? 'recipe' : 'recipes'}…
+      {:else if available.length === 0}All samples added
+      {:else}Add {picked.length} sample {picked.length === 1 ? 'recipe' : 'recipes'}{/if}
     </button>
   </div>
 {/if}
@@ -104,4 +126,11 @@
   .sample.added { color: var(--muted); }
   .sample-text { min-width: 0; flex: 1; }
   .sample-text .clip { font-size: .8rem; }
+  /* While the chosen samples are being added, the list rests a little, so the button is where the eye goes. */
+  .sample-grid { transition: opacity .2s; }
+  .sample-grid.waiting { opacity: .6; }
+  .added-chip { display: inline-block; }
+  @media (prefers-reduced-motion: no-preference) {
+    .added-chip.fresh { animation: pop .4s cubic-bezier(.3, 1.6, .5, 1) var(--delay) backwards; }
+  }
 </style>

@@ -4,6 +4,8 @@
 <script>
   import { tick } from 'svelte';
   import { app, openSwap, toggleKeep, moveMeal, planAction } from '../lib/app.svelte.js';
+  import { pendingClick } from '../lib/pending.js';
+  import { celebrate, popIn } from '../lib/motion.js';
   import Chip from '../components/Chip.svelte';
   import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
   import Pin from '@lucide/svelte/icons/pin';
@@ -11,9 +13,10 @@
 
   /**
    * meal: MealResponse. days: the week's days as { name, date }, for the Move menu.
-   * ondragstart, ondragend: told when this meal starts and stops being dragged.
+   * ondragstart, ondragend: told when this meal starts and stops being dragged. order: its place on the board, for
+   * dealing the cards in turn (WeekBoard.svelte).
    */
-  let { meal, days = [], ondragstart = null, ondragend = null } = $props();
+  let { meal, days = [], order = 0, ondragstart = null, ondragend = null } = $props();
 
   const draft = $derived(app.plan.status === 'Staged');
   const planned = $derived(meal.status === 'Planned');
@@ -21,7 +24,15 @@
   const kept = $derived(app.keep.includes(meal.id));
   const label = $derived(meal.isLeftover ? 'Lunch, leftovers' : meal.slot);
 
-  const setStatus = (status) => planAction(`meals/${meal.id}/status`, { status });
+  let card = $state();
+
+  /** Marks the meal, and celebrates once the week's last meal is done. */
+  const setStatus = (status) => pendingClick(async () => {
+    await planAction(`meals/${meal.id}/status`, { status });
+    const meals = app.plan?.meals.filter((other) => !other.isOptional) ?? [];
+    if (status === 'Cooked' && meals.length && meals.every((other) => other.status !== 'Planned')) celebrate(card, { count: 18 });
+  });
+  const swap = pendingClick(() => openSwap(meal));
 
   /** Moves the meal from its Move menu, then puts focus back on that menu, which is now in the meal's new day. */
   async function moveTo(date) {
@@ -37,7 +48,7 @@
   }
 </script>
 
-<article class="meal" class:done={!planned} class:leftover={meal.isLeftover} class:kept class:movable
+<article bind:this={card} class="meal" style:--order={order} class:done={!planned} class:leftover={meal.isLeftover} class:kept class:movable
          draggable={movable ? 'true' : undefined} ondragstart={movable ? startDrag : undefined} ondragend={movable ? ondragend : undefined}>
   <div class="slot" data-slot={meal.isLeftover ? 'Leftovers' : meal.slot}>
     {#if movable}<span class="grip" title="Drag to another day"><GripVertical size={14} /></span>{/if}
@@ -49,8 +60,8 @@
   {#if meal.isSlowCooker || kept || !planned}
     <div class="chips">
       {#if meal.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
-      {#if kept}<Chip tone="good">Kept</Chip>{/if}
-      {#if !planned}<Chip>{meal.status}</Chip>{/if}
+      {#if kept}<span class="chip-wrap" in:popIn><Chip tone="good">Kept</Chip></span>{/if}
+      {#if !planned}<span class="chip-wrap" in:popIn><Chip>{meal.status}</Chip></span>{/if}
     </div>
   {/if}
 
@@ -65,7 +76,7 @@
     {/if}
     {#if planned && !meal.isLeftover}
       <button class="icon" aria-label="Swap {meal.title}" title="Swap for another recipe" aria-haspopup="dialog"
-              onclick={() => openSwap(meal)}><ArrowLeftRight size={16} /></button>
+              onclick={swap}><ArrowLeftRight size={16} /></button>
     {/if}
     {#if draft && !meal.isLeftover}
       <button class="small keep" aria-pressed={String(kept)} aria-label="Keep {meal.title}" title="Keep this meal when shuffling"
@@ -73,17 +84,20 @@
     {/if}
     {#if !draft}
       {#if planned}
-        <button class="small" aria-label="{meal.isLeftover ? 'Eaten' : 'Cooked'}: {meal.title}" onclick={() => setStatus('Cooked')}>{meal.isLeftover ? 'Eaten' : 'Cooked'}</button>
-        <button class="small" aria-label="Skip {meal.title}" onclick={() => setStatus('Skipped')}>Skip</button>
+        <button class="small" aria-label="{meal.isLeftover ? 'Eaten' : 'Cooked'}: {meal.title}" onclick={setStatus('Cooked')}>{meal.isLeftover ? 'Eaten' : 'Cooked'}</button>
+        <button class="small" aria-label="Skip {meal.title}" onclick={setStatus('Skipped')}>Skip</button>
       {:else}
-        <button class="small" aria-label="Undo {meal.status.toLowerCase()}: {meal.title}" onclick={() => setStatus('Planned')}>Undo</button>
+        <button class="small" aria-label="Undo {meal.status.toLowerCase()}: {meal.title}" onclick={setStatus('Planned')}>Undo</button>
       {/if}
     {/if}
   </div>
 </article>
 
 <style>
-  .meal { display: grid; gap: .25rem; padding: .55rem .6rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--panel); }
+  .meal { display: grid; gap: .25rem; padding: .55rem .6rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--panel);
+    transition: background-color .35s, border-color .35s, color .35s; }
+  .meal :is(h4, a), .slot-name { transition: color .35s, background-color .35s; }
+  .chip-wrap { display: inline-flex; }
   .meal.movable { cursor: grab; }
   .meal.movable:active { cursor: grabbing; }
   .meal.leftover { background: var(--bg); border-style: dashed; }
@@ -107,6 +121,12 @@
   .move { font-size: .85rem; padding: .15rem .3rem; max-width: 100%; }
   .keep { display: inline-flex; align-items: center; gap: .25rem; }
   .keep[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  /* The pin drops in when a meal is kept. */
+  @media (prefers-reduced-motion: no-preference) {
+    .keep[aria-pressed="true"] :global(svg) { animation: pin-drop .3s cubic-bezier(.3, 1.6, .5, 1); }
+  }
+  @keyframes pin-drop { from { transform: translateY(-4px) rotate(-25deg); } }
+  @media (prefers-reduced-motion: reduce) { .meal, .meal :is(h4, a), .slot-name { transition: none; } }
   @media (pointer: coarse) {
     .move { padding: .4rem .4rem; }
   }

@@ -12,6 +12,9 @@ internal sealed class FoodMoment
 
     public DateOnly OccurredOn { get; set; }
 
+    /// <summary>The exact time it happened, in UTC. Null when it was recorded later than <see cref="OccurredOn"/>.</summary>
+    public DateTimeOffset? OccurredAt { get; set; }
+
     public FoodMomentKind Kind { get; set; }
 
     /// <summary>The recipe added, retired or cooked. Null for free-form meals and for moments about no recipe.</summary>
@@ -28,4 +31,7 @@ internal sealed class FoodMoment
 
     /// <summary>How many things were bought, for a haul.</summary>
     public int? Count { get; set; }
+
+    /// <summary>For a cook: the names of the people who had the recipe as a favourite then, oldest favourite first.</summary>
+    public List<string> FavouredBy { get; set; } = [];
 }

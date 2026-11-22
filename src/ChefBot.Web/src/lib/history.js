@@ -1,7 +1,7 @@
 // The wording of the History tab. The server says what happened (HistoryMoment, HistoryChapter); this picks how to
 // say it. Each kind has a few ways to say it, and a moment always gets the same one, chosen from a hash of what it
 // is, so the page reads the same every time it is opened. Add a line to a list to give a kind another way to say it.
-import { plural } from './format.js';
+import { plural, owners } from './format.js';
 
 /**
  * A caption is a list of parts: plain text, or { dish, recipeId } for a name the page links to its recipe when the
@@ -24,6 +24,11 @@ const CAPTIONS = {
     (m) => ['The return of ', dish(m), `, after ${m.count} days in exile.`],
     (m) => [dish(m), ` is back after ${m.count} days. It never really left our hearts.`],
     (m) => [`After ${m.count} days on the bench, `, dish(m), ' got called back up.'],
+  ],
+  FavouriteCooked: [
+    (m) => [`Cooked ${owners(m.favouredBy)} favourite recipe: `, dish(m), '.'],
+    (m) => [dish(m), ` was on the table. That's ${owners(m.favouredBy)} favourite, so someone was smiling.`],
+    (m) => [`Someone made ${owners(m.favouredBy)} day: `, dish(m), ' was on the menu.'],
   ],
   DinnerMilestone: [
     (m) => [`Dinner number ${m.count}: `, dish(m), '. Somebody get a cake.'],
@@ -63,7 +68,7 @@ const CAPTIONS = {
 
 /** The picture on each kind's plate. */
 const EMOJI = {
-  Debut: '🎉', FanFavourite: '🏆', Comeback: '🪃', DinnerMilestone: '🎂', WeekOfPlates: '🍽️', RecipeAdded: '📖',
+  Debut: '🎉', FanFavourite: '🏆', FavouriteCooked: '❤️', Comeback: '🪃', DinnerMilestone: '🎂', WeekOfPlates: '🍽️', RecipeAdded: '📖',
   RecipeStampede: '🐘', RecipeRetired: '🏖️', Haul: '🛒', KitchenOpened: '🔥', PersonJoined: '🪑',
 };
 

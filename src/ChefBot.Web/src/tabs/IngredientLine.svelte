@@ -3,6 +3,7 @@
 <script>
   import { app, isConfirmed, planAction, setShoppingStore, buyManual, removeManualItem, setManualStore } from '../lib/app.svelte.js';
   import { amount, shortDate } from '../lib/format.js';
+  import { collapse } from '../lib/motion.js';
   import Chip from '../components/Chip.svelte';
   import Trash2 from '@lucide/svelte/icons/trash-2';
 
@@ -25,7 +26,7 @@
   const move = (store) => (manual ? setManualStore(line.manualId, store) : setShoppingStore(line.shoppingItemId, store));
 </script>
 
-<li class="line" class:buying class:tickable={canBuy}>
+<li class="line" class:buying class:tickable={canBuy} out:collapse>
   {#if toBuy}
     <input type="checkbox" class="tick" id="tick-{itemId}" aria-label="Bought: {line.name}" disabled={!canBuy || buying}
            checked={buying} title={canBuy ? 'Tick off once bought' : 'Confirm the plan to tick this off'} onchange={buy}>
@@ -64,7 +65,11 @@
   .what { display: block; flex: 1 1 12rem; min-width: 0; font-size: 1rem; color: var(--ink); }
   .tickable .what { cursor: pointer; }
   .tickable:hover strong { text-decoration: underline; text-decoration-color: var(--accent); }
-  .buying strong, .buying .amount { text-decoration: line-through; color: var(--muted); }
+  /* Ticked: a line is drawn through the name, then the line folds away once the purchase is saved. */
+  .buying strong { color: var(--muted); background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 100% 2px; }
+  .buying .amount { text-decoration: line-through; }
+  @media (prefers-reduced-motion: no-preference) { .buying strong { animation: strike .28s ease-out; } }
+  @keyframes strike { from { background-size: 0 2px; } }
   .amount { color: var(--muted); }
   .what .chips { display: inline-flex; margin: 0 0 0 .25rem; vertical-align: middle; }
   .for { display: block; font-size: .82rem; }

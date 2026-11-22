@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ChefBot.Core.Managers.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -64,6 +65,21 @@ public static class RecipeEndpoints
     [WolverineDelete("/api/recipes/{id}")]
     public static Task Archive(Guid id, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
         recipes.ArchiveAsync(id, cancellationToken);
+
+    /// <summary>
+    /// Marks a recipe as one of the signed-in person's favourites. Gives back the recipe's summary, with everyone who
+    /// has it as a favourite. Marking it again changes nothing.
+    /// </summary>
+    [WolverinePut("/api/recipes/{id}/favourite")]
+    public static Task<RecipeSummaryResponse> AddFavourite(
+        Guid id, ClaimsPrincipal principal, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.AddFavouriteAsync(id, Sessions.RequireUserId(principal), cancellationToken);
+
+    /// <summary>Takes a recipe off the signed-in person's favourites, and gives back the recipe's summary.</summary>
+    [WolverineDelete("/api/recipes/{id}/favourite")]
+    public static Task<RecipeSummaryResponse> RemoveFavourite(
+        Guid id, ClaimsPrincipal principal, [FromServices] IRecipeManager recipes, CancellationToken cancellationToken) =>
+        recipes.RemoveFavouriteAsync(id, Sessions.RequireUserId(principal), cancellationToken);
 
     /// <summary>
     /// A recipe photo, as an image file. A photo's bytes never change once stored (replacing one gives it a new

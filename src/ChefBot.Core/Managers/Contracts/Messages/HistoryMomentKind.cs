@@ -30,6 +30,12 @@ public enum HistoryMomentKind
     /// <summary>A recipe was cooked again after a long rest. <see cref="HistoryMoment.Count"/> is the days since it was last cooked.</summary>
     Comeback,
 
+    /// <summary>
+    /// An everyday cook of a recipe someone had as a favourite. <see cref="HistoryMoment.FavouredBy"/> names them.
+    /// A debut, fan favourite or comeback of a favourite stays that kind and names them the same way.
+    /// </summary>
+    FavouriteCooked,
+
     /// <summary>The household's 50th, 100th, 250th, 500th or 1000th dinner. <see cref="HistoryMoment.Count"/> is the number; <see cref="HistoryMoment.Title"/> the dinner.</summary>
     DinnerMilestone,
 

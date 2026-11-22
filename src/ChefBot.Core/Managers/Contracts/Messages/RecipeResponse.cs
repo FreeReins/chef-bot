@@ -20,6 +20,7 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Images">Its stored photos, the cover first. Photos still downloading aren't listed.</param>
 /// <param name="IngredientDetails">The same ingredients as <paramref name="Ingredients"/>, as ChefBot understood them for shopping.</param>
 /// <param name="StepDetails">The same steps as <paramref name="Instructions"/>, as ChefBot read them for cooking mode.</param>
+/// <param name="FavouredBy">The people who have it as a favourite, oldest favourite first.</param>
 public sealed record RecipeResponse(
     Guid Id,
     string Name,
@@ -39,4 +40,5 @@ public sealed record RecipeResponse(
     IReadOnlyList<string> Tags,
     IReadOnlyList<RecipeImageResponse> Images,
     IReadOnlyList<RecipeIngredientResponse> IngredientDetails,
-    IReadOnlyList<RecipeStepResponse> StepDetails);
+    IReadOnlyList<RecipeStepResponse> StepDetails,
+    IReadOnlyList<FavouriteResponse> FavouredBy);

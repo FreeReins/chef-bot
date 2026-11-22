@@ -7,13 +7,15 @@
   import { app, run, loadRecipes, toast, ask } from '../lib/app.svelte.js';
   import { go, closeDialog } from '../lib/addresses.js';
   import { api } from '../lib/api.js';
-  import { duration } from '../lib/format.js';
+  import { duration, favouriteOf } from '../lib/format.js';
   import { canShare, share, recipeText } from '../lib/exporting.js';
   import Chip from '../components/Chip.svelte';
   import Modal from '../components/Modal.svelte';
   import RecipeForm from './RecipeForm.svelte';
   import RecipeCook from './RecipeCook.svelte';
   import RecipeDownloads from '../components/RecipeDownloads.svelte';
+  import FavouriteButton from '../components/FavouriteButton.svelte';
+  import Heart from '@lucide/svelte/icons/heart';
   import CookingPot from '@lucide/svelte/icons/cooking-pot';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import ExternalLink from '@lucide/svelte/icons/external-link';
@@ -221,6 +223,7 @@
       <h2>{recipe.name}</h2>
       <div class="row-actions">
         <a class="button primary with-icon" href="{base}/cook"><CookingPot size={16} />Start cooking</a>
+        <FavouriteButton {recipe} size={16} label="Favourite" onchange={(list) => (recipe.favouredBy = list)} />
         <a class="button with-icon" href="{base}/edit"><Pencil size={16} />Edit</a>
         <a class="button with-icon" href="{base}/photos"><Images size={16} />Photos ({images.length})</a>
         <div class="menu" bind:this={menu}>
@@ -247,6 +250,9 @@
       {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
       {#each recipe.tags as tag (tag)}<Chip>#{tag}</Chip>{/each}
     </div>
+    {#if recipe.favouredBy?.length}
+      <p class="favoured"><Heart size={15} fill="currentColor" aria-hidden="true" />{favouriteOf(recipe.favouredBy.map((favourite) => favourite.name))}</p>
+    {/if}
 
     {#if recipe.description}<p class="description">{recipe.description}</p>{/if}
     {#if !shown}
@@ -333,6 +339,7 @@
 <style>
   .back-row { margin: 1rem 0 0; }
   .with-icon { display: inline-flex; align-items: center; gap: .35rem; }
+  .favoured { display: flex; align-items: center; gap: .35rem; margin: .5rem 0 0; color: var(--bad); font-size: .9rem; }
 
   .hero { margin-top: .75rem; }
   .cover { display: block; width: 100%; max-height: 26rem; object-fit: cover; border-radius: .6rem; background: var(--chip); }

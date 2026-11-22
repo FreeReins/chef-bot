@@ -1,6 +1,6 @@
 // Every screen of the page, checked with axe in each project of playwright.config.js (light, dark, phone).
 // To cover a new screen or state, add a row to VIEWS: where to go, any answers to change, and what to click first.
-import { test, open, reply, library } from './fixtures.js';
+import { test, expect, open, reply, library } from './fixtures.js';
 import { expectAccessible } from './axe.js';
 import * as data from './data.js';
 
@@ -102,6 +102,11 @@ const VIEWS = [
     act: (page) => page.getByRole('button', { name: 'List' }).click(),
   },
   { name: 'recipes, an empty library', path: '/recipes', answers: library([]) },
+  {
+    name: 'recipes, one just made a favourite', path: '/recipes',
+    act: (page) => page.getByRole('button', { name: 'Favourite Chickpea Curry' }).click()
+      .then(() => page.getByRole('button', { name: 'Favourite Chickpea Curry', pressed: true }).waitFor()),
+  },
   { name: 'add a recipe from a link', path: '/recipes/new/link' },
   { name: 'add a recipe by typing it in', path: '/recipes/new/write' },
   { name: 'add recipes from files', path: '/recipes/new/files' },
@@ -282,6 +287,12 @@ const VIEWS = [
   { name: 'AI assistants for a member', path: '/settings/assistants', answers: { 'GET /api/session': data.session(data.member()) } },
   { name: 'calendar for a member', path: '/settings/calendar',
     answers: { 'GET /api/session': data.session(data.member()), 'GET /api/calendar/feed': data.calendarFeed() } },
+  // The food history is for everyone signed in, not only admins: a member stays on /history and sees it.
+  { name: 'history for a member', path: '/history', answers: { 'GET /api/session': data.session(data.member()) },
+    act: async (page) => {
+      await page.getByRole('heading', { name: 'The Noodle of Time' }).waitFor();
+      if (new URL(page.url()).pathname !== '/history') throw new Error(`A member was sent to ${page.url()} instead of the history.`);
+    } },
 
   // Things laid over the page
   {
@@ -328,7 +339,13 @@ test('setup wizard, every step', async ({ page, api }) => {
   await page.getByLabel(/^Password/).fill('correct horse');
   await page.getByRole('button', { name: 'Create account' }).click();
 
+  // A welcome before moving on, rather than a jump straight to the next step.
+  await page.getByRole('heading', { name: 'Welcome, Alex Rivera.' }).waitFor();
+  await expectAccessible(page);
+  await page.getByRole('button', { name: 'Continue' }).click();
+
   await page.getByRole('heading', { name: 'Secure connection' }).waitFor();
+  await expect(page.getByRole('heading', { name: 'Secure connection' })).toBeFocused();
   await expectAccessible(page);
 
   await page.getByRole('button', { name: 'Next' }).click();
@@ -336,8 +353,34 @@ test('setup wizard, every step', async ({ page, api }) => {
   await expectAccessible(page);
   await page.getByText('Import my recipes').click();
   await expectAccessible(page);
+
+  // While a file is being imported, setup waits for it and says so.
+  const skip = page.getByRole('button', { name: 'Skip for now' });
+  let finishImport;
+  api.set({ 'POST /api/recipes/import/file': () => new Promise((resolve) => {
+    finishImport = () => resolve({ added: 1, alreadyInLibrary: 0, skipped: 0, photosAdded: 0 });
+  }) });
+  await page.locator('input[type="file"]').setInputFiles({ name: 'recipes.json', mimeType: 'application/json', buffer: Buffer.from('[]') });
+  await page.getByText('Importing your recipes…').waitFor();
+  await expect(skip).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Back' })).toBeDisabled();
+  await expectAccessible(page);
+  finishImport();
+  await page.getByText('1 added').waitFor();
+  await expect(skip).toBeEnabled();
+
   await page.getByText('Start with sample recipes').click();
   await expectAccessible(page);
+
+  // The same while sample recipes are being added.
+  let finishSamples;
+  api.set({ 'POST /api/setup/samples': () => new Promise((resolve) => { finishSamples = () => resolve({ added: 2 }); }) });
+  await page.getByRole('button', { name: /^Add \d+ sample/ }).click();
+  await page.getByText('Adding sample recipes…').waitFor();
+  await expect(skip).toBeDisabled();
+  await expect(page.getByRole('button', { name: /^Adding \d+ recipes…/ })).toBeVisible();
+  finishSamples();
+  await expect(skip).toBeEnabled();
 
   await page.getByRole('button', { name: 'Skip for now' }).click();
   await page.getByRole('heading', { name: 'How do you like to plan a week?' }).waitFor();

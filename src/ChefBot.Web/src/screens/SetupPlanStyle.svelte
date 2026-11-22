@@ -5,7 +5,6 @@
   import { app, run, saveStyles, moveSetup } from '../lib/app.svelte.js';
   import { ruleText, styleSummary } from '../lib/styles.js';
   import SetupNav from '../components/SetupNav.svelte';
-  import SetupProgress from '../components/SetupProgress.svelte';
   import PlanStyleEditor from '../components/PlanStyleEditor.svelte';
 
   // Kept in app state rather than here, so going back a step and returning keeps the choices made so far.
@@ -17,7 +16,7 @@
   }
 
   function next() {
-    run(async () => {
+    return run(async () => {
       if (styles.length || app.styles?.styles.length) await saveStyles($state.snapshot(styles));
       app.styleDraft = null;
       await moveSetup(1);
@@ -26,7 +25,6 @@
 </script>
 
 <section class="gate wide">
-  <SetupProgress />
   <h2>How do you like to plan a week?</h2>
   <p class="muted">
     A plan style sets the days you cook dinner, what else to plan, and rules for the recipes, such as a slow cooker

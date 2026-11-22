@@ -83,6 +83,16 @@ public interface IRecipeManager
     /// <exception cref="RecipeSourceException">The page couldn't be downloaded.</exception>
     Task<WebImportResponse> ImportFromWebAsync(WebRecipeRequest request, CancellationToken cancellationToken);
 
+    /// <summary>Marks a recipe as one of a person's favourites. Marking it again changes nothing.</summary>
+    /// <returns>The recipe, with everyone who now has it as a favourite.</returns>
+    /// <exception cref="NotFoundException">There is no such recipe or person, or the recipe has been archived.</exception>
+    Task<RecipeSummaryResponse> AddFavouriteAsync(Guid id, Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Takes a recipe off a person's favourites. Taking off one that isn't there changes nothing.</summary>
+    /// <returns>The recipe, with everyone who still has it as a favourite.</returns>
+    /// <exception cref="NotFoundException">There is no such recipe, or it has been archived.</exception>
+    Task<RecipeSummaryResponse> RemoveFavouriteAsync(Guid id, Guid userId, CancellationToken cancellationToken);
+
     /// <summary>
     /// The household's food history, newest month first: recipes that joined or retired, what was cooked, with
     /// debuts, fan favourites, comebacks and milestone dinners picked out, big shopping hauls and people joining.

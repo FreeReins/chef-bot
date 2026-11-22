@@ -25,6 +25,7 @@ internal sealed class PlanManager(
     IKnownPlanStyleAccess knownStyles,
     IToDoListAccess toDoLists,
     IHistoryAccess history,
+    IFavouriteAccess favourites,
     IMessageAccess messages,
     PlanningEngine planning,
     ShoppingEngine shopping,
@@ -595,7 +596,8 @@ internal sealed class PlanManager(
 
     /// <summary>
     /// Keeps the food history in step with a meal's new status: cooking a meal, other than leftovers, adds a moment,
-    /// and taking "cooked" back removes it. A meal marked cooked before its day counts as cooked today.
+    /// and taking "cooked" back removes it. A meal marked cooked before its day counts as cooked today. The moment
+    /// remembers who had the recipe as a favourite then, so changing favourites later doesn't change the history.
     /// </summary>
     private async Task RecordCookingAsync(PlannedMeal meal, MealStatus status, CancellationToken cancellationToken)
     {
@@ -607,15 +609,21 @@ internal sealed class PlanManager(
         if (status == MealStatus.Cooked && !meal.IsLeftover)
         {
             var today = clock.Today();
+            var late = meal.Date is { } day && day < today;
+            var favouredBy = meal.RecipeId is Guid recipeId
+                ? (await favourites.ListForRecipesAsync([recipeId], cancellationToken)).Select(favourite => favourite.UserName).ToList()
+                : [];
             await history.AddAsync(
                 new FoodMoment
                 {
-                    OccurredOn = meal.Date is { } day && day < today ? day : today,
+                    OccurredOn = late ? meal.Date!.Value : today,
+                    OccurredAt = late ? null : clock.GetUtcNow(),
                     Kind = FoodMomentKind.Cooked,
                     RecipeId = meal.RecipeId,
                     MealId = meal.Id,
                     Slot = meal.Slot,
                     Title = meal.Title,
+                    FavouredBy = favouredBy,
                 },
                 cancellationToken);
         }
@@ -627,7 +635,13 @@ internal sealed class PlanManager(
         if (bought > 0)
         {
             await history.AddAsync(
-                new FoodMoment { OccurredOn = request.PurchasedOn ?? clock.Today(), Kind = FoodMomentKind.Haul, Count = bought },
+                new FoodMoment
+                {
+                    OccurredOn = request.PurchasedOn ?? clock.Today(),
+                    OccurredAt = request.PurchasedOn is { } on && on != clock.Today() ? null : clock.GetUtcNow(),
+                    Kind = FoodMomentKind.Haul,
+                    Count = bought,
+                },
                 cancellationToken);
         }
     }

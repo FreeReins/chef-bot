@@ -15,7 +15,9 @@ export default defineConfig({
   reporter: process.env.CI ? 'dot' : 'list',
   testMatch: shooting ? 'screenshot.spec.js' : '*.spec.js',
   testIgnore: shooting ? [] : ['screenshot.spec.js'],
-  use: { baseURL: `http://localhost:${port}`, locale: 'en-US', timezoneId: 'UTC' },
+  // Less motion, as some people ask their system for: the page's transitions finish at once (lib/motion.js), so axe
+  // never checks something half faded in and nothing waits on an animation.
+  use: { baseURL: `http://localhost:${port}`, locale: 'en-US', timezoneId: 'UTC', contextOptions: { reducedMotion: 'reduce' } },
   // Light and dark mode use different colours, so contrast is checked in both. Phones lay the page out differently
   // (the tabs move to a bar at the bottom of the window).
   projects: [

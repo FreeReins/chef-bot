@@ -164,7 +164,7 @@ export const ingredients = () => {
 const recipe = (id, name, course, extra = {}) => ({
   id, name, course, isSlowCooker: false, servings: 4, ingredients: ['oats', 'milk'],
   description: null, instructions: [], prepMinutes: null, cookMinutes: null, totalMinutes: null, sourceUrl: null,
-  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], stepDetails: [], ...extra,
+  author: null, yieldText: null, notes: null, tags: [], images: [], ingredientDetails: [], stepDetails: [], favouredBy: [], ...extra,
 });
 
 /** RecipeResponse[]: the first has everything filled in, for the recipe page. */
@@ -179,6 +179,7 @@ export const recipes = () => [
     ],
     prepMinutes: 20, cookMinutes: 10, totalMinutes: 30, sourceUrl: 'https://example.com/slaw-fish-tacos',
     author: 'Jo Park', yieldText: '8 tacos', notes: 'Any firm white fish works.', tags: ['quick', 'fish'],
+    favouredBy: [{ userId: ids.admin, name: 'Alex Rivera' }, { userId: ids.sam, name: 'Sam Rivera' }],
     images: [
       { id: '00000000-0000-4000-8000-000000000401', url: '/api/test-images/1.png' },
       { id: '00000000-0000-4000-8000-000000000402', url: '/api/test-images/2.png' },
@@ -192,7 +193,9 @@ export const recipes = () => [
       { text: 'Warm the tortillas and fill them.', timers: [], headStart: null, ingredients: [3] },
     ],
   }),
-  recipe(ids.stew, 'Beef and Barley Stew', 'Main', { isSlowCooker: true, ingredients: ['beef chuck', 'barley', 'carrots'] }),
+  recipe(ids.stew, 'Beef and Barley Stew', 'Main', {
+    isSlowCooker: true, ingredients: ['beef chuck', 'barley', 'carrots'], favouredBy: [{ userId: ids.sam, name: 'James' }],
+  }),
   recipe(ids.curry, 'Chickpea Curry', 'Main', { ingredients: ['chickpeas', 'spinach', 'coconut milk'] }),
   recipe(ids.oats, 'Overnight Oats', 'Breakfast'),
   recipe(ids.granola, 'Maple Granola', 'Snack', { ingredients: ['oats', 'maple syrup'] }),
@@ -343,7 +346,9 @@ export const issuedApiToken = (name = 'Kitchen tablet') => ({
 });
 
 /** HistoryMoment */
-const moment = (date, kind, extra = {}) => ({ date, kind, title: null, recipeId: null, count: null, dishes: [], ...extra });
+const moment = (date, kind, extra = {}) => ({
+  date, kind, title: null, recipeId: null, count: null, dishes: [], at: null, favouredBy: [], ...extra,
+});
 
 /** HistoryResponse: two months of a household's food story, with older months still to load. */
 export const history = () => ({
@@ -357,8 +362,9 @@ export const history = () => ({
           { title: 'Pizza night', recipeId: null, date: '2026-11-07' },
         ] }),
         moment('2026-11-06', 'FanFavourite', { title: 'Slaw Fish Tacos', recipeId: ids.tacos, count: 5 }),
+        moment('2026-11-05', 'FavouriteCooked', { title: 'Beef and Barley Stew', recipeId: ids.stew, favouredBy: ['Sam', 'James'] }),
         moment('2026-11-04', 'Haul', { count: 23 }),
-        moment('2026-11-02', 'Comeback', { title: 'Beef and Barley Stew', recipeId: ids.stew, count: 132 }),
+        moment('2026-11-02', 'Comeback', { title: 'Beef and Barley Stew', recipeId: ids.stew, count: 132, favouredBy: ['Jamie'] }),
         moment('2026-11-01', 'DinnerMilestone', { title: 'Chickpea Curry', recipeId: ids.curry, count: 100 }),
       ],
     },

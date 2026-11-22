@@ -1,5 +1,5 @@
 <!-- The Recipes tab: the library across the full width, as photo cards or a compact list, found by words and course a
-     page at a time. Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
+     page at a time. Each recipe has a heart to make it a favourite, and says whose favourite it is. Adding a recipe opens a dialog (RecipeAdd.svelte); one recipe opens on its own page. -->
 <script>
   import { untrack } from 'svelte';
   import { app, run, isAdmin } from '../lib/app.svelte.js';
@@ -7,6 +7,7 @@
   import Chip from '../components/Chip.svelte';
   import RecipeDetail from './RecipeDetail.svelte';
   import RecipeAdd from './RecipeAdd.svelte';
+  import { deal } from '../lib/motion.js';
   import LoaderCircle from '@lucide/svelte/icons/loader-circle';
   import ChefHat from '@lucide/svelte/icons/chef-hat';
   import Plus from '@lucide/svelte/icons/plus';
@@ -15,6 +16,9 @@
   import Download from '@lucide/svelte/icons/download';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import RecipeDownloads from '../components/RecipeDownloads.svelte';
+  import FavouriteButton from '../components/FavouriteButton.svelte';
+  import { favouriteOf } from '../lib/format.js';
+  import Heart from '@lucide/svelte/icons/heart';
 
   const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
   const PAGE_SIZE = 24;
@@ -28,6 +32,7 @@
   let course = $state('');  // '' for every course
   let page = $state(1);
   let result = $state(null); // RecipePageResponse for the page shown
+  let loading = $state(false); // a newer page is on its way; the one shown stays, dimmed, until it arrives
   let listTop = $state();
   let layout = $state(remembered());
   let downloadsOpen = $state(false); // whether the "Download all" choices show
@@ -57,6 +62,7 @@
     if (query) params.set('query', query);
     if (course) params.set('course', course);
     const ticket = ++latest;
+    loading = true;
     // run() clears old messages as it starts; untracked, so that doesn't make this effect run again.
     untrack(() => run(async () => {
       const found = await api('GET', `/api/recipes/search?${params}`);
@@ -64,7 +70,7 @@
       // After an archive the page asked for can be past the end; step back to the last one.
       if (found.recipes.length === 0 && found.total > 0) page = Math.ceil(found.total / found.pageSize);
       else result = found;
-    }));
+    }).finally(() => { if (ticket === latest) loading = false; }));
   });
 
   const librarySize = $derived(result?.librarySize ?? app.recipeCount);
@@ -93,6 +99,10 @@
     listTop?.scrollIntoView({ block: 'start' });
   }
 </script>
+
+{#snippet favoured(recipe)}
+  <span class="favoured"><Heart size={13} fill="currentColor" aria-hidden="true" />{favouriteOf(recipe.favouredBy.map((favourite) => favourite.name))}</span>
+{/snippet}
 
 {#if app.recipeId}
   {#key app.recipeId}<RecipeDetail id={app.recipeId} />{/key}
@@ -154,12 +164,13 @@
       <p class="muted">No recipes match. Try fewer words or another course.</p>
     {/if}
 
+    <div class="results" class:loading={loading && result} aria-busy={loading && result ? 'true' : undefined}>
     {#each groups as { course: heading, recipes } (heading)}
       <h3 class="course">{heading} <span class="muted">({recipes.length})</span></h3>
       {#if layout === 'grid'}
         <ul class="cards">
-          {#each recipes as recipe (recipe.id)}
-            <li>
+          {#each recipes as recipe, index (recipe.id)}
+            <li in:deal={{ index }}>
               <a class="recipe-card" href="/recipes/{recipe.id}">
                 {#if recipe.coverUrl}
                   <img class="cover" src={recipe.coverUrl} alt="" loading="lazy">
@@ -168,9 +179,11 @@
                 {/if}
                 <span class="text">
                   <strong>{recipe.name}</strong>
+                  {#if recipe.favouredBy?.length}{@render favoured(recipe)}{/if}
                   {#if recipe.description?.trim()}<span class="blurb">{recipe.description}</span>{/if}
                 </span>
               </a>
+              <FavouriteButton {recipe} class="on-cover" onchange={(list) => (recipe.favouredBy = list)} />
               {#if recipe.isSlowCooker || recipe.tags.length}
                 <div class="chips">
                   {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
@@ -182,8 +195,8 @@
         </ul>
       {:else}
         <ul class="plain card rows">
-          {#each recipes as recipe (recipe.id)}
-            <li>
+          {#each recipes as recipe, index (recipe.id)}
+            <li in:deal={{ index }}>
               {#if recipe.coverUrl}
                 <img class="thumb" src={recipe.coverUrl} alt="" loading="lazy">
               {:else}
@@ -192,13 +205,16 @@
               <div class="text">
                 <a href="/recipes/{recipe.id}"><strong>{recipe.name}</strong></a>
                 {#if recipe.isSlowCooker}<Chip tone="good">Slow cooker</Chip>{/if}
+                {#if recipe.favouredBy?.length}<p class="row-favoured">{@render favoured(recipe)}</p>{/if}
                 {#if recipe.description?.trim()}<p class="muted blurb">{recipe.description}</p>{/if}
               </div>
+              <FavouriteButton {recipe} class="icon" onchange={(list) => (recipe.favouredBy = list)} />
             </li>
           {/each}
         </ul>
       {/if}
     {/each}
+    </div>
 
     {#if pageCount > 1}
       <nav class="row pager" aria-label="Recipe pages">
@@ -214,6 +230,9 @@
 
 <style>
   .head { align-items: center; margin-top: 1rem; }
+  /* While the next page loads, the one shown rests; only if it takes more than a moment, so quick answers don't flicker. */
+  .results { transition: opacity .2s; }
+  .results.loading { opacity: .55; transition-delay: .15s; }
   .head h2 { margin: 0; }
   .add { display: inline-flex; align-items: center; gap: .35rem; }
   .downloads:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; }
@@ -231,7 +250,7 @@
 
   .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: .9rem;
     grid-template-columns: repeat(auto-fill, minmax(min(13.5rem, 100%), 1fr)); }
-  .cards li { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: .6rem;
+  .cards li { position: relative; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: .6rem;
     overflow: hidden; transition: border-color .15s, box-shadow .15s, translate .15s; }
   .cards li:hover, .cards li:focus-within { border-color: var(--area-recipes); box-shadow: 0 6px 18px var(--shadow); translate: 0 -2px; }
   @media (prefers-reduced-motion: reduce) { .cards li { transition: none; } .cards li:hover, .cards li:focus-within { translate: none; } }
@@ -244,6 +263,11 @@
   /* A recipe's description, cut to two lines in both layouts. Recipes without one show only their name. */
   .blurb { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .recipe-card .blurb { color: var(--muted); font-size: .85rem; }
+  /* The heart sits on the cover's top corner, outside the card's link so it can be pressed on its own. */
+  .cards :global(.on-cover) { position: absolute; top: .45rem; right: .45rem; padding: .4rem; border-radius: 999px;
+    border-color: transparent; background: color-mix(in srgb, var(--panel) 88%, transparent); box-shadow: 0 1px 4px var(--shadow); }
+  .favoured { display: inline-flex; align-items: center; gap: .3rem; color: var(--bad); font-size: .8rem; }
+  .row-favoured { margin: .1rem 0 0; }
   .cards .chips { padding: 0 .8rem; }
   .cards li::after { content: ""; padding-bottom: .7rem; }
 

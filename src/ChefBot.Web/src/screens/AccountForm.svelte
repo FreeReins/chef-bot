@@ -2,10 +2,9 @@
 <script>
   import { run } from '../lib/app.svelte.js';
   import { pending } from '../lib/pending.js';
-  import SetupProgress from '../components/SetupProgress.svelte';
 
-  /** setup: true in the setup wizard, which shows its progress bar. submit receives { displayName, username, password }. */
-  let { setup = false, title, intro, button, submit } = $props();
+  /** submit receives { displayName, username, password }. */
+  let { title, intro, button, submit } = $props();
 
   function onsubmit(event) {
     event.preventDefault();
@@ -19,7 +18,6 @@
 </script>
 
 <section class="gate">
-  {#if setup}<SetupProgress />{/if}
   <h2>{title}</h2>
   <p class="muted">{intro}</p>
   <form class="stack card" {onsubmit}>

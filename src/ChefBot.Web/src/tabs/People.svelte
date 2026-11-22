@@ -1,6 +1,7 @@
 <!-- Admins only: the household's accounts, invite links and password reset links. A new link is shown once, where it
      was asked for: a password reset link under its person, an invite link under "Invite someone". -->
 <script>
+  import { pendingClick } from '../lib/pending.js';
   import { app, run, ask, loadPeople } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { dayMonth } from '../lib/format.js';
@@ -45,7 +46,7 @@
       confirmLabel: 'Remove',
       danger: true,
     }))) return;
-    change(() => api('DELETE', `/api/users/${user.id}`));
+    return change(() => api('DELETE', `/api/users/${user.id}`));
   }
 
   async function replaceLink(link) {
@@ -54,7 +55,7 @@
       message: 'The old link stops working, and a new one is shown for you to send instead.',
       confirmLabel: 'Replace link',
     }))) return;
-    issue(placeOf(link), describe(link), () => api('POST', `/api/links/${link.id}/regenerate`));
+    return issue(placeOf(link), describe(link), () => api('POST', `/api/links/${link.id}/regenerate`));
   }
 
   async function deleteLink(link) {
@@ -64,7 +65,7 @@
       confirmLabel: 'Delete link',
       danger: true,
     }))) return;
-    change(() => api('DELETE', `/api/links/${link.id}`));
+    return change(() => api('DELETE', `/api/links/${link.id}`));
   }
 
   async function copyLink() {
@@ -114,13 +115,13 @@
               </span>
               <div class="person-actions">
                 {#if isLocked(user)}
-                  <button class="small" onclick={() => change(() => api('POST', `/api/users/${user.id}/unlock`))}>Unlock</button>
+                  <button class="small" onclick={pendingClick(() => change(() => api('POST', `/api/users/${user.id}/unlock`)))}>Unlock</button>
                 {/if}
-                <button class="small" onclick={() => issue(user.id, `Password reset link for @${user.username}`,
-                  () => api('POST', `/api/users/${user.id}/password-reset`))}>Reset password</button>
+                <button class="small" onclick={pendingClick(() => issue(user.id, `Password reset link for @${user.username}`,
+                  () => api('POST', `/api/users/${user.id}/password-reset`)))}>Reset password</button>
                 {#if !isYou}
                   <button class="icon remove" aria-label="Remove @{user.username}" title="Remove"
-                          onclick={() => removeUser(user)}><Trash2 size={16} /></button>
+                          onclick={pendingClick(() => removeUser(user))}><Trash2 size={16} /></button>
                 {/if}
               </div>
             </div>
@@ -142,7 +143,7 @@
     <div class="card">
       <p class="muted">An invite link lets one person create their own account. It works once and expires after 7 days.</p>
       <div class="row-actions" style="margin-top:.5rem">
-        <button class="primary" onclick={() => issue('invite', 'Invite link', () => api('POST', '/api/invites'))}>Create invite link</button>
+        <button class="primary" onclick={pendingClick(() => issue('invite', 'Invite link', () => api('POST', '/api/invites')))}>Create invite link</button>
       </div>
       {@render newLink('invite')}
     </div>
@@ -159,8 +160,8 @@
                 <span class="muted" style="display:block">Expires {day(link.expiresAt)}</span>
               </div>
               <div class="row-actions">
-                <button class="small" aria-label="Replace link: {describe(link)}" onclick={() => replaceLink(link)}>Replace link</button>
-                <button class="small" aria-label="Delete link: {describe(link)}" onclick={() => deleteLink(link)}>Delete</button>
+                <button class="small" aria-label="Replace link: {describe(link)}" onclick={pendingClick(() => replaceLink(link))}>Replace link</button>
+                <button class="small" aria-label="Delete link: {describe(link)}" onclick={pendingClick(() => deleteLink(link))}>Delete</button>
               </div>
             </li>
           {/each}

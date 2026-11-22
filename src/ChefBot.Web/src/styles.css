@@ -75,10 +75,17 @@ button.icon, a.icon { display: inline-flex; border: 0; border-radius: .4rem; bac
 button.icon:hover, a.icon:hover { color: var(--accent); background: var(--accent-bg); }
 button.icon.remove:hover { color: var(--bad); background: var(--bad-bg); }
 button:disabled { opacity: .5; cursor: not-allowed; }
-/* A button whose action is under way (lib/pending.js): it shows a spinner and ignores more clicks. */
+/* A button whose action is under way (lib/pending.js): it shows a spinner and ignores more clicks. An icon-only
+   button swaps its icon for the spinner, so it doesn't change size. */
 button[aria-busy="true"] { cursor: progress; }
-button[aria-busy="true"]::before { content: ""; display: inline-block; width: .8em; height: .8em; margin-right: .4em; vertical-align: -.05em;
+/* A pressed button that is also switched off while it works keeps full colour, so it reads as busy rather than unavailable. */
+button[aria-busy="true"]:disabled { opacity: 1; }
+button[aria-busy="true"]::before { content: ""; display: inline-block; flex: none; width: .8em; height: .8em; margin-right: .4em; vertical-align: -.05em;
   border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+button.icon[aria-busy="true"]::before { width: 16px; height: 16px; margin: 0; box-sizing: border-box; }
+button.icon[aria-busy="true"] > svg { display: none; }
+/* While a confirmation is asked (ConfirmDialog.svelte), the button that asked isn't working yet: it waits for the answer. */
+body:has(dialog.confirm[open]) button[aria-busy="true"]::before { display: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { button[aria-busy="true"]::before { animation: none; border-right-color: currentColor; } }
 a.button { display: inline-block; border: 1px solid var(--line); border-radius: .4rem; background: var(--panel); color: var(--ink);
@@ -115,7 +122,8 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); border-c
 .chip { background: var(--chip); border-radius: 1rem; padding: .05rem .55rem; font-size: .8rem; color: var(--muted); white-space: nowrap; }
 .chip.good { color: var(--good); background: var(--good-bg); } .chip.warn { color: var(--warn); background: var(--warn-bg); }
 .chip.bad { color: var(--bad); background: var(--bad-bg); } .chip.info { color: var(--info); background: var(--info-bg); }
-.pill { display: inline-block; border-radius: 1rem; padding: .1rem .6rem; font-size: .8rem; font-weight: 600; border: 1px solid currentColor; }
+.pill { display: inline-block; border-radius: 1rem; padding: .1rem .6rem; font-size: .8rem; font-weight: 600; border: 1px solid currentColor;
+  transition: color .4s, background-color .4s; }
 /* A row of rounded buttons, one of them selected: tabs inside a picker. */
 .segmented { display: flex; flex-wrap: wrap; gap: .25rem; }
 .segmented button { font-size: .85rem; padding: .25rem .65rem; border-radius: 1rem; }
@@ -162,6 +170,27 @@ textarea { min-height: 7rem; }
   button.small, a.button.small { padding: .4rem .7rem; }
   button.icon, a.icon { padding: .5rem; }
 }
+
+/* Movement. Only for people who haven't asked their system for less of it; lib/motion.js does the same for Svelte's
+   transitions. */
+@media (prefers-reduced-motion: no-preference) {
+  /* Dialogs settle into place rather than appearing; on phones, where they fill the screen, they slide up. */
+  dialog[open] { animation: dialog-in .2s cubic-bezier(.2, .8, .3, 1); }
+  dialog[open]::backdrop { animation: fade-in .2s ease-out; }
+  @media (max-width: 40rem) { dialog[open] { animation-name: sheet-in; animation-duration: .25s; } }
+  /* Folding sections open and close smoothly where the browser can animate to their natural height. */
+  :root { interpolate-size: allow-keywords; }
+  details::details-content { transition: block-size .22s cubic-bezier(.2, .8, .3, 1), content-visibility .22s allow-discrete; block-size: 0; overflow: clip; }
+  details[open]::details-content { block-size: auto; }
+  /* A count or chip that has just changed (popOn in lib/motion.js). */
+  .pop { animation: pop .35s cubic-bezier(.3, 1.6, .5, 1); }
+}
+@keyframes dialog-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+@keyframes sheet-in { from { transform: translateY(2.5rem); opacity: .4; } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes pop { 40% { transform: scale(1.18); } }
+/* The dots celebrate() in lib/motion.js scatters; above everything and never in the way. */
+.sprinkle { position: fixed; z-index: 50; border-radius: 2px; pointer-events: none; }
 
 /* Shown only on paper, or only on screen: a printed page's title, or controls that mean nothing once printed. */
 .print-only { display: none; }

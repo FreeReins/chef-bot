@@ -5,7 +5,7 @@
   import { untrack, tick } from 'svelte';
   import { app, run, loadPantry, refreshAfterPantryChange, addToShoppingList, removePantryItem, updatePantryItem, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
-  import { pending } from '../lib/pending.js';
+  import { pending, pendingClick } from '../lib/pending.js';
   import { amount, shortDate, parseDate, freshness, plural, DAYS, FOOD_GROUPS } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
   import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -157,9 +157,9 @@
               <button class="icon" id="edit-{item.id}" aria-label="Change the amount or date of {item.name}" title="Change the amount or date"
                       onclick={() => edit(item)}><Pencil size={16} /></button>
               <button class="icon" aria-label="Add {item.name} to the shopping list" title="Add to the shopping list"
-                      onclick={() => restock(item)}><ListPlus size={16} /></button>
+                      onclick={pendingClick(() => restock(item))}><ListPlus size={16} /></button>
               <button class="icon remove" aria-label="Remove {item.name}" title="Remove"
-                      onclick={() => removePantryItem(item)}><Trash2 size={16} /></button>
+                      onclick={pendingClick(() => removePantryItem(item))}><Trash2 size={16} /></button>
             </div>
           </div>
         {/if}
@@ -191,7 +191,7 @@
             <li class="row item">
               {@render summary(item, usedFor)}
               {#if item.freshness === 'Expired'}
-                <button class="small" aria-label="Buy more {item.name}" onclick={() => restock(item)}>Buy more</button>
+                <button class="small" aria-label="Buy more {item.name}" onclick={pendingClick(() => restock(item))}>Buy more</button>
               {/if}
             </li>
           {/each}

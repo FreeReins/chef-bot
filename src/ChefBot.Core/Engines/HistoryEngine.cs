@@ -5,7 +5,7 @@ namespace ChefBot.Core.Engines;
 
 /// <summary>
 /// Tells the household's food history from the stored moments: picks out debuts, fan favourites, comebacks and
-/// milestone dinners, folds the everyday cooking of each week into one moment and a day of many new recipes into a
+/// milestone dinners and someone's favourite being cooked, folds the everyday cooking of each week into one moment and a day of many new recipes into a
 /// stampede, and groups it all into monthly chapters. Reads and saves nothing.
 /// </summary>
 internal sealed class HistoryEngine
@@ -85,16 +85,20 @@ internal sealed class HistoryEngine
             HistoryMoment? special = null;
             if (!seen && cook.RecipeId is not null)
             {
-                special = new HistoryMoment(cook.OccurredOn, HistoryMomentKind.Debut, cook.Title, link, null, []);
+                special = Cook(cook, HistoryMomentKind.Debut, link, null);
             }
             else if (FanFavouriteCooks.Contains(times))
             {
-                special = new HistoryMoment(cook.OccurredOn, HistoryMomentKind.FanFavourite, cook.Title, link, times, []);
+                special = Cook(cook, HistoryMomentKind.FanFavourite, link, times);
             }
             else if (seen && cook.OccurredOn.DayNumber - before.Last.DayNumber >= ComebackDays)
             {
                 var days = cook.OccurredOn.DayNumber - before.Last.DayNumber;
-                special = new HistoryMoment(cook.OccurredOn, HistoryMomentKind.Comeback, cook.Title, link, days, []);
+                special = Cook(cook, HistoryMomentKind.Comeback, link, days);
+            }
+            else if (cook.FavouredBy.Count > 0)
+            {
+                special = Cook(cook, HistoryMomentKind.FavouriteCooked, link, null);
             }
 
             if (special is null)
@@ -108,7 +112,7 @@ internal sealed class HistoryEngine
 
             if (cook.Slot == MealSlot.Dinner && DinnerMilestones.Contains(++dinners))
             {
-                told.Add(new HistoryMoment(cook.OccurredOn, HistoryMomentKind.DinnerMilestone, cook.Title, link, dinners, []));
+                told.Add(Cook(cook, HistoryMomentKind.DinnerMilestone, link, dinners));
             }
         }
 
@@ -116,11 +120,16 @@ internal sealed class HistoryEngine
         foreach (var week in everyday.GroupBy(cook => (Month: MonthOf(cook.OccurredOn), Week: WeekStartOf(cook.OccurredOn))))
         {
             var dishes = week.Select(cook => new HistoryDish(cook.Title, Linked(cook.RecipeId, library), cook.OccurredOn)).ToList();
-            told.Add(new HistoryMoment(dishes[^1].Date, HistoryMomentKind.WeekOfPlates, null, null, dishes.Count, dishes));
+            told.Add(new HistoryMoment(
+                dishes[^1].Date, HistoryMomentKind.WeekOfPlates, null, null, dishes.Count, dishes, week.Last().OccurredAt, []));
         }
 
         return dinners;
     }
+
+    /// <summary>A moment about one cook, naming whose favourite it was.</summary>
+    private static HistoryMoment Cook(FoodMoment cook, HistoryMomentKind kind, Guid? link, int? count) =>
+        new(cook.OccurredOn, kind, cook.Title, link, count, [], cook.OccurredAt, [.. cook.FavouredBy]);
 
     /// <summary>Adds the recipes that joined: one moment each, or a stampede for a day of many.</summary>
     private static void TellArrivals(IEnumerable<FoodMoment> added, Dictionary<Guid, Recipe> library, List<HistoryMoment> told)
@@ -133,22 +142,23 @@ internal sealed class HistoryEngine
                 var named = arrivals.Take(StampedeNames)
                     .Select(moment => new HistoryDish(moment.Title, Linked(moment.RecipeId, library), moment.OccurredOn))
                     .ToList();
-                told.Add(new HistoryMoment(day.Key, HistoryMomentKind.RecipeStampede, null, null, arrivals.Count, named));
+                told.Add(new HistoryMoment(
+                    day.Key, HistoryMomentKind.RecipeStampede, null, null, arrivals.Count, named, arrivals[^1].OccurredAt, []));
                 continue;
             }
 
             told.AddRange(arrivals.Select(moment => new HistoryMoment(
-                moment.OccurredOn, HistoryMomentKind.RecipeAdded, moment.Title, Linked(moment.RecipeId, library), null, [])));
+                moment.OccurredOn, HistoryMomentKind.RecipeAdded, moment.Title, Linked(moment.RecipeId, library), null, [], moment.OccurredAt, [])));
         }
     }
 
     /// <summary>The moments told as they were stored. Null for cooking and arrivals, which are told above.</summary>
     private static HistoryMoment? Plain(FoodMoment moment) => moment.Kind switch
     {
-        FoodMomentKind.RecipeRetired => new(moment.OccurredOn, HistoryMomentKind.RecipeRetired, moment.Title, null, null, []),
-        FoodMomentKind.Haul => new(moment.OccurredOn, HistoryMomentKind.Haul, null, null, moment.Count, []),
-        FoodMomentKind.KitchenOpened => new(moment.OccurredOn, HistoryMomentKind.KitchenOpened, moment.Title, null, null, []),
-        FoodMomentKind.PersonJoined => new(moment.OccurredOn, HistoryMomentKind.PersonJoined, moment.Title, null, null, []),
+        FoodMomentKind.RecipeRetired => new(moment.OccurredOn, HistoryMomentKind.RecipeRetired, moment.Title, null, null, [], moment.OccurredAt, []),
+        FoodMomentKind.Haul => new(moment.OccurredOn, HistoryMomentKind.Haul, null, null, moment.Count, [], moment.OccurredAt, []),
+        FoodMomentKind.KitchenOpened => new(moment.OccurredOn, HistoryMomentKind.KitchenOpened, moment.Title, null, null, [], moment.OccurredAt, []),
+        FoodMomentKind.PersonJoined => new(moment.OccurredOn, HistoryMomentKind.PersonJoined, moment.Title, null, null, [], moment.OccurredAt, []),
         _ => null,
     };
 

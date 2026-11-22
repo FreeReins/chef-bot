@@ -150,6 +150,7 @@ public class HistoryTests
         await Assert.That(cooked.Kind).IsEqualTo(FoodMomentKind.Cooked);
         await Assert.That(cooked.RecipeId).IsEqualTo(TestData.Stew.Id);
         await Assert.That(cooked.OccurredOn).IsEqualTo(new DateOnly(2026, 11, 14));
+        await Assert.That(cooked.OccurredAt).IsEqualTo(core.Clock.Now);
 
         await plans.SetMealStatusAsync(plan.Id, stew.Id, new MealStatusRequest(MealStatus.Planned), default);
         await Assert.That(core.History.Rows).IsEmpty();
@@ -157,6 +158,95 @@ public class HistoryTests
         await plans.SetMealStatusAsync(plan.Id, stew.Id, new MealStatusRequest(MealStatus.Cooked), default);
         await plans.ClearAsync(plan.Id, default);
         await Assert.That(core.History.Rows.Count).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task A_dinner_marked_cooked_after_its_day_keeps_the_day_but_no_time()
+    {
+        var core = new TestCore();
+        core.Clock.Now = new DateTimeOffset(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);
+        core.Recipes.Rows.AddRange(TestData.Library);
+        var plans = core.PlanManager();
+        var plan = await plans.StageAsync(new StagePlanRequest(), default);
+        var stew = plan.Meals.Single(meal => meal.Title == TestData.Stew.Name && !meal.IsLeftover);
+
+        core.Clock.Now = stew.Date!.Value.AddDays(2).ToDateTime(new TimeOnly(9, 0));
+        await plans.SetMealStatusAsync(plan.Id, stew.Id, new MealStatusRequest(MealStatus.Cooked), default);
+
+        var cooked = core.History.Rows.Single();
+        await Assert.That(cooked.OccurredOn).IsEqualTo(stew.Date!.Value);
+        await Assert.That(cooked.OccurredAt).IsNull();
+    }
+
+    [Test]
+    public async Task A_moment_keeps_its_time()
+    {
+        var at = new DateTimeOffset(2026, 3, 1, 18, 42, 0, TimeSpan.Zero);
+        var cook = Cooked(TestData.Stew, March);
+        cook.OccurredAt = at;
+
+        var debut = All(Tell([cook])).Single(moment => moment.Kind == HistoryMomentKind.Debut);
+
+        await Assert.That(debut.At).IsEqualTo(at);
+    }
+
+    [Test]
+    public async Task Cooking_a_favourite_remembers_whose_it_was_then()
+    {
+        var core = new TestCore();
+        core.Clock.Now = new DateTimeOffset(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);
+        core.Recipes.Rows.AddRange(TestData.Library);
+        var james = new UserAccount { Username = "james", DisplayName = "James" };
+        core.Accounts.Users.Add(james);
+        var recipes = core.RecipeManager();
+        await recipes.AddFavouriteAsync(TestData.Stew.Id, james.Id, default);
+        var plans = core.PlanManager();
+        var plan = await plans.StageAsync(new StagePlanRequest(), default);
+        var stew = plan.Meals.First(meal => meal.Title == TestData.Stew.Name && !meal.IsLeftover);
+        core.Clock.Now = stew.Date!.Value.ToDateTime(new TimeOnly(18, 0));
+
+        await plans.SetMealStatusAsync(plan.Id, stew.Id, new MealStatusRequest(MealStatus.Cooked), default);
+        await recipes.RemoveFavouriteAsync(TestData.Stew.Id, james.Id, default);
+
+        await Assert.That(string.Join(", ", core.History.Rows.Single().FavouredBy)).IsEqualTo("James");
+    }
+
+    [Test]
+    public async Task An_everyday_cook_of_a_favourite_gets_its_own_moment()
+    {
+        var debut = Cooked(TestData.Stew, March);
+        var again = Cooked(TestData.Stew, March.AddDays(2));
+        again.FavouredBy = ["Jamie", "Chris"];
+        var plain = Cooked(TestData.Stew, March.AddDays(3));
+
+        var moments = All(Tell([debut, again, plain]));
+
+        var favourite = moments.Single(moment => moment.Kind == HistoryMomentKind.FavouriteCooked);
+        await Assert.That(string.Join(", ", favourite.FavouredBy)).IsEqualTo("Jamie, Chris");
+        await Assert.That(favourite.RecipeId).IsEqualTo(TestData.Stew.Id);
+        var plates = moments.Single(moment => moment.Kind == HistoryMomentKind.WeekOfPlates);
+        await Assert.That(plates.Count).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task A_favourites_debut_stays_a_debut_and_names_whose_it_is()
+    {
+        var debut = Cooked(TestData.Stew, March);
+        debut.FavouredBy = ["Jamie"];
+
+        var moments = All(Tell([debut]));
+
+        var told = moments.Single();
+        await Assert.That(told.Kind).IsEqualTo(HistoryMomentKind.Debut);
+        await Assert.That(string.Join(", ", told.FavouredBy)).IsEqualTo("Jamie");
+    }
+
+    [Test]
+    public async Task Moments_not_about_a_cook_name_no_favourites()
+    {
+        var moments = All(Tell([Added("Pho", March), Cooked(TestData.Stew, March), Cooked(TestData.Stew, March.AddDays(1))]));
+
+        await Assert.That(moments.All(moment => moment.FavouredBy.Count == 0)).IsTrue();
     }
 
     [Test]

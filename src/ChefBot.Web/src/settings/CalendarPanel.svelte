@@ -1,6 +1,7 @@
 <!-- Settings, Calendar: the meal plan as a calendar feed to subscribe to. Everyone signed in can copy its address;
      admins turn it on, give it a new address (the old one stops working) or turn it off. -->
 <script>
+  import { pendingClick } from '../lib/pending.js';
   import { run, toast, ask, isAdmin } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { copyText } from '../lib/exporting.js';
@@ -25,7 +26,7 @@
       message: 'Calendars subscribed to the current address stop updating, and need the new one added instead.',
       confirmLabel: 'Make a new address',
     }))) return;
-    run(async () => {
+    return run(async () => {
       feed = await api('POST', '/api/calendar/feed');
       toast(replacing ? 'The calendar has a new address. The old one no longer works.' : 'The calendar feed is on. Copy its address into your calendar app.');
     });
@@ -34,7 +35,7 @@
   async function stop() {
     if (!(await ask({ title: 'Turn the calendar feed off?', message: 'Subscribed calendars stop updating, and its address stops working.',
       confirmLabel: 'Turn off', danger: true }))) return;
-    run(async () => {
+    return run(async () => {
       feed = await api('DELETE', '/api/calendar/feed');
       toast('The calendar feed is off.');
     });
@@ -66,13 +67,13 @@
       </p>
       {#if isAdmin()}
         <div class="row-actions">
-          <button type="button" onclick={() => start(true)}>Make a new address</button>
-          <button type="button" class="bad-text" onclick={stop}>Turn off</button>
+          <button type="button" onclick={pendingClick(() => start(true))}>Make a new address</button>
+          <button type="button" class="bad-text" onclick={pendingClick(stop)}>Turn off</button>
         </div>
       {/if}
     {:else if isAdmin()}
       <p>The calendar feed is off.</p>
-      <div class="row-actions"><button type="button" class="primary" onclick={() => start(false)}>Turn on the calendar feed</button></div>
+      <div class="row-actions"><button type="button" class="primary" onclick={pendingClick(() => start(false))}>Turn on the calendar feed</button></div>
     {:else}
       <p class="muted">The calendar feed is off. Ask an admin to turn it on under Settings, Calendar.</p>
     {/if}

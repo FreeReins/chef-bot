@@ -201,12 +201,23 @@ internal static partial class EntityMapping
     {
         Id = entity.Id,
         OccurredOn = entity.OccurredOn,
+        OccurredAt = entity.OccurredAt,
         Kind = entity.Kind,
         RecipeId = entity.RecipeId,
         MealId = entity.MealId,
         Slot = entity.Slot,
         Title = entity.Title,
         Count = entity.Count,
+        FavouredBy = [.. entity.FavouredBy],
+    };
+
+    public static RecipeFavourite ToContract(this RecipeFavouriteEntity entity, string userName) => new()
+    {
+        Id = entity.Id,
+        RecipeId = entity.RecipeId,
+        UserId = entity.UserId,
+        CreatedAt = entity.CreatedAt,
+        UserName = userName,
     };
 
     // ---------- contract to entity ----------
@@ -396,12 +407,22 @@ internal static partial class EntityMapping
     {
         Id = moment.Id,
         OccurredOn = moment.OccurredOn,
+        OccurredAt = moment.OccurredAt,
         Kind = moment.Kind,
         RecipeId = moment.RecipeId,
         MealId = moment.MealId,
         Slot = moment.Slot,
         Title = moment.Title,
         Count = moment.Count,
+        FavouredBy = [.. moment.FavouredBy],
+    };
+
+    public static RecipeFavouriteEntity ToEntity(this RecipeFavourite favourite) => new()
+    {
+        Id = favourite.Id,
+        RecipeId = favourite.RecipeId,
+        UserId = favourite.UserId,
+        CreatedAt = favourite.CreatedAt,
     };
 
     // ---------- saving ----------

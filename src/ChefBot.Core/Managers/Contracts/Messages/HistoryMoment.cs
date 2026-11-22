@@ -9,5 +9,14 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="RecipeId">The recipe, when it is still in the library.</param>
 /// <param name="Count">A number that goes with the kind: cooks, days, dinners, recipes or things bought.</param>
 /// <param name="Dishes">The dishes of a week of plates or a recipe stampede, in order; empty for the rest.</param>
+/// <param name="At">The exact time of <paramref name="Date"/>, in UTC. Null when only the day is known.</param>
+/// <param name="FavouredBy">For a cook, whose favourite the recipe was when it was cooked, oldest favourite first; empty for the rest.</param>
 public sealed record HistoryMoment(
-    DateOnly Date, HistoryMomentKind Kind, string? Title, Guid? RecipeId, int? Count, IReadOnlyList<HistoryDish> Dishes);
+    DateOnly Date,
+    HistoryMomentKind Kind,
+    string? Title,
+    Guid? RecipeId,
+    int? Count,
+    IReadOnlyList<HistoryDish> Dishes,
+    DateTimeOffset? At,
+    IReadOnlyList<string> FavouredBy);

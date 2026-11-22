@@ -22,6 +22,8 @@
   import Toasts from './components/Toasts.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import ThemeToggle from './components/ThemeToggle.svelte';
+  import SetupProgress from './components/SetupProgress.svelte';
+  import { stepIn, stepOut, rise } from './lib/motion.js';
   import CalendarDays from '@lucide/svelte/icons/calendar-days';
   import ShoppingCart from '@lucide/svelte/icons/shopping-cart';
   import Refrigerator from '@lucide/svelte/icons/refrigerator';
@@ -30,7 +32,6 @@
   import Users from '@lucide/svelte/icons/users';
   import SettingsIcon from '@lucide/svelte/icons/settings';
   import CodeXml from '@lucide/svelte/icons/code-xml';
-  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
   const TABS = [
     { key: 'plan', label: 'Plan', icon: CalendarDays },
@@ -50,6 +51,20 @@
   const tabs = $derived(TABS.filter((tab) => !tab.adminOnly || isAdmin()));
   const Gate = $derived(GATES[app.screen]);
   const View = $derived(TAB_VIEWS[app.tab]);
+  // The setup steps share one progress bar, which stays put while the steps slide beneath it.
+  const inSetup = $derived(app.screen.startsWith('setup-') && app.screen !== 'setup-samples');
+
+  // When a new screen arrives after another (a setup step, or sign-in after a link), the page goes back to its top and
+  // focus moves to the screen's heading, so keyboard and screen reader users start where everyone else is looking.
+  let firstScreen = true;
+  function arrive(node) {
+    if (firstScreen) { firstScreen = false; return; }
+    window.scrollTo({ top: 0 });
+    const heading = node.querySelector('h2');
+    if (!heading) return;
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+  }
 
   // The browser tab's title names the view, so bookmarks and history read well.
   const title = $derived.by(() => {
@@ -104,11 +119,24 @@
 
 <main id="view">
   {#if app.screen === 'loading'}
-    <p class="loading muted" role="status" aria-label="Loading"><LoaderCircle size={28} /></p>
+    <p class="loading muted" role="status" aria-label="Loading">
+      <span class="loading-mark" aria-hidden="true"><ChefHat size={30} /></span>
+      <span class="warming" aria-hidden="true">Warming up the kitchen…</span>
+    </p>
   {:else if !inApp}
-    <Gate />
+    {#if inSetup}<div class="gate wide setup-head"><SetupProgress /></div>{/if}
+    <!-- One cell, so the step leaving and the step arriving overlap while they slide instead of stacking. -->
+    <div class="stage" class:in-setup={inSetup}>
+      {#key app.screen}
+        <div class="scene" use:arrive in:stepIn={{ direction: app.setupDirection }} out:stepOut={{ direction: app.setupDirection }}>
+          <Gate />
+        </div>
+      {/key}
+    </div>
   {:else}
-    <View />
+    {#key app.tab}
+      <div in:rise={{ duration: 160 }}><View /></div>
+    {/key}
   {/if}
 </main>
 
@@ -167,10 +195,21 @@
   .footer-links a { display: inline-flex; padding: .3rem; border-radius: .4rem; color: var(--muted); }
   .footer-links a:hover { color: var(--ink); background: var(--chip); }
   .footer-links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .loading { display: flex; justify-content: center; padding: 2rem 0; }
-  .loading :global(svg) { animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .loading :global(svg) { animation: none; } }
+  /* The first load: the logo mark bobs like a lid on a simmering pot, and a line appears if it takes a moment. */
+  .loading { display: grid; justify-items: center; gap: .75rem; padding: 3rem 0; }
+  .loading-mark { display: inline-grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: 1rem;
+    color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 14%, var(--panel)); }
+  .warming { animation: appear .6s step-end; }
+  @media (prefers-reduced-motion: no-preference) {
+    .loading-mark :global(svg) { animation: simmer 1.1s ease-in-out infinite; transform-origin: 50% 90%; }
+  }
+  @keyframes simmer { 0%, 100% { transform: translateY(0) rotate(0); } 30% { transform: translateY(-4px) rotate(-6deg); } 60% { transform: translateY(-2px) rotate(4deg); } }
+  .stage { display: grid; }
+  .scene { grid-area: 1 / 1; min-width: 0; }
+  /* The progress bar above already makes the gap at the top of the step. */
+  .setup-head { margin-bottom: 0; }
+  .stage.in-setup :global(.gate) { margin-top: 0; }
+  .scene :global(h2[tabindex="-1"]:focus:not(:focus-visible)) { outline: none; }
 
   /* Tablets and narrow windows: the tabs share the width evenly, label under icon, so the row never scrolls. */
   @media (max-width: 56rem) {

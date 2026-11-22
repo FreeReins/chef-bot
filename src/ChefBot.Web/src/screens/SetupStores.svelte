@@ -3,21 +3,23 @@
 <script>
   import { app, run, enterApp, saveStores, toast } from '../lib/app.svelte.js';
   import { go } from '../lib/addresses.js';
+  import { celebrate } from '../lib/motion.js';
   import SetupNav from '../components/SetupNav.svelte';
-  import SetupProgress from '../components/SetupProgress.svelte';
   import StoreEditor from '../components/StoreEditor.svelte';
 
   // Kept in app state rather than here, so going back a step and returning keeps the stores chosen so far.
   const stores = $derived(app.storeDraft ?? []);
 
   function finish() {
-    run(async () => {
+    return run(async () => {
       const chosen = $state.snapshot(stores);
       if (chosen.length || app.stores?.stores.length) await saveStores(chosen);
       app.storeDraft = null;
       const total = app.recipeCount;
       await enterApp();
       await go(total ? '/plan' : '/recipes');
+      // Setup's finish line: the logo in the header bursts as the app opens.
+      celebrate(document.querySelector('header.top .mark'), { count: 18 });
       const shopping = chosen.length
         ? 'Shopping lists are split between your stores.'
         : 'Shopping lists are grouped by food group. Add stores under Settings, Stores at any time.';
@@ -29,7 +31,6 @@
 </script>
 
 <section class="gate wide">
-  <SetupProgress />
   <h2>Where do you shop? <span class="muted">(optional)</span></h2>
   <p class="muted">
     Choose your stores and the shopping list is split between them: your main store gets everything, except what

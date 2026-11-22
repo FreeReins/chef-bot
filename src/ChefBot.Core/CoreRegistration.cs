@@ -66,6 +66,7 @@ public static class CoreRegistration
         services.AddScoped<ISettingsAccess, SettingsAccess>();
         services.AddScoped<IMessageAccess, MessageAccess>();
         services.AddScoped<IHistoryAccess, HistoryAccess>();
+        services.AddScoped<IFavouriteAccess, FavouriteAccess>();
         var backupFolder = DataPath(configuration, "Data:Backups", "backups");
         services.AddScoped<IBackupAccess>(provider => new BackupAccess(provider.GetRequiredService<ChefBotDbContext>(), backupFolder));
         services.AddSingleton<ISampleRecipeAccess>(new SampleRecipeAccess(DataPath(configuration, "Data:SampleRecipes", "config/sample-recipes.json")));

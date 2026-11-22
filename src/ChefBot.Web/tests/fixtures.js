@@ -10,6 +10,10 @@ export const reply = (status, body = null, contentType = 'application/json') => 
 
 const COURSES = ['Main', 'Breakfast', 'Snack', 'Sweet', 'Drink', 'Other'];
 
+/** RecipeSummaryResponse, from a RecipeResponse. */
+const summary = ({ id, name, course, isSlowCooker, ingredients, tags, images, favouredBy }) =>
+  ({ id, name, course, isSlowCooker, ingredients, tags, coverUrl: images[0]?.url ?? null, favouredBy });
+
 /**
  * Answers for a recipe library, as the server gives them: the whole list, one recipe by id (404 when it isn't there),
  * and a search a page at a time.
@@ -18,6 +22,9 @@ export const library = (recipes) => ({
   'GET /api/recipes': recipes,
   'GET /api/recipes/*': (request) => recipes.find((recipe) => new URL(request.url()).pathname.endsWith(`/${recipe.id}`))
     ?? reply(404, { detail: 'There is no recipe with that id.' }),
+  // Favouriting answers as the signed-in admin would get it: the recipe with them added or taken off.
+  'PUT /api/recipes/*/favourite': (request) => favourite(recipes, request, true),
+  'DELETE /api/recipes/*/favourite': (request) => favourite(recipes, request, false),
   'GET /api/recipes/search': (request) => {
     const params = new URL(request.url()).searchParams;
     const words = (params.get('query') ?? '').toLowerCase().split(/\s+/).filter(Boolean);
@@ -31,12 +38,19 @@ export const library = (recipes) => ({
       .sort((a, b) => COURSES.indexOf(a.course) - COURSES.indexOf(b.course) || a.name.localeCompare(b.name));
     return {
       recipes: matches.slice((page - 1) * pageSize, page * pageSize)
-        .map(({ id, name, course: kind, isSlowCooker, ingredients, tags, images }) =>
-          ({ id, name, course: kind, isSlowCooker, ingredients, tags, coverUrl: images[0]?.url ?? null })),
+        .map((recipe) => summary(recipe)),
       total: matches.length, page, pageSize, librarySize: recipes.length,
     };
   },
 });
+
+function favourite(recipes, request, add) {
+  const id = new URL(request.url()).pathname.split('/')[3];
+  const recipe = recipes.find((candidate) => candidate.id === id);
+  if (!recipe) return reply(404, { detail: 'There is no recipe with that id.' });
+  const others = recipe.favouredBy.filter((favourite) => favourite.userId !== data.ids.admin);
+  return summary({ ...recipe, favouredBy: add ? [...others, { userId: data.ids.admin, name: 'Alex Rivera' }] : others });
+}
 
 /** What every test starts with: an admin signed in, a confirmed plan for one week, and everything the Settings tab loads. */
 function defaults() {

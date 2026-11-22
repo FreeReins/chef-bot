@@ -2,6 +2,7 @@
      SwapDialog.svelte. -->
 <script>
   import { replaceMeal } from '../lib/app.svelte.js';
+  import { pendingClick } from '../lib/pending.js';
   import { shortDate } from '../lib/format.js';
   import Chip from '../components/Chip.svelte';
 
@@ -23,7 +24,7 @@
           {#if option.toBuy.length}<Chip>Buy: {option.toBuy.join(', ')}</Chip>{/if}
         </div>
       </div>
-      <button class="small" onclick={() => replaceMeal(meal.id, { recipeId: option.recipeId })}>Use this</button>
+      <button class="small" onclick={pendingClick(() => replaceMeal(meal.id, { recipeId: option.recipeId }))}>Use this</button>
     </div>
   {/each}
 
@@ -46,7 +47,7 @@
           {/each}
         </div>
       </div>
-      <button class="small" onclick={() => replaceMeal(meal.id, { custom: { title: idea.title, ingredients: idea.ingredients } })}>Use this</button>
+      <button class="small" onclick={pendingClick(() => replaceMeal(meal.id, { custom: { title: idea.title, ingredients: idea.ingredients } }))}>Use this</button>
     </div>
   {/each}
 </div>

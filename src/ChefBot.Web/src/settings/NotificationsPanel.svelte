@@ -1,4 +1,5 @@
 <script>
+  import { pendingClick } from '../lib/pending.js';
   import { app, run, toast } from '../lib/app.svelte.js';
   import { api } from '../lib/api.js';
   import { autosave } from '../lib/autosave.svelte.js';
@@ -57,7 +58,7 @@
   {/each}
   <SaveStatus {saver} />
   <div class="row-actions">
-    <button type="button" onclick={() => send('/api/system/notifications/test', describeTest)}>Send a test</button>
-    <button type="button" onclick={() => send('/api/system/notifications/send-today', describeRun)}>Send today's reminders now</button>
+    <button type="button" onclick={pendingClick(() => send('/api/system/notifications/test', describeTest))}>Send a test</button>
+    <button type="button" onclick={pendingClick(() => send('/api/system/notifications/send-today', describeRun))}>Send today's reminders now</button>
   </div>
 </form>

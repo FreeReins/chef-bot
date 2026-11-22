@@ -5,6 +5,9 @@
 <script>
   import { app, ask, canPlanAhead, selectWeek, confirmPlan, replan, clearPlan, regenerate } from '../lib/app.svelte.js';
   import { shortDate, weekName } from '../lib/format.js';
+  import { pendingClick } from '../lib/pending.js';
+  import { celebrate } from '../lib/motion.js';
+  import WorkingLine from '../components/WorkingLine.svelte';
   import { choosableStyles } from '../lib/styles.js';
   import PlanNextWeek from './PlanNextWeek.svelte';
   import ShoppingSummary from './ShoppingSummary.svelte';
@@ -21,6 +24,26 @@
   const meals = $derived(plan?.meals.filter((meal) => !meal.isOptional) ?? []);
   const done = $derived(meals.filter((meal) => meal.status !== 'Planned').length);
 
+  /** What planning again looks like while it takes a moment. */
+  const REPLANNING = ['Shuffling the meals…', 'Picking recipes…', 'Checking your pantry…', 'Writing the shopping list…'];
+  let replanning = $state(false);
+
+  async function planAgain(style) {
+    replanning = true;
+    try { await replan(style); } finally { replanning = false; }
+  }
+
+  const confirm = pendingClick(async (event) => {
+    const button = event.currentTarget;
+    const before = app.plan?.status;
+    await confirmPlan();
+    if (before === 'Staged' && app.plan?.status === 'Confirmed') celebrate(button.isConnected ? button : document.getElementById('plan-heading'), { count: 18 });
+  });
+  const shuffle = pendingClick(() => planAgain());
+  const discard = pendingClick(clearPlan);
+  const replanFromPantry = pendingClick(regenerate);
+  const showWeek = (id) => pendingClick(() => selectWeek(id));
+
   /** Plans the draft's week again in another style, once the person agrees. The menu shows the plan's style until then. */
   async function changeStyle(event) {
     const select = event.currentTarget;
@@ -34,7 +57,7 @@
         : 'The draft is planned again in this style.',
       confirmLabel: 'Plan again',
     });
-    if (agreed) replan(style);
+    if (agreed) await planAgain(style);
   }
 </script>
 
@@ -46,7 +69,7 @@
   {#if app.plans.length > 1}
     <div class="segmented weeks" role="group" aria-label="Weeks with a plan">
       {#each app.plans as week (week.id)}
-        <button type="button" aria-pressed={String(week.id === plan.id)} onclick={() => selectWeek(week.id)}>
+        <button type="button" aria-pressed={String(week.id === plan.id)} onclick={showWeek(week.id)}>
           {weekName(week.weekStart, week.weekEnd)}{week.status === 'Staged' ? ', draft' : ''}
         </button>
       {/each}
@@ -78,20 +101,21 @@
         </li>
       </ol>
       <div class="actions">
-        <button class="primary" onclick={confirmPlan}>Confirm plan</button>
-        <button class="with-icon" onclick={() => replan()}>
+        <button class="primary" disabled={replanning} onclick={confirm}>Confirm plan</button>
+        <button class="with-icon shuffle" class:shuffling={replanning} disabled={replanning} onclick={shuffle}>
           <Shuffle size={15} />{keeping ? `Shuffle the rest (keeping ${keeping})` : 'Shuffle'}
         </button>
         {#if choices.length > 1}
           <label class="style-choice">
             <span class="sr-only">Plan style</span>
-            <select value={plan.styleName} onchange={changeStyle}>
+            <select value={plan.styleName} disabled={replanning} onchange={changeStyle}>
               {#if !choices.some((style) => style.name === plan.styleName)}<option value={plan.styleName}>{plan.styleName}</option>{/if}
               {#each choices as style (style.name)}<option value={style.name}>{style.name}</option>{/each}
             </select>
           </label>
         {/if}
-        <button onclick={clearPlan}>Discard draft</button>
+        <button disabled={replanning} onclick={discard}>Discard draft</button>
+        <WorkingLine active={replanning} lines={REPLANNING} />
       </div>
     </section>
   {:else}
@@ -106,8 +130,8 @@
       </p>
       <ShoppingSummary />
       <div class="actions">
-        <button title="Plan the rest of this week again around what is already in your pantry" onclick={regenerate}>Replan from pantry</button>
-        <button title="Remove this plan and keep the pantry" onclick={clearPlan}>Clear plan</button>
+        <button title="Plan the rest of this week again around what is already in your pantry" onclick={replanFromPantry}>Replan from pantry</button>
+        <button title="Remove this plan and keep the pantry" onclick={discard}>Clear plan</button>
       </div>
     </section>
   {/if}
@@ -132,5 +156,12 @@
   .steps li > strong { display: block; }
   .actions { align-items: center; margin-top: .25rem; }
   .with-icon { display: inline-flex; align-items: center; gap: .35rem; }
+  /* Shuffle shows its own work: the arrows turn instead of the usual spinner. */
+  .shuffle:global([aria-busy="true"])::before { display: none; }
+  .shuffle.shuffling:disabled { opacity: 1; }
+  @media (prefers-reduced-motion: no-preference) {
+    .shuffle.shuffling :global(svg) { animation: shuffle .6s ease-in-out infinite; }
+  }
+  @keyframes shuffle { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
   .style-choice select { padding: .4rem .5rem; }
 </style>
