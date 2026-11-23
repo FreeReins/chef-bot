@@ -10,7 +10,7 @@ is made, and how backups relate to it.
 | Recipes | `Recipe`, `RecipeIngredient`, `RecipeImage`, `RecipeImageData`, `RecipeFavourite`, `RecipeReview`, `RecipeSuggestion` (an AI model's suggestions, one per recipe, with its changes as `jsonb`), `Cookbook` (a named group of recipes; each recipe lists the cookbooks it is in as a `uuid[]` column, `CookbookIds`, so removing a cookbook takes its id off those recipes and leaves them in the library) |
 | Plans | `MealPlan`, `PlannedMeal`, `PlannedMealIngredient`, `ShoppingItem`, `PlanStyle` |
 | Shopping and pantry | `PantryItem`, `ManualShoppingItem`, `GroceryStore`, `ShoppingTarget` |
-| People | `User`, `AccessLink` (invites and resets), `ApiToken` |
+| People | `User`, `AccessLink` (invites and resets), `ApiToken`, `InboxEntry` (each person's messages behind the bell, the newest 50; `SourceId` is the event that added one, so handling it twice adds nothing) |
 | History and fun | `FoodMoment`, `AchievementUnlock` |
 | Settings | `PlannerSettings`, `CalendarSettings`, `AdvancedSettings`, `NotificationSettings`, `BackupSettings`, `SecuritySettings`, `CalendarFeed`, `ScheduleState`, `AiModel` and `AiRoute` (the AI models and which does each task) |
 | Messages | Wolverine's own tables, in the `wolverine` schema |
@@ -28,11 +28,13 @@ map those to the public records in `Managers/Contracts/Messages/` (`Mapping.cs`)
 
 ## Creating the schema
 
-The schema is created with `EnsureCreated` on the first start, and is **not upgraded**. A change to an entity needs a
-fresh database. For development, run `./dev.sh reset`. For users, it's the backup → fresh database → restore path in
-[Upgrading](../admin/upgrading.md#when-a-version-changes-the-database). Before the first release that changes a table
-for existing users, ChefBot should switch to EF Core migrations, as
-[Database changes](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md#database-changes) describes.
+The schema comes from EF Core migrations in `ResourceAccess/Persistence/Migrations/`, applied at startup before the
+message bus starts (`DatabaseUpgrade`). The first, `Baseline`, is the schema as it was when ChefBot switched from
+`EnsureCreated`. A database made by `EnsureCreated` (ChefBot's tables but no migration recorded in `__EFMigrationsHistory`, which may be missing or empty) is marked as
+being at `Baseline` and then gets only the migrations after it. A fresh database gets them all.
+
+A change to an entity needs a new migration; `MigrationTests` fails until there is one. See
+[Database changes](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md#database-changes).
 
 ## Backups
 

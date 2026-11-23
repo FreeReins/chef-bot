@@ -40,8 +40,10 @@ For a new stored table, a new manager operation or endpoint, a new web screen, o
   which ends with `ReconcileAsync` so leftovers and the shopping list stay in step, or publishes an event whose
   `plans`-queue handler calls `CatchUpAsync` (`MealAdded`).
 - Admin-only endpoints use `[Authorize(Policy = Sessions.AdminPolicy)]`; managers don't check roles.
-- The schema comes from `EnsureCreated` and is never upgraded: after changing an entity, tell the user to run
-  `./dev.sh reset`. Don't add migrations unless asked. A new stored entity also goes in `BackupAccess.Tables`.
+- The schema comes from EF Core migrations, applied at startup. After changing an entity, add one:
+  `dotnet tool restore`, then `dotnet ef migrations add <Name> --project src/ChefBot.Core --output-dir
+  ResourceAccess/Persistence/Migrations`, and change the new class from `public` to `internal`. Never edit or delete a
+  migration that has been released. A new stored entity also goes in `BackupAccess.Tables`.
 - ChefBot ships as one container (and a Windows app) that runs its own PostgreSQL (`src/ChefBot.Api/Database/`):
   never add a second container or volume. Files ChefBot writes go under `Data:Root` via `CoreRegistration.StoragePath`.
 - A setting people should change goes in `deploy/podman/chefbot.env.example`. A port: update the unit in

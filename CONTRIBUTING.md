@@ -32,8 +32,8 @@ To see changes as you make them, with the .NET 10 SDK and Podman installed:
 The dev copy uses its own database (`chefbot-dev-db`) and never touches an installed ChefBot. It runs on
 <http://localhost:8080> and <https://localhost:8443> with its own self-signed certificate, or on 5080 and 5443
 when those ports are taken. The web page also runs on <http://localhost:5173>, where it reloads as you save;
-use that address while working on the page. `./dev.sh help` lists the other commands. The schema
-is only created, never upgraded, so after changing an entity run `./dev.sh reset`.
+use that address while working on the page. `./dev.sh help` lists the other commands. After changing
+an entity, add a migration (see "Database changes"); the dev copy applies it when it next starts.
 
 With the .NET 10 SDK installed you can also work directly:
 
@@ -150,12 +150,24 @@ Assertions are awaited: `await Assert.That(actual).IsEqualTo(expected);`.
 
 ## Database changes
 
-The schema is created with `EnsureCreated` on first start, which is simple but cannot upgrade an existing
-database. It only creates tables in a database that has none, so `PrepareChefBotAsync` runs it (from
-`ChefBotStartup`, registered before the message bus) before the message bus starts and creates its own tables in
-the `wolverine` schema. Before the first release that changes
-a table, switch to EF Core migrations: add `Microsoft.EntityFrameworkCore.Design`, run
-`dotnet ef migrations add Initial`, and replace `EnsureCreatedAsync` with `MigrateAsync` in `CoreRegistration.cs`.
+The schema comes from EF Core migrations in `src/ChefBot.Core/ResourceAccess/Persistence/Migrations/`.
+`InitializeChefBotDatabaseAsync` applies them through `DatabaseUpgrade` (from `ChefBotStartup`, registered before
+the message bus), so no handler meets an old schema, and the message bus then creates its own tables in the
+`wolverine` schema. The first migration, `Baseline`, is the schema as `EnsureCreated` made it before ChefBot used
+migrations. A database made that way has no migration recorded in `__EFMigrationsHistory` (the table may be missing or empty), so it is marked as being at `Baseline` and then
+gets only the newer migrations.
+
+After changing an entity:
+
+```sh
+dotnet tool restore            # once: dotnet-ef, pinned in dotnet-tools.json
+dotnet ef migrations add <WhatChanged> --project src/ChefBot.Core --output-dir ResourceAccess/Persistence/Migrations
+```
+
+Then change the new migration class from `public` to `internal` (`ArchitectureTests` checks it). Read its `Up`
+before committing. `MigrationTests` fails while the model has changes no migration covers. Never edit, rename or
+delete a migration that has been released: fix it with a new one. The generated files are left out of the analyzers
+(`.editorconfig`) and of `FileSizeTests`.
 
 ## Code made at build time
 

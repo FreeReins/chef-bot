@@ -2,7 +2,7 @@
 // meanwhile sent once it answers again (src/lib/offline.svelte.js, src/lib/outbox.svelte.js). `api.offline` makes
 // every API request fail as with no signal. The service worker isn't part of these tests: Vite's dev server serves
 // the page, and the page registers it only in a build.
-import { test, expect, open, reply } from './fixtures.js';
+import { test, expect, open, reply, expectInbox } from './fixtures.js';
 import * as data from './data.js';
 
 const [milk, soap] = data.manualItems();
@@ -11,7 +11,9 @@ const limes = data.ingredients().ingredients[1];
 const today = new Date().toISOString().slice(0, 10); // the tests run in UTC (playwright.config.js)
 
 const banner = (page) => page.getByRole('status').filter({ hasText: 'Offline.' });
-const changes = (api, from) => api.requests.slice(from).filter((request) => !request.startsWith('GET '));
+// The shopping changes sent: notes the page puts in the inbox are left out.
+const changes = (api, from) => api.requests.slice(from)
+  .filter((request) => !request.startsWith('GET ') && !request.startsWith('POST /api/inbox'));
 
 /** Opens the Shopping tab while connected, so the browser saves it, then reloads it with no connection. */
 async function openOffline(page, api, path = '/shopping') {
@@ -54,7 +56,7 @@ test('the shopping list opens offline and its changes are sent once ChefBot answ
   const from = api.requests.length;
   await page.getByRole('button', { name: 'Try again' }).click();
 
-  await expect(page.getByText('Your 4 shopping changes reached ChefBot.')).toBeVisible();
+  await expectInbox(page, 'Your 4 shopping changes reached ChefBot.');
   await expect(banner(page)).toHaveCount(0);
   expect(changes(api, from)).toEqual([
     `POST /api/plans/${data.ids.plan}/shopping/${fish.shoppingItemId}/purchase`,
@@ -78,7 +80,7 @@ test('an item added offline and bought before sending is bought by its new id', 
   const from = api.requests.length;
   await page.getByRole('button', { name: 'Try again' }).click();
 
-  await expect(page.getByText('Your 2 shopping changes reached ChefBot.')).toBeVisible();
+  await expectInbox(page, 'Your 2 shopping changes reached ChefBot.');
   expect(changes(api, from)).toEqual(['POST /api/shopping/items', `POST /api/shopping/items/${bread.id}/purchase`]);
 });
 
@@ -95,6 +97,7 @@ test('a change that no longer applies is skipped and named, and the rest still g
   const from = api.requests.length;
   await page.getByRole('button', { name: 'Try again' }).click();
 
+  // An error, so it shows in the corner rather than the inbox.
   await expect(page.getByText(/1 shopping change reached ChefBot\. 1 change couldn't be applied .*: fish fillets\./)).toBeVisible();
   expect(changes(api, from)).toHaveLength(2);
 });
@@ -104,7 +107,7 @@ test('losing the connection with the page open keeps the change for later', asyn
   api.offline = true;
   await page.getByLabel('Bought: fish fillets').click();
 
-  await expect(page.getByText(/ChefBot can't be reached\. The shopping list still works/)).toBeVisible();
+  await expectInbox(page, /ChefBot can't be reached\. The shopping list still works/);
   await expect(banner(page)).toContainText('1 change will be sent');
   await expect(page.getByLabel('Bought: fish fillets')).toHaveCount(0);
 });
@@ -124,7 +127,7 @@ test('an ended session asks to sign in, then sends the changes', async ({ page, 
   await page.getByLabel('Username').fill('alex');
   await page.getByLabel('Password').fill('correct horse');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByText('Your 1 shopping change reached ChefBot.')).toBeVisible();
+  await expectInbox(page, 'Your 1 shopping change reached ChefBot.');
   expect(api.requests).toContain('POST /api/shopping/items');
 });
 

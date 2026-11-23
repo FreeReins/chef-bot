@@ -155,7 +155,45 @@ function defaults() {
     'GET /api/ai/settings': data.aiSettings(false),
     'GET /api/ai/sweeps/recipe-details': { sparse: 0, waiting: 0, modelName: null },
     'GET /api/recipes/*/suggestion': reply(404, { detail: 'This recipe has no suggestions.' }),
+    ...inbox(),
   };
+}
+
+/** The signed-in person's inbox, empty at first; it keeps the notes the page sends, as ChefBot would. */
+function inbox() {
+  const entries = [];
+  const answer = () => ({ entries: [...entries], unread: entries.filter((entry) => !entry.read).length });
+  return {
+    'GET /api/inbox': () => answer(),
+    'POST /api/inbox': (request) => {
+      const id = `00000000-0000-4000-8000-${String(900000 + entries.length).padStart(12, '0')}`;
+      entries.unshift({ id, text: request.postDataJSON().text, source: 'Page', createdAt: new Date().toISOString(), read: false });
+      return answer();
+    },
+    'POST /api/inbox/read': () => {
+      for (const entry of entries) entry.read = true;
+      return answer();
+    },
+    'DELETE /api/inbox': () => {
+      entries.length = 0;
+      return answer();
+    },
+  };
+}
+
+/**
+ * Opens the bell in the header and returns its panel, to check what the page said. Notes go there rather than the
+ * corner while someone is signed in.
+ */
+export async function openInbox(page) {
+  await page.getByRole('button', { name: /^Notifications/ }).click();
+  return page.getByRole('region', { name: 'Notifications' });
+}
+
+/** Checks the inbox has a message, then closes the bell again so the rest of the test can carry on. */
+export async function expectInbox(page, text) {
+  await expect((await openInbox(page)).getByText(text)).toBeVisible();
+  await page.keyboard.press('Escape');
 }
 
 /** 'GET /api/plans/*' matches any one path segment where the * is. */

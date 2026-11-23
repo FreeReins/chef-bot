@@ -60,7 +60,9 @@ public class FileSizeTests
             .Concat(Directory.EnumerateFiles(web, "*.svelte", SearchOption.AllDirectories))
             .Concat(Directory.EnumerateFiles(web, "*.js", SearchOption.AllDirectories))
             .Select(path => Path.GetRelativePath(Root, path).Replace('\\', '/'))
-            .Where(path => !path.Contains("/bin/", StringComparison.Ordinal) && !path.Contains("/obj/", StringComparison.Ordinal));
+            .Where(path => !path.Contains("/bin/", StringComparison.Ordinal) && !path.Contains("/obj/", StringComparison.Ordinal))
+            // EF Core migrations are generated, and read only when one is being checked.
+            .Where(path => !path.Contains("/Persistence/Migrations/", StringComparison.Ordinal));
     }
 
     private static int Lines(string path) => File.ReadAllLines(Path.Combine(Root, path)).Length;

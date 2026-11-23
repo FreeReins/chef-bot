@@ -45,6 +45,21 @@ const VIEWS = [
 
   // The plan
   { name: 'plan, confirmed week', path: '/plan' },
+
+  // The bell in the header
+  {
+    name: 'notifications, with unread messages open', path: '/plan', answers: {
+      'GET /api/inbox': data.inbox(),
+      'POST /api/inbox/read': data.inbox({ read: true }),
+    },
+    act: (page) => page.getByRole('button', { name: 'Notifications, 1 unread message' }).click()
+      .then(() => page.getByRole('region', { name: 'Notifications' }).waitFor()),
+  },
+  {
+    name: 'notifications, nothing new', path: '/plan',
+    act: (page) => page.getByRole('button', { name: 'Notifications' }).click()
+      .then(() => page.getByText('Nothing new.', { exact: false }).waitFor()),
+  },
   {
     name: 'plan, a dinner just marked cooked asks how it was', path: '/plan',
     act: async (page, api) => {
@@ -659,16 +674,16 @@ const VIEWS = [
       .then(() => page.getByRole('dialog').waitFor()),
   },
   {
-    name: 'a note and an error message', path: '/plan',
+    name: 'a note in the bell and an error message', path: '/plan',
     answers: {
       ...staged,
       'POST /api/plans/*/confirm': { ...data.plan(), notes: ['Coconut milk was left off the list: it is already in the pantry.'] },
       'POST /api/plans/stage': reply(500, { detail: 'Next week could not be staged. Try again in a minute.' }),
     },
     act: async (page) => {
-      // A note from confirming the plan, then an error from planning the week after.
+      // A note from confirming the plan, which lights the bell, then an error from planning the week after.
       await page.getByRole('button', { name: 'Confirm plan' }).click();
-      await page.getByText('Coconut milk was left off').waitFor();
+      await page.getByRole('button', { name: /^Notifications, \d+ unread/ }).waitFor();
       await page.getByRole('button', { name: /^Plan Nov 29/ }).click();
       await page.getByText('Next week could not be staged').waitFor();
     },

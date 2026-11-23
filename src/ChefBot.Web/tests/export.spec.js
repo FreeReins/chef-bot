@@ -1,7 +1,7 @@
 // Taking recipes and shopping lists out of ChefBot: sharing as text, copying where there is no share sheet, and the
 // CSV download. The share sheet and the clipboard are replaced with recorders, so each test sees what was handed over.
 import { readFile } from 'node:fs/promises';
-import { test, expect, open } from './fixtures.js';
+import { test, expect, open, expectInbox } from './fixtures.js';
 import * as data from './data.js';
 
 /** Records what the page shares or copies in window.handedOver; `sheet` says whether the browser has a share sheet. */
@@ -44,7 +44,7 @@ test('without a share sheet the recipe is copied, and the page says so', async (
   await page.getByRole('button', { name: /^More actions/ }).click();
   await page.getByRole('button', { name: 'Copy as text' }).click();
 
-  await expect(page.getByText('Slaw Fish Tacos was copied as text.')).toBeVisible();
+  await expectInbox(page, 'Slaw Fish Tacos was copied as text.');
   const [copied] = await handedOver(page);
   expect(copied.via).toBe('copy');
   expect(copied.text).toContain('Notes\nAny firm white fish works.');
@@ -55,7 +55,7 @@ test('the shopping list is copied as a checklist grouped by store and area of th
   await open(page, '/shopping');
   await page.getByRole('button', { name: 'Copy list' }).click();
 
-  await expect(page.getByText('The shopping list was copied.')).toBeVisible();
+  await expectInbox(page, 'The shopping list was copied.');
   const [{ text }] = await handedOver(page);
   expect(text).toMatch(/^Shopping list, week of .+ \(3 items\)\n/);
   expect(text).toContain('Corner Market\nMeat and seafood:\n☐ fish fillets, 600 g');
@@ -122,7 +122,7 @@ test('the shopping list is sent to a to-do app, and the page says how many items
   await open(page, '/shopping');
   await page.getByRole('button', { name: 'Send to Kitchen list' }).click();
 
-  await expect(page.getByText('3 items went to Kitchen list.')).toBeVisible();
+  await expectInbox(page, '3 items went to Kitchen list.');
   expect(sent).toEqual({ targetId: kitchen.id, planId: data.plan().id });
 });
 
@@ -154,7 +154,7 @@ test('a new to-do app is saved without echoing a token, and a saved token is kep
   await fresh.getByLabel('Name').fill('Todoist'); // last: the group is named after it
   await page.getByRole('button', { name: 'Save' }).click();
 
-  await expect(page.getByText('To-do apps saved.')).toBeVisible();
+  await expectInbox(page, 'To-do apps saved.');
   expect(saved.targets.map((target) => [target.name, target.kind, target.token])).toEqual([
     ['Kitchen list', 'HomeAssistant', null],
     ['Automation', 'Webhook', null],
@@ -172,7 +172,7 @@ test('an admin turns the calendar feed on, and its address can be copied or subs
   await expect(page.getByRole('link', { name: 'Subscribe on this device' }))
     .toHaveAttribute('href', data.calendarFeed().url.replace('https:', 'webcal:'));
   await page.getByRole('button', { name: 'Copy address' }).click();
-  await expect(page.getByText('The calendar address was copied.')).toBeVisible();
+  await expectInbox(page, 'The calendar address was copied.');
   expect((await handedOver(page)).at(-1).text).toBe(data.calendarFeed().url);
 });
 

@@ -55,6 +55,19 @@ export const dayMonth = (date) => date.toLocaleDateString(undefined, { month: 's
 
 export const shortDate = (iso) => (iso ? dayMonth(parseDate(iso)) : '');
 
+/** How long ago a moment (an ISO time) was, briefly: "Just now", "5 min ago", "3 h ago", "Yesterday", or its date. */
+export function ago(iso, now = new Date()) {
+  const then = new Date(iso);
+  const minutes = Math.floor((now - then) / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 24 * 60 && then.getDate() === now.getDate()) return `${Math.floor(minutes / 60)} h ago`;
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (then.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return dayMonth(then);
+}
+
 /**
  * A date in full, with the time when it is known: "Saturday, November 21, 2026 at 6:42 PM", or
  * "Saturday, November 21, 2026" when there is only a yyyy-mm-dd date.

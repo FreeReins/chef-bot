@@ -44,6 +44,8 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
 
     public DbSet<CookbookEntity> Cookbooks => Set<CookbookEntity>();
 
+    public DbSet<InboxEntryEntity> InboxEntries => Set<InboxEntryEntity>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<decimal>().HavePrecision(12, 3);
@@ -159,6 +161,13 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
             suggestion.ToTable("RecipeSuggestions");
             suggestion.HasIndex(s => s.RecipeId).IsUnique();
             suggestion.Property(s => s.Changes).HasColumnType("jsonb");
+        });
+
+        modelBuilder.Entity<InboxEntryEntity>(entry =>
+        {
+            entry.ToTable("InboxEntries");
+            entry.HasIndex(e => new { e.UserId, e.CreatedAt });
+            entry.HasIndex(e => new { e.UserId, e.SourceId }).IsUnique().HasFilter("\"SourceId\" IS NOT NULL");
         });
 
         StoreEnumsByName(modelBuilder);

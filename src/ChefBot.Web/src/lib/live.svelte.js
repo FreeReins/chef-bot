@@ -16,7 +16,7 @@ const loaders = new Map();
 const waiting = new Map();
 const DEBOUNCE = 150;
 
-/** Runs `load` whenever `topic` changes ("plan", "shopping", "pantry", "recipes", "achievements", "backups", "history"). */
+/** Runs `load` whenever `topic` changes ("plan", "shopping", "pantry", "recipes", "achievements", "backups", "history", "inbox"). */
 export function onLive(topic, load) {
   if (!loaders.has(topic)) loaders.set(topic, new Set());
   loaders.get(topic).add(load);
@@ -44,7 +44,7 @@ function connect() {
     if (opened) for (const topic of loaders.keys()) announce(topic);
     opened = true;
   });
-  for (const topic of ['plan', 'shopping', 'pantry', 'recipes', 'achievements', 'backups', 'history']) {
+  for (const topic of ['plan', 'shopping', 'pantry', 'recipes', 'achievements', 'backups', 'history', 'inbox']) {
     source.addEventListener(topic, () => announce(topic));
   }
   return () => {

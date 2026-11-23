@@ -22,6 +22,12 @@ public static class MessageQueues
     /// <summary>Delivers notifications to the webhook, a couple at a time.</summary>
     public const string Notifications = "notifications";
 
+    /// <summary>
+    /// Adds background news, such as a plan the weekly schedule staged, to everyone's inbox: one message at a time, so
+    /// the same news is never added twice.
+    /// </summary>
+    public const string Inbox = "inbox";
+
     /// <summary>The scheduled jobs, backups and settings that apply to the running server: one at a time.</summary>
     public const string Maintenance = "maintenance";
 

@@ -9,8 +9,9 @@ using ChefBot.Core.Utilities;
 namespace ChefBot.Core.Managers;
 
 /// <inheritdoc cref="IAccountManager"/>
-internal sealed class AccountManager(
+internal sealed partial class AccountManager(
     IAccountAccess accounts,
+    IInboxAccess inbox,
     ISettingsAccess settings,
     IFavouriteAccess favourites,
     IMessageAccess messages,
@@ -146,6 +147,7 @@ internal sealed class AccountManager(
         }
 
         await favourites.RemoveForUserAsync(user.Id, cancellationToken);
+        await inbox.ClearAsync(user.Id, cancellationToken);
         await accounts.RemoveUserAsync(user.Id, cancellationToken);
         await messages.CommitAsync(cancellationToken);
     }

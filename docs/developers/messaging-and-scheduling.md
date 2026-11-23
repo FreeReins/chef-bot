@@ -27,6 +27,7 @@ gets a `.v2` identity.
 | `AchievementProgressHandler` | kitchen events | Works out newly earned achievements |
 | `AchievementsUnlockedNotificationHandler` | `AchievementsUnlocked` | Sends the achievement notification |
 | `PlanStagedNotificationHandler` | `PlanStaged` | Sends "a new plan is ready" |
+| `PlanStagedInboxHandler` | `PlanStaged` | Tells everyone in their inbox when the weekly schedule staged a plan (`IAccountManager.AnnouncePlanStagedAsync`). Plans staged by a person are left out |
 | `FetchRecipeImagesHandler` | `FetchRecipeImages` | Downloads imported photos |
 | `SuggestRecipeDetailsHandler` | `SuggestRecipeDetails` | Asks the AI model what one recipe is missing, for the library sweep (`IRecipeManager.SuggestDetailsForSweepAsync`). Skips a recipe that already has suggestions for how it is now |
 | `LiveTopicsHandler` | most events | Tells open pages what changed, through `/api/live` |
@@ -40,7 +41,7 @@ Each handler runs on a named queue (`MessageQueues`, set with `[StickyHandler]`)
 | Queue | Runs |
 |---|---|
 | `plans` | One at a time, next to plan writes from requests |
-| `history`, `achievements`, `maintenance` | One at a time |
+| `history`, `achievements`, `maintenance`, `inbox` | One at a time |
 | `ai` | One at a time, to stay within the AI provider's rate limits |
 | `images`, `notifications` | A couple at a time |
 | `live` | In memory only: a page that misses a nudge reloads everything when it reconnects |

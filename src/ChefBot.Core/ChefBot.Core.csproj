@@ -10,6 +10,8 @@
     <!-- Talks to Claude for the AI features, when an admin sets up an Anthropic model. -->
     <PackageReference Include="Anthropic" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Only for `dotnet ef migrations add`: the migrations themselves need nothing from it at run time. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <PackageReference Include="WolverineFx.EntityFrameworkCore" />
     <PackageReference Include="WolverineFx.Postgresql" />
   </ItemGroup>

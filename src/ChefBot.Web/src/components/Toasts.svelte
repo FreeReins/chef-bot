@@ -1,5 +1,7 @@
-<!-- The messages in the bottom corner of the window: notes that go away by themselves, and errors that stay until
-     closed. A message can carry one button, such as Undo. App.svelte shows this once; anything can add a message with toast() from lib/app.svelte.js. -->
+<!-- The messages in the bottom corner of the window: errors that stay until closed, and notes that carry a button,
+     such as Undo, which go away by themselves. Other notes go to the inbox behind the bell (Inbox.svelte) once someone
+     is signed in, so they don't cover the page. App.svelte shows this once; anything can add a message with toast()
+     from lib/app.svelte.js. -->
 <script>
   import { fly } from 'svelte/transition';
   import { flip } from 'svelte/animate';

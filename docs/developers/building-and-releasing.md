@@ -83,8 +83,9 @@ git tag v1.2.3
 git push origin v1.2.3
 ```
 
-A release that changes the database tables must say so in its notes, with a link to
-[Upgrading](../admin/upgrading.md#when-a-version-changes-the-database).
+A release that changes the database tables carries a migration, which is applied when it starts, so people upgrade
+as usual. Its notes should still say the tables changed, since going back to an older version then needs a restore (see
+[Upgrading](../admin/upgrading.md#go-back-to-an-older-version)).
 
 ## The documentation
 

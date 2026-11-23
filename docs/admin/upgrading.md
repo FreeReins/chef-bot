@@ -38,8 +38,12 @@ version needs the steps below.
 
 ## When a version changes the database
 
-ChefBot creates its database tables on the first start, but doesn't upgrade them yet. A version that changes the
-tables needs a fresh database, with your data brought across in a backup:
+ChefBot upgrades its database by itself when a new version starts: there's nothing to do. A database made before
+ChefBot did this is recognised and upgraded too. Make a backup first all the same (**Settings → Backups → Back up
+now**), in case you want to go back.
+
+The versions listed below came before that, and needed a fresh database with your data brought across in a backup.
+These steps still move a database to a new major version of PostgreSQL:
 
 1. **On the old version:** **Settings → Backups → Back up now**, and download the backup.
 2. **Stop ChefBot and delete only its database,** the `database` folder in the data folder, keeping the keys and
@@ -59,6 +63,9 @@ moves to a newer one in a release that says so; if it ever finds a database made
 says so rather than touching it.
 
 ### Versions that needed this
+
+From the version that added the bell's messages (the `InboxEntries` table) on, upgrades apply database changes by
+themselves.
 
 - **One container:** ChefBot runs its own PostgreSQL, keeping everything in one `/data` volume (or
   `C:\ProgramData\ChefBot`). Installs from before it used a separate database container and three volumes: back up,
@@ -81,7 +88,8 @@ says so rather than touching it.
 ## Go back to an older version
 
 Install the older version the same way (the older image tag, or the older MSI after uninstalling the newer one),
-with a fresh database if the tables changed, and restore a backup made on that version.
+with a fresh database if the tables changed, and restore a backup made on that version. An older version doesn't
+undo a newer one's database changes, so going back always needs the fresh database and backup.
 
 ## If something goes wrong
 

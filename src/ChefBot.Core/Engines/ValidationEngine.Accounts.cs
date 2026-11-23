@@ -52,6 +52,20 @@ internal sealed partial class ValidationEngine
             : throw new RuleViolationException($"A token's name can have at most {ApiTokenNameLength} characters.");
     }
 
+    /// <summary>A trimmed inbox note: not blank, and at most <see cref="InboxNoteLength"/> characters.</summary>
+    public static string InboxNote(string? text)
+    {
+        var trimmed = (text ?? string.Empty).Trim();
+        if (trimmed.Length == 0)
+        {
+            throw new RuleViolationException("An inbox message needs some text.");
+        }
+
+        return trimmed.Length <= InboxNoteLength
+            ? trimmed
+            : throw new RuleViolationException($"An inbox message can have at most {InboxNoteLength} characters.");
+    }
+
     public static void CanRemove(Guid id, Guid actingUserId)
     {
         if (id == actingUserId)

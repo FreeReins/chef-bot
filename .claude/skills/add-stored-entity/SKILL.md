@@ -31,12 +31,15 @@ Edit these instead of reading them first; each step names the line to copy.
 
 ## Finish
 
-Build and run the tests (AGENTS.md), then tell the user to run `./dev.sh reset`. The schema comes from
-`EnsureCreated`, so don't add a migration. Add the table to `docs/developers/data-model.md`, and a line under
-"Versions that needed this" in `docs/admin/upgrading.md`, since existing installs need a fresh database.
+Add a migration: `dotnet tool restore`, then `dotnet ef migrations add Add<Name> --project src/ChefBot.Core
+--output-dir ResourceAccess/Persistence/Migrations`. Change the new class from `public` to `internal`, and read its
+`Up`. Build and run the tests (AGENTS.md). Add the table to `docs/developers/data-model.md`. Existing installs get the
+table when they next start, so `docs/admin/upgrading.md` needs nothing.
 
 ## Troubleshooting
 
 - SA1402/SA1649 build error: one type per file, named after the type.
+- `MigrationTests` fails: the model changed with no migration; add one (Finish).
+- `ArchitectureTests` names a migration: it is still `public`.
 - `SchemaTests` fails: the table is missing from `BackupAccess.Tables` (step 5). A table that must not be backed
   up goes in that test's `NotBackedUp` with the reason.

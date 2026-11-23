@@ -23,6 +23,7 @@
   import People from './tabs/People.svelte';
   import Settings from './tabs/Settings.svelte';
   import Toasts from './components/Toasts.svelte';
+  import Inbox from './components/Inbox.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import ThemeToggle from './components/ThemeToggle.svelte';
   import SetupProgress from './components/SetupProgress.svelte';
@@ -108,7 +109,7 @@
     </p>
   </div>
   <div class="actions account">
-    {#if inApp}<RankBadge />{/if}
+    {#if inApp}<RankBadge /><Inbox />{/if}
     <!-- Help is on every screen, sign-in and setup included: the documentation is built in and needs no sign-in. -->
     <a class="icon help" href="/help/" target="_blank" rel="noopener" aria-label="Help: open the ChefBot guide"
        title="Help"><CircleHelp size={20} /></a>

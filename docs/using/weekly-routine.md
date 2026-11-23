@@ -79,6 +79,15 @@ On a confirmed week:
   past, and comes back as a draft to review and confirm.
 - **Clear plan** removes the plan and its shopping list. The pantry is kept.
 
+## Messages from ChefBot
+
+When you save, add or change something, ChefBot says so behind the **bell** at the top of the page, rather than over
+what you're looking at. A dot on the bell means there's something new; open it to read it all. **Clear all** empties it.
+Each person has their own messages, the same on every device, and the newest 50 are kept.
+
+The bell also tells you when the weekly schedule has made a new plan. Two kinds of message still pop up at the bottom of
+the window: problems, which stay until you close them, and messages with an **Undo** button, which go away by themselves.
+
 ## If something goes wrong
 
 - The plan is short, or a rule wasn't followed: see [Planning problems](../troubleshooting/planning.md).

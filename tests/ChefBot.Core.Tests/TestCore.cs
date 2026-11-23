@@ -40,6 +40,8 @@ internal sealed class TestCore
 
     public FakeHistory History { get; } = new();
 
+    public FakeInbox Inbox { get; } = new();
+
     public FakeAchievements Achievements { get; } = new();
 
     public FakeWebhook Webhook { get; } = new();
@@ -124,6 +126,7 @@ internal sealed class TestCore
         services.AddSingleton<IShoppingListAccess>(ShoppingList);
         services.AddSingleton<IAccountAccess>(Accounts);
         services.AddSingleton<IHistoryAccess>(History);
+        services.AddSingleton<IInboxAccess>(Inbox);
         services.AddSingleton<IAchievementAccess>(Achievements);
         services.AddSingleton<INotificationAccess>(Webhook);
         services.AddSingleton<IFavouriteAccess>(Favourites);

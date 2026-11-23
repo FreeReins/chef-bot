@@ -23,4 +23,10 @@ public static class LiveTopics
 
     /// <summary>The food history.</summary>
     public const string History = "history";
+
+    /// <summary>
+    /// Someone's inbox, the messages behind the bell. Sent to every page; each page loads only its own person's
+    /// inbox, so a page whose inbox didn't change loads the same list again.
+    /// </summary>
+    public const string Inbox = "inbox";
 }

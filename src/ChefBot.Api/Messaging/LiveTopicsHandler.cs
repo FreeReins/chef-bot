@@ -57,6 +57,8 @@ public static class LiveTopicsHandler
 
     public static void Handle(AchievementsUnlocked message, LiveUpdates live) => live.Broadcast(LiveTopics.Achievements);
 
+    public static void Handle(InboxChanged message, LiveUpdates live) => live.Broadcast(LiveTopics.Inbox);
+
     private static void Broadcast(LiveUpdates live, params string[] topics)
     {
         foreach (var topic in topics)

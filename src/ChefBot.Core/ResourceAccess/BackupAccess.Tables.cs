@@ -82,6 +82,9 @@ internal sealed partial class BackupAccess
 
         // The cookbooks; each recipe lists the ones it is in. Empty in backups made before cookbooks.
         new BackupTable<CookbookEntity>("cookbooks", BackupJson.Default.ListCookbookEntity),
+
+        // Each person's inbox, the messages behind the bell. Empty in backups made before the inbox.
+        new BackupTable<InboxEntryEntity>("inboxEntries", BackupJson.Default.ListInboxEntryEntity),
     ];
 
     /// <summary>A planned meal points at its recipe by id; the recipe itself is written once, under recipes.

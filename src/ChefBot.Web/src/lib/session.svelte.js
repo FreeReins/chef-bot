@@ -1,5 +1,6 @@
 import { listenForAddresses, showAddress } from './addresses.js';
 import { api } from './api.js';
+import { forgetInbox, loadInbox } from './inbox.svelte.js';
 import { forgetSnapshot, restoreSnapshot } from './offline.svelte.js';
 import { loadOutbox, report, sendOutbox } from './outbox.svelte.js';
 import { loadPantry, loadPlan } from './plan.svelte.js';
@@ -25,7 +26,7 @@ export async function enterApp() {
   app.offlineSince = null;
   loadOutbox(app.session.user.id);
   const sent = app.outbox.length ? await sendOutbox() : null;
-  await Promise.all([loadRecipes(), loadPlan(), loadManualItems(), loadPantry(), loadSystem(), loadStores(), loadShoppingTargets(), loadAiFeatures(), loadStyles(), loadPlanning(), isAdmin() ? loadPeople() : null]);
+  await Promise.all([loadRecipes(), loadPlan(), loadManualItems(), loadPantry(), loadSystem(), loadStores(), loadShoppingTargets(), loadAiFeatures(), loadStyles(), loadPlanning(), loadInbox(), isAdmin() ? loadPeople() : null]);
   await showAddress();
   if (sent) report(sent);
 }
@@ -45,6 +46,7 @@ export async function signOut() {
     app.plans = [];
     app.keep = [];
     app.toasts = [];
+    forgetInbox();
     app.screen = 'sign-in';
   });
 }

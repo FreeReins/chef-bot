@@ -39,6 +39,14 @@ path that isn't a file, `/api` or `/help` with `index.html`.
 The page listens to `/api/live`, a server-sent event stream naming what changed (`plan`, `shopping`, `pantry`…). It
 then loads that part again through the API, so a change on one phone shows on the others straight away.
 
+## Messages
+
+`toast()` in `lib/state.svelte.js` is how any part of the page says what happened. While someone is signed in, a note
+goes to their inbox (`lib/inbox.svelte.js`, `POST /api/inbox`), shown behind the bell in the header
+(`components/Inbox.svelte`), so nothing covers the page. It appears at once as a local entry, replaced by the saved one;
+one made offline stays on the page until a reload. Errors, notes with a button such as **Undo**, and anything before
+sign-in still show in the corner (`components/Toasts.svelte`).
+
 ## Styling
 
 `src/styles.css` holds colour tokens written as `light-dark(light, dark)` and shared building blocks. Each tab has an

@@ -2,7 +2,10 @@ using ChefBot.Core.Managers.Contracts.Messages;
 
 namespace ChefBot.Core.Managers.Contracts.Services;
 
-/// <summary>First-run setup, signing in, passwords, lockout, inviting or removing people, the sign-in rules, and API tokens.</summary>
+/// <summary>
+/// First-run setup, signing in, passwords, lockout, inviting or removing people, the sign-in rules, API tokens, and
+/// each person's inbox.
+/// </summary>
 public interface IAccountManager
 {
     /// <summary>Whether setup is needed and who is signed in.</summary>
@@ -85,4 +88,26 @@ public interface IAccountManager
 
     /// <summary>The account an API token signs in as, as it is now. Null when the token or its account no longer exists.</summary>
     Task<SessionInfo?> FindApiTokenSessionAsync(string token, CancellationToken cancellationToken);
+
+    /// <summary>A person's inbox: the newest messages, newest first, and how many are unread.</summary>
+    Task<InboxResponse> GetInboxAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Adds a note from the web page to a person's own inbox, unread. Only the newest messages are kept. Publishes
+    /// <see cref="InboxChanged"/>.
+    /// </summary>
+    /// <exception cref="RuleViolationException">The text is blank or too long.</exception>
+    Task<InboxResponse> AddInboxNoteAsync(Guid userId, InboxNoteRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Marks everything in a person's inbox read. Publishes <see cref="InboxChanged"/>.</summary>
+    Task<InboxResponse> MarkInboxReadAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Empties a person's inbox. Publishes <see cref="InboxChanged"/>.</summary>
+    Task<InboxResponse> ClearInboxAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tells everyone in their inbox that the weekly schedule staged a plan. Plans staged by a person are left out:
+    /// the page told them already. Handling the same message twice adds nothing.
+    /// </summary>
+    Task AnnouncePlanStagedAsync(PlanStaged message, Guid messageId, CancellationToken cancellationToken);
 }

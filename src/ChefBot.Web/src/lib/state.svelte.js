@@ -1,4 +1,4 @@
-// Everything the page shows (`app`), plus what every area's actions use: run(), toasts and the confirmation
+// Everything the page shows (`app`), plus what every area's actions use: run(), toasts (and the inbox they feed) and the confirmation
 // dialog. Components read `app` and import from app.svelte.js; Svelte redraws whatever reads a property of `app`
 // when it changes, so nothing asks for a redraw.
 
@@ -39,7 +39,9 @@ export const app = $state({
   recipesChanged: 0,   // goes up each time the library may have changed, so the open page of recipes reloads
   recipeName: null,    // the name of the recipe open on its own page, once loaded, for the browser tab's title
   swap: null,          // { mealId, options } while a meal's alternatives are open
-  toasts: [],          // { id, text, kind: 'note' | 'error', action?: { label, run } } shown in the corner by Toasts.svelte
+  toasts: [],          // { id, text, kind: 'note' | 'error', action?: { label, run } } shown in the corner by Toasts.svelte: errors, and notes with a button
+  inbox: { entries: [], unread: 0 }, // InboxResponse: the signed-in person's messages behind the bell (inbox.svelte.js)
+  inboxLocal: [],      // notes not saved to the inbox yet, or made offline: { id, text, createdAt, read, local: true }
   confirmation: null,  // { title, message, confirmLabel, danger } while ConfirmDialog.svelte is asking
   busy: 0,             // actions run() has started and not finished; App.svelte shows a progress bar while above 0
   importing: 0,        // recipe files being sent by FileImport.svelte; setup can't move on until they are in
@@ -91,13 +93,22 @@ export function wentOffline() {
 // ---------- toasts ----------
 
 let nextToastId = 0;
+let noteSink = null;
+
+/** Where notes go instead of the corner while someone is signed in: the inbox (inbox.svelte.js registers it). */
+export function setNoteSink(sink) {
+  noteSink = sink;
+}
 
 /**
- * Shows a short message in the corner of the window and returns its id. A note goes away by itself after long
- * enough to read it; an error stays until it is closed or the next action starts. `action` ({ label, run }) adds a
- * button to the message, such as Undo; a note with one stays a little longer, so there is time to press it.
+ * Tells the person what happened. While someone is signed in, a note goes quietly into the inbox behind the bell,
+ * so nothing covers the page. An error, and any message before sign-in, shows in the corner instead: a note goes
+ * away by itself after long enough to read it, and an error stays until it is closed or the next action starts.
+ * `action` ({ label, run }) adds a button, such as Undo. A note with one shows in the corner as well, for a little
+ * longer, so there is time to press it. Returns the corner message's id, or null when it went only to the inbox.
  */
 export function toast(text, kind = 'note', action = null) {
+  if (kind === 'note' && noteSink?.(text) && !action) return null;
   const id = nextToastId++;
   app.toasts.push({ id, text, kind, action });
   if (kind !== 'error') setTimeout(() => dismissToast(id), Math.max(action ? 8000 : 5000, text.length * 60));

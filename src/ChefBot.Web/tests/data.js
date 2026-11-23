@@ -287,6 +287,16 @@ export const https = () => ({
 });
 
 /** SecurityResponse */
+/** An inbox with a plan the weekly schedule staged, unread unless `read`, and an older note from the page. */
+export const inbox = ({ read = false } = {}) => ({
+  entries: [
+    { id: '00000000-0000-4000-8000-000000000901', text: 'The weekly schedule made a new plan. Review it on the Plan tab, then confirm it.',
+      source: 'Plan', createdAt: new Date(Date.now() - 5 * 60000).toISOString(), read },
+    { id: '00000000-0000-4000-8000-000000000902', text: 'Recipe saved.', source: 'Page', createdAt: '2026-11-20T18:00:00Z', read: true },
+  ],
+  unread: read ? 0 : 1,
+});
+
 export const security = () => ({ maxFailedSignIns: 5, lockoutMinutes: 15, requireHttps: false });
 
 /** NotificationSettingsResponse */

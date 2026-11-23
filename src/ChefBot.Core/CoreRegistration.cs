@@ -61,6 +61,7 @@ public static class CoreRegistration
         services.AddScoped<IPantryAccess, PantryAccess>();
         services.AddScoped<IShoppingListAccess, ShoppingListAccess>();
         services.AddScoped<IAccountAccess, AccountAccess>();
+        services.AddScoped<IInboxAccess, InboxAccess>();
         services.AddScoped<ISettingsAccess, SettingsAccess>();
         services.AddScoped<IMessageAccess, MessageAccess>();
         services.AddScoped<IHistoryAccess, HistoryAccess>();
@@ -152,6 +153,7 @@ public static class CoreRegistration
         wolverine.LocalQueue(MessageQueues.Ai).UseDurableInbox().Sequential();
         wolverine.LocalQueue(MessageQueues.Images).UseDurableInbox().MaximumParallelMessages(2);
         wolverine.LocalQueue(MessageQueues.Notifications).UseDurableInbox().MaximumParallelMessages(2);
+        wolverine.LocalQueue(MessageQueues.Inbox).UseDurableInbox().Sequential();
         wolverine.LocalQueue(MessageQueues.Live).BufferedInMemory();
     }
 
@@ -180,9 +182,10 @@ public static class CoreRegistration
     }
 
     /// <summary>
-    /// Creates ChefBot's tables on first start. Waits for PostgreSQL to accept connections first, so ChefBot
-    /// can start at the same time as its database. Other errors, such as a wrong password, fail straight away.
-    /// Run it before the message bus starts: tables are only created in a database that has none yet.
+    /// Creates ChefBot's tables on first start and applies any newer migrations on later ones
+    /// (<see cref="DatabaseUpgrade"/>). Waits for PostgreSQL to accept connections first, so ChefBot can start at the
+    /// same time as its database. Other errors, such as a wrong password, fail straight away. Run it before the
+    /// message bus starts, so no handler meets an old schema.
     /// </summary>
     public static async Task InitializeChefBotDatabaseAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
     {
@@ -192,10 +195,11 @@ public static class CoreRegistration
         while (true)
         {
             await using var scope = services.CreateAsyncScope();
-            var database = scope.ServiceProvider.GetRequiredService<ChefBotDbContext>().Database;
+            var context = scope.ServiceProvider.GetRequiredService<ChefBotDbContext>();
+            var database = context.Database;
             try
             {
-                await database.EnsureCreatedAsync(cancellationToken);
+                await DatabaseUpgrade.RunAsync(context, logger, cancellationToken);
                 return;
             }
             catch (Exception exception) when (IsUnreachable(exception))

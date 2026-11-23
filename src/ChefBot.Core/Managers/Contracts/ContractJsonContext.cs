@@ -158,6 +158,10 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(CreateApiTokenRequest))]
 [JsonSerializable(typeof(IssuedApiToken))]
 [JsonSerializable(typeof(IReadOnlyList<ApiTokenResponse>))]
+// The inbox
+[JsonSerializable(typeof(InboxNoteRequest))]
+[JsonSerializable(typeof(InboxResponse))]
+[JsonSerializable(typeof(InboxChanged))]
 // Maintenance
 [JsonSerializable(typeof(NotificationSettingsRequest))]
 [JsonSerializable(typeof(NotificationSettingsResponse))]

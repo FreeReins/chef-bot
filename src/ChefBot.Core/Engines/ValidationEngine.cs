@@ -19,6 +19,8 @@ internal sealed partial class ValidationEngine(
     /// <summary>The longest name an API token can have.</summary>
     public const int ApiTokenNameLength = 80;
 
+    public const int InboxNoteLength = 500;
+
     private const int MaxStores = 50;
 
     private const int MaxStoreName = 60;

@@ -15,7 +15,7 @@ public static class LiveEndpoints
 
     /// <summary>
     /// Server-sent events: each event's name is a topic ("plan", "shopping", "pantry", "recipes", "achievements",
-    /// "backups" or "history"), sent when that part changed, by anyone. Load it again with the normal API. A "ping" is
+    /// "backups", "history" or "inbox"), sent when that part changed, by anyone. Load it again with the normal API. A "ping" is
     /// sent every 25 seconds to keep proxies from closing the connection. After reconnecting, load everything, since
     /// topics sent meanwhile are not repeated.
     /// </summary>

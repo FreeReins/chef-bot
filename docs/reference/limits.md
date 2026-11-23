@@ -40,7 +40,7 @@ What ChefBot doesn't do, or does differently than you might expect.
 
 ## Running it
 
-- **The database isn't upgraded automatically yet.** A version that changes its tables needs a fresh database and a
-  restore. See [Upgrading](../admin/upgrading.md).
+- **Going back to an older version needs a restore.** Upgrades change the database by themselves, but an older
+  version can't undo that. See [Upgrading](../admin/upgrading.md#go-back-to-an-older-version).
 - **Scheduled jobs catch up within limits.** A weekly plan due while ChefBot was stopped is made when it starts again,
   as long as its week hasn't started. Daily reminders and backups run at startup if their time has passed that day.

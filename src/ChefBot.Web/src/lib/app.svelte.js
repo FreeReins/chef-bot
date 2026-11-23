@@ -13,3 +13,4 @@ export * from './outbox.svelte.js';
 export * from './reviews.svelte.js';
 export * from './achievements.svelte.js';
 export * from './live.svelte.js';
+export * from './inbox.svelte.js';
