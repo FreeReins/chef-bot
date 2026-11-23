@@ -5,19 +5,25 @@ mount them over the built-in ones.
 
 | File | Holds |
 |---|---|
-| `config/ingredients.json` | Every ingredient ChefBot knows: its shared name, other names, food group, shelf life and season |
+| `config/ingredients.json` | Every ingredient ChefBot knows: its shared name, other names, food group, area of the store, shelf life and season |
 | `config/stores.json` | The stores offered as starting points under **Settings → Stores** |
 | `config/plan-styles.json` | The starter plan styles. The first is the default for a new household |
 | `config/sample-recipes.json` | The sample recipes offered in setup and under **Browse sample recipes** |
 
 ## The ingredient catalog
 
-This is what makes planning work: shelf lives decide expiry dates, seasons decide what's in season, and groups decide
-how the shopping list is grouped and which simple plates ChefBot can invent.
+This is what makes planning work: shelf lives decide expiry dates, seasons decide what's in season, groups decide
+which simple plates ChefBot can invent, and the area of the store decides where it sits on the shopping list.
 
 ```json
 {"name": "cabbage", "group": "Vegetable", "shelfLifeDays": 14, "seasonMonths": [6, 7, 9, 10, 11, 12, 1, 2]}
 ```
+
+`area` is optional: `Produce`, `Bakery`, `MeatAndSeafood`, `DairyAndChilled`, `GrainsAndPasta`, `CannedAndDry`,
+`SaucesAndOils`, `International`, `SpicesAndBaking`, `Frozen`, `Drinks` or `Other`. Leave it out and it follows the
+group: vegetables, fruit and herbs are `Produce`, proteins `MeatAndSeafood`, dairy `DairyAndChilled`, whole grains
+`GrainsAndPasta`, staples `SpicesAndBaking`, and the rest `Other`. Give one when that's wrong, as
+`{"name": "canned tomatoes", "group": "Other", "area": "CannedAndDry", ...}` does.
 
 The seasons shipped are a starting point for the Kansas City area, and the shelf lives are rough estimates. Edit both
 to match what you see. The file is large, so search it rather than reading it from the top.

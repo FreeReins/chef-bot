@@ -1,4 +1,5 @@
-<!-- A sidebar of sections, one section shown at a time. On phones the sidebar is a drawer opened from a menu button. -->
+<!-- A sidebar of sections, one section shown at a time. On phones the sidebar is a drawer opened from a menu button,
+     and once that button has scrolled out of view a round button in the corner brings it back. -->
 <script>
   import { tick } from 'svelte';
   import { app, isAdmin } from '../lib/app.svelte.js';
@@ -18,6 +19,7 @@
   import AppearancePanel from '../settings/AppearancePanel.svelte';
   import RecipeHealthPanel from '../settings/RecipeHealthPanel.svelte';
   import HelpLink from '../components/HelpLink.svelte';
+  import BackToTop from '../components/BackToTop.svelte';
   import Palette from '@lucide/svelte/icons/palette';
   import KeyRound from '@lucide/svelte/icons/key-round';
   import Lock from '@lucide/svelte/icons/lock';
@@ -90,6 +92,9 @@
   }
   const clickedOutside = (event) => { if (event.target === drawer) closeMenu(); };
 
+  // The menu button isn't pinned, so on a long section it scrolls away; BackToTop brings it back while it is out of view.
+  let menuButton = $state();
+
   // Each section has its own address, /settings/{key}. Following one closes the drawer and moves focus to the section.
   async function open(event) {
     if (!followLink(event)) return;
@@ -112,7 +117,7 @@
 
 <div class="settings">
   {#if narrow}
-    <button type="button" class="menu-button" aria-haspopup="dialog" aria-expanded={menuOpen} aria-label="Settings sections, {current.label} open" onclick={openMenu}>
+    <button type="button" class="menu-button" bind:this={menuButton} aria-haspopup="dialog" aria-expanded={menuOpen} aria-label="Settings sections, {current.label} open" onclick={openMenu}>
       <Menu size={18} /><current.icon size={16} /><span>{current.label}</span>
     </button>
     <dialog class="drawer" bind:this={drawer} aria-labelledby="settings-drawer-title" onclose={() => { menuOpen = false; }} onclick={clickedOutside}>
@@ -122,6 +127,7 @@
       </header>
       <nav class="side-nav" aria-label="Settings">{@render links('drawer')}</nav>
     </dialog>
+    <BackToTop watch={menuButton} focus={() => menuButton} label="Back to the settings menu" />
   {:else}
     <nav class="side-nav" aria-label="Settings">{@render links('side')}</nav>
   {/if}

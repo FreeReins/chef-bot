@@ -75,6 +75,42 @@ test('on a phone the Settings menu opens a drawer that Escape closes', async ({ 
   await expect(menu).toHaveAttribute('aria-expanded', 'false');
 });
 
+test('on a phone, scrolled past the Settings menu, a button brings it back and focuses it', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'Wide screens show the Settings sidebar all the time.');
+  await open(page, '/settings/styles');
+  const back = page.getByRole('button', { name: 'Back to the settings menu' });
+  await expect(back).toBeHidden();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await back.click();
+  const menu = page.getByRole('button', { name: /^Settings sections/ });
+  await expect(menu).toBeFocused();
+  await expect(menu).toBeInViewport();
+  await expect(back).toBeHidden();
+});
+
+for (const path of ['/shopping', '/pantry', '/recipes', '/history']) {
+  test(`on ${path}, once the header scrolls away, a button goes back to the top and focuses the first heading`, async ({ page }) => {
+    // A short window, so even the stubbed data scrolls.
+    await page.setViewportSize({ width: page.viewportSize().width, height: 420 });
+    await open(page, path);
+    const back = page.getByRole('button', { name: 'Back to the top' });
+    await expect(back).toBeHidden();
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await back.click();
+    await expect(page.locator('#view h2:focus')).toHaveCount(1);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await expect(back).toBeHidden();
+  });
+}
+
+test('the Plan tab has no button back to the top', async ({ page }) => {
+  await page.setViewportSize({ width: page.viewportSize().width, height: 420 });
+  await open(page, '/plan');
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect(page.locator('header.top')).not.toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Back to the top' })).toHaveCount(0);
+});
+
 test('every control in the header and the tabs shows where focus is', async ({ page }) => {
   await open(page, '/plan');
   const controls = page.locator('header.top :is(a, button), nav.tabs a');

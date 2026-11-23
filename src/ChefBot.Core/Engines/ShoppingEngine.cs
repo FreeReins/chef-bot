@@ -235,7 +235,8 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
 
         OverviewLine Line(string name, IngredientStatus status, decimal? quantity = null, string unit = "",
             string? store = null, DateOnly? expiresOn = null, Guid? shoppingItemId = null) =>
-            new(name, status, quantity, unit, store, entry?.Group ?? IngredientGroup.Other, expiresOn, optional, usedIn, shoppingItemId);
+            new(name, status, quantity, unit, store, entry?.Group ?? IngredientGroup.Other, expiresOn, optional, usedIn, shoppingItemId,
+                entry?.Area ?? StoreArea.Other);
 
         if (entry?.PantryStaple == true)
         {

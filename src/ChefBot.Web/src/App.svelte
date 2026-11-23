@@ -19,6 +19,7 @@
   import History from './tabs/History.svelte';
   import Achievements from './tabs/Achievements.svelte';
   import RankBadge from './components/RankBadge.svelte';
+  import BackToTop from './components/BackToTop.svelte';
   import People from './tabs/People.svelte';
   import Settings from './tabs/Settings.svelte';
   import Toasts from './components/Toasts.svelte';
@@ -36,6 +37,7 @@
   import Users from '@lucide/svelte/icons/users';
   import SettingsIcon from '@lucide/svelte/icons/settings';
   import CircleHelp from '@lucide/svelte/icons/circle-help';
+  import LogOut from '@lucide/svelte/icons/log-out';
   import Sprout from '@lucide/svelte/icons/sprout';
   import WifiOff from '@lucide/svelte/icons/wifi-off';
 
@@ -58,6 +60,9 @@
   const tabs = $derived(TABS.filter((tab) => !tab.adminOnly || isAdmin()));
   const Gate = $derived(GATES[app.screen]);
   const View = $derived(TAB_VIEWS[app.tab]);
+  // The long tabs get a button back to the top once the header has scrolled away. Settings has its own, for its menu.
+  const LONG_TABS = ['shopping', 'pantry', 'recipes', 'history'];
+  let topBar = $state();
   // The setup steps share one progress bar, which stays put while the steps slide beneath it.
   const inSetup = $derived(app.screen.startsWith('setup-') && app.screen !== 'setup-samples');
 
@@ -87,7 +92,7 @@
 
 <svelte:head><title>{title ? `${title} · ChefBot` : 'ChefBot'}</title></svelte:head>
 
-<header class="top">
+<header class="top" bind:this={topBar}>
   <div class="brand">
     <span class="mark" aria-hidden="true"><ChefHat size={22} /></span>
     <h1>ChefBot</h1>
@@ -110,7 +115,7 @@
     <ThemeToggle />
     {#if inApp}
       <span class="muted name">{app.session.user.displayName}</span>
-      <button onclick={signOut}>Sign out</button>
+      <button class="with-icon sign-out" onclick={signOut} title="Sign out"><LogOut size={16} aria-hidden="true" /><span class="sign-out-label">Sign out</span></button>
     {/if}
   </div>
   <!-- Shown while something takes a moment to save or load, so a slow click doesn't look ignored. Fixed to the top of
@@ -160,6 +165,7 @@
         {/if}
       </div>
     {/key}
+    {#if LONG_TABS.includes(app.tab)}<BackToTop watch={topBar} />{/if}
   {/if}
 </main>
 
@@ -251,17 +257,21 @@
     .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   }
 
-  /* Phones: the title and Sign out share the top line, the tabs become a bar pinned to the bottom of the window,
-     and the footer links sit at the end of the page instead. */
+  /* Phones: the logo, the name and the account buttons share the top line and the week gets the whole line under
+     them, so nothing overlaps when a plan is open. Sign out shows as an icon (its name is still read out). The tabs
+     become a bar pinned to the bottom of the window, and the footer links sit at the end of the page instead. */
   @media (max-width: 40rem) {
-    .top { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title account"; gap: .75rem; }
-    .top > div:first-child { grid-area: title; margin: 0; }
-    .mark { width: 2.2rem; height: 2.2rem; }
-    .account { grid-area: account; }
+    .top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "mark name account" "week week week";
+      column-gap: .6rem; row-gap: .45rem; align-items: center; }
+    .brand { display: contents; }
+    .mark { grid-area: mark; grid-row: auto; width: 2.2rem; height: 2.2rem; }
+    .brand h1 { grid-area: name; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand #week { grid-area: week; }
+    .account { grid-area: account; flex-wrap: nowrap; gap: .2rem; }
     .account .name { display: none; }
-    /* Room for the title beside the award, Help, the theme button and Sign out. */
-    .account { flex-wrap: nowrap; gap: .2rem; }
     a.help { width: 2.1rem; height: 2.1rem; }
+    .sign-out { padding: .4rem .55rem; }
+    .sign-out-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .tabs { position: fixed; inset: auto 0 0 0; z-index: 10; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
       gap: 0; margin: 0; overflow: visible; background: var(--bg); border-bottom: 0; border-top: 1px solid var(--line);
       padding-bottom: env(safe-area-inset-bottom); }
@@ -270,5 +280,10 @@
     .tabs a[aria-current="page"] { border-top-color: var(--area); background: color-mix(in srgb, var(--area) 10%, var(--bg)); }
     .tab-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
     .site-footer { position: static; margin-top: 1.5rem; padding-bottom: .45rem; background: none; }
+  }
+  /* The narrowest phones: Help is left to the footer at the end of the page, so the account buttons fit beside the name. */
+  @media (max-width: 24rem) {
+    .top { column-gap: .45rem; }
+    a.help { display: none; }
   }
 </style>

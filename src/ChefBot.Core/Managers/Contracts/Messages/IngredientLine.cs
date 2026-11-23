@@ -2,7 +2,8 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 
 /// <summary>
 /// One ingredient the plan needs, and which meals need it. <c>Store</c> is empty when no store was chosen for it;
-/// <c>Group</c> is its food group, which the shopping list uses instead of a store then.
+/// <c>Group</c> is its food group, and <c>Area</c> the part of the store it is found in,
+/// which the shopping list groups by within a store.
 /// </summary>
 public sealed record IngredientLine(
     string Name,
@@ -14,4 +15,5 @@ public sealed record IngredientLine(
     DateOnly? ExpiresOn,
     bool IsOptional,
     IReadOnlyList<string> UsedIn,
-    Guid? ShoppingItemId);
+    Guid? ShoppingItemId,
+    StoreArea Area);

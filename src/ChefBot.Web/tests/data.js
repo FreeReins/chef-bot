@@ -132,7 +132,7 @@ export const planStyles = () => {
 
 /** IngredientLine */
 const line = (name, status, extra = {}) => ({
-  name, status, quantity: 1, unit: '', store: null, group: 'Other', expiresOn: null, isOptional: false,
+  name, status, quantity: 1, unit: '', store: null, group: 'Other', area: 'Other', expiresOn: null, isOptional: false,
   usedIn: ['Slaw Fish Tacos'], shoppingItemId: null, ...extra,
 });
 
@@ -160,8 +160,8 @@ export const pantryToUseSoon = () => [
 
 /** ManualShoppingItemResponse[]: things put on the shopping list by hand, one at a store and one without. */
 export const manualItems = () => [
-  { id: '00000000-0000-4000-8000-000000000401', name: 'milk', quantity: 2, unit: 'l', store: 'Corner Market', group: 'Dairy' },
-  { id: '00000000-0000-4000-8000-000000000402', name: 'dish soap', quantity: null, unit: '', store: '', group: 'Other' },
+  { id: '00000000-0000-4000-8000-000000000401', name: 'milk', quantity: 2, unit: 'l', store: 'Corner Market', group: 'Dairy', area: 'DairyAndChilled' },
+  { id: '00000000-0000-4000-8000-000000000402', name: 'dish soap', quantity: null, unit: '', store: '', group: 'Other', area: 'Other' },
 ];
 
 /** IngredientsResponse: the shopping list and the pantry for the plan. */
@@ -169,12 +169,12 @@ export const ingredients = () => {
   const [cabbage, eggs, barley, cream] = pantry();
   return {
     ingredients: [
-      line('fish fillets', 'ToBuy', { quantity: 600, unit: 'g', store: 'Corner Market', group: 'Protein', shoppingItemId: '00000000-0000-4000-8000-000000000301' }),
-      line('limes', 'ToBuy', { quantity: 3, store: 'Saturday Farmers Market', group: 'Fruit', shoppingItemId: '00000000-0000-4000-8000-000000000302' }),
-      line('coconut milk', 'ToBuy', { unit: 'can', group: 'Other', isOptional: true, usedIn: ['Chickpea Curry'], shoppingItemId: '00000000-0000-4000-8000-000000000303' }),
-      line('tortillas', 'Purchased', { quantity: 8, group: 'WholeGrain' }),
-      line('cabbage', 'InPantry', { unit: 'head', group: 'Vegetable', expiresOn: '2026-11-25' }),
-      line('salt', 'Staple', { quantity: null, group: 'Staple', usedIn: ['Slaw Fish Tacos', 'Beef and Barley Stew'] }),
+      line('fish fillets', 'ToBuy', { quantity: 600, unit: 'g', store: 'Corner Market', group: 'Protein', area: 'MeatAndSeafood', shoppingItemId: '00000000-0000-4000-8000-000000000301' }),
+      line('limes', 'ToBuy', { quantity: 3, store: 'Saturday Farmers Market', group: 'Fruit', area: 'Produce', shoppingItemId: '00000000-0000-4000-8000-000000000302' }),
+      line('coconut milk', 'ToBuy', { unit: 'can', group: 'Other', area: 'CannedAndDry', isOptional: true, usedIn: ['Chickpea Curry'], shoppingItemId: '00000000-0000-4000-8000-000000000303' }),
+      line('tortillas', 'Purchased', { quantity: 8, group: 'WholeGrain', area: 'Bakery' }),
+      line('cabbage', 'InPantry', { unit: 'head', group: 'Vegetable', area: 'Produce', expiresOn: '2026-11-25' }),
+      line('salt', 'Staple', { quantity: null, group: 'Staple', area: 'SpicesAndBaking', usedIn: ['Slaw Fish Tacos', 'Beef and Barley Stew'] }),
     ],
     pantry: [
       { item: cabbage, usedByPlan: true, usedFor: [{ mealId: plan().meals[0].id, title: 'Slaw Fish Tacos', date: '2026-11-22', slot: 'Dinner' }] },

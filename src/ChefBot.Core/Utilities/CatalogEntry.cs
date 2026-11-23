@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ChefBot.Core.Managers.Contracts.Messages;
 
 namespace ChefBot.Core.Utilities;
@@ -15,6 +16,22 @@ internal sealed record CatalogEntry
     public IReadOnlyList<string> Aliases { get; init => field = value ?? []; } = [];
 
     public IngredientGroup Group { get; init; } = IngredientGroup.Other;
+
+    /// <summary>The store area the file names (its <c>area</c> field), or null to take the usual one for the group.</summary>
+    [JsonPropertyName("area")]
+    public StoreArea? ListedArea { get; init; }
+
+    /// <summary>Where in a store it is usually found, which the shopping list groups by.</summary>
+    [JsonIgnore]
+    public StoreArea Area => ListedArea ?? Group switch
+    {
+        IngredientGroup.Vegetable or IngredientGroup.Fruit or IngredientGroup.Herb => StoreArea.Produce,
+        IngredientGroup.Protein => StoreArea.MeatAndSeafood,
+        IngredientGroup.Dairy => StoreArea.DairyAndChilled,
+        IngredientGroup.WholeGrain => StoreArea.GrainsAndPasta,
+        IngredientGroup.Staple => StoreArea.SpicesAndBaking,
+        _ => StoreArea.Other,
+    };
 
     /// <summary>Roughly how long it keeps after purchase. Used to estimate expiration dates.</summary>
     public int? ShelfLifeDays { get; init; }

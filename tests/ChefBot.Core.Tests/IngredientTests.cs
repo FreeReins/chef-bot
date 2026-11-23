@@ -8,6 +8,20 @@ namespace ChefBot.Core.Tests;
 public class IngredientTests
 {
     [Test]
+    public async Task Every_ingredient_in_the_catalog_has_a_part_of_the_store()
+    {
+        var file = Path.Combine(AppContext.BaseDirectory, "config", "ingredients.json");
+        var catalog = IngredientCatalog.FromJson(File.ReadAllText(file));
+
+        var unplaced = catalog.Entries.Where(entry => entry.Area == StoreArea.Other).Select(entry => entry.Name).ToList();
+
+        await Assert.That(catalog.Entries.Count).IsGreaterThan(100);
+        await Assert.That(unplaced).IsEmpty();
+        await Assert.That(catalog.Get("canned tomatoes")?.Area).IsEqualTo(StoreArea.CannedAndDry);
+        await Assert.That(catalog.Get("carrot")?.Area).IsEqualTo(StoreArea.Produce);
+    }
+
+    [Test]
     public async Task Recognizes_aliases_and_plurals()
     {
         await Assert.That(TestData.Catalog.Find("Scallions, thinly sliced")?.Name).IsEqualTo("green onion");

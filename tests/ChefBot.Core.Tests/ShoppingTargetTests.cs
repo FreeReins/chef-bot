@@ -153,9 +153,9 @@ public class ShoppingTargetTests
     public async Task Items_read_as_an_amount_with_their_store_and_meals()
     {
         var items = ShoppingEngine.ToDoItems([
-            new OverviewLine("limes", IngredientStatus.ToBuy, 3, string.Empty, null, IngredientGroup.Fruit, null, false, [], null),
-            new OverviewLine("fish fillets", IngredientStatus.ToBuy, 600, "g", "Corner Market", IngredientGroup.Protein, null, false, ["Slaw Fish Tacos"], null),
-            new OverviewLine("coconut milk", IngredientStatus.ToBuy, null, "can", string.Empty, IngredientGroup.Other, null, true, ["Curry", "Soup"], null),
+            new OverviewLine("limes", IngredientStatus.ToBuy, 3, string.Empty, null, IngredientGroup.Fruit, null, false, [], null, StoreArea.Produce),
+            new OverviewLine("fish fillets", IngredientStatus.ToBuy, 600, "g", "Corner Market", IngredientGroup.Protein, null, false, ["Slaw Fish Tacos"], null, StoreArea.MeatAndSeafood),
+            new OverviewLine("coconut milk", IngredientStatus.ToBuy, null, "can", string.Empty, IngredientGroup.Other, null, true, ["Curry", "Soup"], null, StoreArea.CannedAndDry),
         ]);
 
         await Assert.That(items.Select(item => item.Title)).IsEquivalentTo(["fish fillets, 600 g", "coconut milk", "limes, 3"], TUnit.Assertions.Enums.CollectionOrdering.Matching);

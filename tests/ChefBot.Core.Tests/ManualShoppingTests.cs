@@ -31,6 +31,7 @@ public class ManualShoppingTests
         await Assert.That(item.Quantity).IsEqualTo(1m);
         await Assert.That(item.Unit).IsEqualTo("lb");
         await Assert.That(item.Group).IsEqualTo(IngredientGroup.Protein);
+        await Assert.That(item.Area).IsEqualTo(StoreArea.MeatAndSeafood);
         await Assert.That(core.Plans.Rows.Count).IsEqualTo(0);
     }
 

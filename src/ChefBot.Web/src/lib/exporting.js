@@ -1,6 +1,6 @@
 // Getting recipes and shopping lists out of ChefBot: as plain text to share or paste, as a CSV file, or on paper.
 // The formatters are plain functions of what the screens already hold; printing itself is styles.css's @media print.
-import { amount, duration, plural } from './format.js';
+import { amount, areaName, duration, plural } from './format.js';
 
 /** True when the browser can hand text to the phone's share sheet; otherwise sharing copies it instead. */
 export const canShare = () => typeof navigator.share === 'function';
@@ -73,11 +73,16 @@ function item(line) {
 
 /**
  * The shopping list as a checklist to paste into notes or a message. `sections` are the Shopping tab's:
- * { title, lines } in the order they are shown, one per store and then per food group.
+ * { title, areas: [{ title, lines }], lines, byStore } in the order they are shown, one per store and then one per
+ * store area. A store's section names each area it has before that area's items.
  */
 export function shoppingText(title, sections) {
   const count = sections.reduce((total, section) => total + section.lines.length, 0);
-  const groups = sections.map((section) => [section.title, ...section.lines.map((line) => `☐ ${item(line)}`)].join('\n'));
+  const checklist = (lines) => lines.map((line) => `☐ ${item(line)}`);
+  const groups = sections.map((section) => [
+    section.title,
+    ...(section.byStore ? section.areas.flatMap((area) => [`${area.title}:`, ...checklist(area.lines)]) : checklist(section.lines)),
+  ].join('\n'));
   return `${[`${title} (${plural(count, 'item')})`, ...groups].join('\n\n')}\n`;
 }
 
@@ -92,10 +97,10 @@ function field(value) {
  * as UTF-8, and ends lines with CRLF as RFC 4180 asks.
  */
 export function shoppingCsv(sections) {
-  const rows = [['Name', 'Quantity', 'Unit', 'Store', 'Food group', 'Optional', 'For']];
+  const rows = [['Name', 'Quantity', 'Unit', 'Store', 'Area', 'Food group', 'Optional', 'For']];
   for (const section of sections) {
     for (const line of section.lines) {
-      rows.push([line.name, line.quantity, line.unit, line.store, line.group, line.isOptional ? 'yes' : '', line.usedIn.join('; ')]);
+      rows.push([line.name, line.quantity, line.unit, line.store, areaName(line.area), line.group, line.isOptional ? 'yes' : '', line.usedIn.join('; ')]);
     }
   }
   return `\uFEFF${rows.map((row) => row.map(field).join(',')).join('\r\n')}\r\n`;

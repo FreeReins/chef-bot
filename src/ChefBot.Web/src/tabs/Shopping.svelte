@@ -1,12 +1,13 @@
 <!-- The shopping list: what the plan needs and what was added by hand, and where each item comes from. What is left
-     to buy comes first, split by store, and anything without a store is grouped by food group. It works without a
+     to buy comes first, split by store and, within each store, by area of the store (produce, bakery, canned and dry
+     goods...) in the order most shoppers walk it. Anything without a store is grouped by area on its own. It works without a
      plan: then only the hand-added items are listed. Pantry items running out of date are offered for the list, and
      what the plan needs but needn't be bought (in the pantry, bought already, staples) is folded away at the end.
      A staple that has run out can be added to the list from there. The pantry itself is on the Pantry tab. -->
 <script>
   import { untrack } from 'svelte';
   import { app, isConfirmed, run, loadPantry, addToShoppingList, buyEverything, toast } from '../lib/app.svelte.js';
-  import { FOOD_GROUPS, shortDate, weekName, freshness, plural, todayIso } from '../lib/format.js';
+  import { STORE_AREAS, shortDate, weekName, freshness, plural, todayIso } from '../lib/format.js';
   import { pending, pendingClick } from '../lib/pending.js';
   import { celebrate } from '../lib/motion.js';
   import { canShare, share, download, shoppingText, shoppingCsv } from '../lib/exporting.js';
@@ -34,23 +35,29 @@
   const bought = $derived(byStatus('Purchased'));
   const handAdded = $derived(app.manualItems.map((item) => ({
     name: item.name, status: 'ToBuy', quantity: item.quantity, unit: item.unit, store: item.store || null,
-    group: item.group, isOptional: false, usedIn: [], manualId: item.id, pending: item.pending,
+    group: item.group, area: item.area ?? 'Other', isOptional: false, usedIn: [], manualId: item.id, pending: item.pending,
   })));
   const toBuy = $derived([...planToBuy, ...handAdded]);
   // What "Mark all as bought" covers: everything once the plan is confirmed, otherwise only the hand-added items.
   const buyable = $derived(isConfirmed() ? toBuy.length : handAdded.length);
 
-  // Items with a store go under it, in the order the stores were saved; the rest go under their food group.
+  // Items with a store go under it, in the order the stores were saved, split by area of the store; the rest get a
+  // card per area. Areas come in walking order (STORE_AREAS), and items are A to Z within an area.
   const sections = $derived.by(() => {
     const saved = (app.stores?.stores ?? []).map((store) => store.name);
     const named = [...new Set(toBuy.filter((line) => line.store).map((line) => line.store))]
       .sort((a, b) => (saved.indexOf(a) + 1 || Infinity) - (saved.indexOf(b) + 1 || Infinity));
-    const loose = toBuy.filter((line) => !line.store);
     const byName = (a, b) => a.name.localeCompare(b.name);
-    return [
-      ...named.map((store) => ({ key: `store:${store}`, title: store, lines: toBuy.filter((line) => line.store === store).sort(byName) })),
-      ...FOOD_GROUPS.map(([group, title]) => ({ key: `group:${group}`, title, lines: loose.filter((line) => (line.group ?? 'Other') === group).sort(byName) })),
-    ].filter((section) => section.lines.length > 0);
+    const byArea = (list) => STORE_AREAS
+      .map(([area, title]) => ({ area, title, lines: list.filter((line) => (line.area ?? 'Other') === area).sort(byName) }))
+      .filter((group) => group.lines.length > 0);
+    const stores = named.map((store) => {
+      const areas = byArea(toBuy.filter((line) => line.store === store));
+      return { key: `store:${store}`, title: store, byStore: true, areas, lines: areas.flatMap((group) => group.lines) };
+    });
+    const loose = byArea(toBuy.filter((line) => !line.store))
+      .map((group) => ({ key: `area:${group.area}`, title: group.title, byStore: false, areas: [group], lines: group.lines }));
+    return [...stores, ...loose];
   });
 
   // Names already on the list, lower-cased, so nothing is offered for it twice.
@@ -210,9 +217,14 @@
     {#each sections as section (section.key)}
       <div class="card">
         <h3>{section.title} <span class="count">{section.lines.length}</span></h3>
-        <ul class="plain">
-          {#each section.lines as line (line.manualId ?? line.shoppingItemId ?? line.name)}<IngredientLine {line} />{/each}
-        </ul>
+        {#each section.areas as group (group.area)}
+          <div class="area">
+            {#if section.byStore}<h4>{group.title} <span class="count">{group.lines.length}</span></h4>{/if}
+            <ul class="plain">
+              {#each group.lines as line (line.manualId ?? line.shoppingItemId ?? line.name)}<IngredientLine {line} />{/each}
+            </ul>
+          </div>
+        {/each}
       </div>
     {/each}
   </div>
@@ -271,7 +283,10 @@
   @media (prefers-reduced-motion: no-preference) { .empty-icon.hop :global(svg) { animation: hop .6s cubic-bezier(.3, 1.6, .5, 1); } }
   @keyframes hop { 30% { transform: translateY(-6px) rotate(-8deg); } 60% { transform: translateY(0) rotate(4deg); } }
   h3 { margin-bottom: .25rem; }
+  h4 { margin: .75rem 0 .1rem; color: var(--muted); font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+  .area:first-of-type h4 { margin-top: .35rem; }
   .count { color: var(--muted); font-weight: 400; font-size: .9rem; }
+  h4 .count { font-size: .78rem; letter-spacing: 0; }
   .folds details { border-top: 1px solid var(--line); padding: .4rem 0; }
   .folds details:first-child { border-top: 0; }
   .folds summary { cursor: pointer; font-weight: 600; }
@@ -282,6 +297,7 @@
   @media print {
     .head { display: none; }
     .lists { columns: 2; column-gap: 1.5rem; }
-    .lists .card { break-inside: avoid; margin: 0 0 .75rem; }
+    .lists .card { margin: 0 0 .75rem; }
+    .lists .area { break-inside: avoid; }
   }
 </style>

@@ -7,6 +7,17 @@ export const FOOD_GROUPS = [
   ['Dairy', 'Dairy'], ['WholeGrain', 'Grains'], ['Other', 'Everything else'], ['Staple', 'Staples'],
 ];
 
+/** The parts of a store (the API's StoreArea), in the order most shoppers walk a supermarket. The shopping list groups by them. */
+export const STORE_AREAS = [
+  ['Produce', 'Fruit and vegetables'], ['Bakery', 'Bakery'], ['MeatAndSeafood', 'Meat and seafood'],
+  ['DairyAndChilled', 'Dairy, eggs and chilled'], ['GrainsAndPasta', 'Rice, grains and pasta'], ['CannedAndDry', 'Canned and dry goods'],
+  ['SaucesAndOils', 'Oils, sauces and condiments'], ['International', 'International'], ['SpicesAndBaking', 'Spices and baking'],
+  ['Frozen', 'Frozen'], ['Drinks', 'Drinks'], ['Other', 'Everything else'],
+];
+
+/** What a store area is called on the page, for example "Canned and dry goods". */
+export const areaName = (area) => (STORE_AREAS.find(([key]) => key === area) ?? STORE_AREAS.at(-1))[1];
+
 /** Reads a yyyy-mm-dd date as a local date, so it doesn't shift a day in time zones west of UTC. */
 export function parseDate(iso) {
   const [year, month, day] = iso.split('-').map(Number);

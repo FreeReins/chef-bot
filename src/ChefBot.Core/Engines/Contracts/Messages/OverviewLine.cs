@@ -13,4 +13,5 @@ internal sealed record OverviewLine(
     DateOnly? ExpiresOn,
     bool IsOptional,
     IReadOnlyList<string> UsedIn,
-    Guid? ShoppingItemId);
+    Guid? ShoppingItemId,
+    StoreArea Area);

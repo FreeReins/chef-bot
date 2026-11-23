@@ -15,6 +15,12 @@ you add by hand. Once the plan is confirmed, it's your list for the shop.
   so having some of an ingredient in another unit counts as having enough. See
   [Limits worth knowing](../reference/limits.md).
 - **Each item shows where it comes from** (to buy, pantry or staple) and which meals use it.
+- **Items are grouped by area of the store** within each store, in the order most people walk a supermarket:
+  **Fruit and vegetables**, **Bakery**, **Meat and seafood**, **Dairy, eggs and chilled**, **Rice, grains and pasta**,
+  **Canned and dry goods**, **Oils, sauces and condiments**, **International**, **Spices and baking**, **Frozen**,
+  **Drinks**, then **Everything else** for anything ChefBot doesn't know. Canned tomatoes are under
+  **Canned and dry goods**, for example. Copying, sharing and printing keep the same groups, and the CSV has an
+  **Area** column.
 
 ## Shop
 
@@ -38,7 +44,7 @@ An admin chooses the household's stores under **Settings → Stores**, or in set
    example);
 3. otherwise your main store.
 
-With no stores chosen, the list is grouped by food group instead.
+Items with no store have a card for each area of the store instead.
 
 To buy an ingredient somewhere else from now on, use the menu beside the item and move it to another store. Later
 lists remember it.

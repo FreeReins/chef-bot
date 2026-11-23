@@ -421,6 +421,24 @@ const VIEWS = [
     },
   },
   {
+    // Phones only: scrolled past the menu button, the button that brings it back shows in the corner.
+    name: 'settings: scrolled past the sections menu', path: '/settings/styles',
+    act: async (page) => {
+      const menu = page.getByRole('button', { name: /^Settings sections/ });
+      if (!await menu.isVisible()) return;
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await expect(page.getByRole('button', { name: 'Back to the settings menu' })).toBeVisible();
+    },
+  },
+  {
+    name: 'shopping: scrolled down, with the button back to the top', path: '/shopping',
+    act: async (page) => {
+      await page.setViewportSize({ width: page.viewportSize().width, height: 420 });
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await expect(page.getByRole('button', { name: 'Back to the top' })).toBeVisible();
+    },
+  },
+  {
     name: 'dark mode chosen with the sun and moon button', path: '/plan',
     act: async (page) => {
       const before = await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches);

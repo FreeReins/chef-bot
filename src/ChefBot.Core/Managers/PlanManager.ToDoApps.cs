@@ -39,7 +39,8 @@ internal sealed partial class PlanManager
         var stores = await settings.ListStoresAsync(cancellationToken);
         toBuy.AddRange((await shoppingList.ListAsync(cancellationToken)).Select(item => new OverviewLine(
             item.DisplayName, IngredientStatus.ToBuy, item.Quantity, item.Unit, shopping.StoreFor(item, today.Month, stores),
-            catalog.Get(item.CatalogName)?.Group ?? IngredientGroup.Other, null, false, [], null)));
+            catalog.Get(item.CatalogName)?.Group ?? IngredientGroup.Other, null, false, [], null,
+            catalog.Get(item.CatalogName)?.Area ?? StoreArea.Other)));
 
         var items = ShoppingEngine.ToDoItems(toBuy);
         if (items.Count == 0)

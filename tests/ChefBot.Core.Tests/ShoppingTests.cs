@@ -167,6 +167,24 @@ public class ShoppingTests
     }
 
     [Test]
+    public async Task Each_line_says_which_part_of_the_store_it_is_in()
+    {
+        var plan = PlanOf(TestData.Tacos, TestData.NewRecipe("Hot Rice", RecipeCourse.Main, false, "2 cups brown rice", "1 can diced tomatoes", "1 jar sriracha"));
+        TestData.Shopping.ApplyList(plan, TestData.Shopping.BuildList(plan, PantrySnapshot.Empty, []));
+
+        var lines = TestData.Shopping.BuildOverview(plan, [], TestData.Sunday, AdvancedSettings.DefaultExpiringSoonDays).Ingredients;
+
+        StoreArea AreaOf(string name) => lines.First(line => line.Name.Contains(name)).Area;
+
+        await Assert.That(AreaOf("cabbage")).IsEqualTo(StoreArea.Produce);
+        await Assert.That(AreaOf("cod")).IsEqualTo(StoreArea.MeatAndSeafood);
+        await Assert.That(AreaOf("tortilla")).IsEqualTo(StoreArea.Bakery);
+        await Assert.That(AreaOf("brown rice")).IsEqualTo(StoreArea.GrainsAndPasta);
+        await Assert.That(AreaOf("tomatoes")).IsEqualTo(StoreArea.CannedAndDry);
+        await Assert.That(AreaOf("sriracha")).IsEqualTo(StoreArea.Other);
+    }
+
+    [Test]
     public async Task The_pantry_view_lists_the_meals_that_use_each_item_soonest_first()
     {
         var plan = PlanOf(TestData.Bowls, TestData.Tacos, TestData.Bowls);

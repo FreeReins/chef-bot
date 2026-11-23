@@ -30,13 +30,13 @@ internal static class TestData
         Entry("chicken", IngredientGroup.Protein, 2, aliases: ["chicken thigh", "chicken breast"]),
         Entry("beef", IngredientGroup.Protein, 2, aliases: ["stew meat"]),
         Entry("white fish", IngredientGroup.Protein, 2, aliases: ["cod"]),
-        Entry("egg", IngredientGroup.Protein, 28),
+        Entry("egg", IngredientGroup.Protein, 28, area: StoreArea.DairyAndChilled),
         Entry("brown rice", IngredientGroup.WholeGrain, 180),
         Entry("quinoa", IngredientGroup.WholeGrain, 365),
-        Entry("tortilla", IngredientGroup.Other, 14),
-        Entry("oats", IngredientGroup.Other, 365),
-        Entry("canned tomatoes", IngredientGroup.Other, 730, aliases: ["diced tomatoes"]),
-        Entry("chicken broth", IngredientGroup.Other, 365),
+        Entry("tortilla", IngredientGroup.Other, 14, area: StoreArea.Bakery),
+        Entry("oats", IngredientGroup.Other, 365, area: StoreArea.GrainsAndPasta),
+        Entry("canned tomatoes", IngredientGroup.Other, 730, aliases: ["diced tomatoes"], area: StoreArea.CannedAndDry),
+        Entry("chicken broth", IngredientGroup.Other, 365, area: StoreArea.CannedAndDry),
         Entry("salt", IngredientGroup.Staple, null, staple: true),
     ]);
 
@@ -125,7 +125,8 @@ internal static class TestData
 
     private static CatalogEntry Entry(
         string name, IngredientGroup group, int? shelfLife,
-        int[]? season = null, string[]? aliases = null, bool staple = false, bool keepSpecific = false) => new()
+        int[]? season = null, string[]? aliases = null, bool staple = false, bool keepSpecific = false,
+        StoreArea? area = null) => new()
     {
         Name = name,
         Group = group,
@@ -134,5 +135,6 @@ internal static class TestData
         Aliases = aliases ?? [],
         PantryStaple = staple,
         KeepSpecificName = keepSpecific,
+        ListedArea = area,
     };
 }

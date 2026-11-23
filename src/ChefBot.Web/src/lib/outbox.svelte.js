@@ -72,7 +72,7 @@ export function addManualOffline({ name, quantity = null, unit = null }) {
     return;
   }
   const tempId = newTempId();
-  app.manualItems.push({ id: tempId, name, quantity, unit: unit ?? '', store: '', group: 'Other', pending: true });
+  app.manualItems.push({ id: tempId, name, quantity, unit: unit ?? '', store: '', group: 'Other', area: 'Other', pending: true });
   queue({ kind: 'add-manual', tempId, name, quantity, unit });
 }
 

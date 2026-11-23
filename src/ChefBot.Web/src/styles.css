@@ -35,6 +35,10 @@
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 * { box-sizing: border-box; }
+/* Pinch-zoom stays (people who need bigger text rely on it), but a quick double tap doesn't zoom the page, and phones
+   don't enlarge the text on their own when turned sideways. Fields are at least 16px on phones (end of the file), so
+   iPhones don't zoom in when one gets focus. */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* The bottom padding keeps content clear of the footer pinned to the bottom of the window (App.svelte). Phones
    change this at the end of the file. */
 body { margin: 0 auto; padding: 1.25rem 1rem calc(4.5rem + env(safe-area-inset-bottom)); max-width: 62rem; background: var(--bg);

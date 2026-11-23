@@ -6,11 +6,13 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Quantity">How much to buy, or null when it wasn't said.</param>
 /// <param name="Unit">The unit <paramref name="Quantity"/> is measured in.</param>
 /// <param name="Store">Where to buy it, chosen from the household's stores. Empty when no store applies.</param>
-/// <param name="Group">The ingredient's food group, which the list uses when there is no store.</param>
+/// <param name="Group">The ingredient's food group.</param>
+/// <param name="Area">The part of the store it is found in, which the list groups by.</param>
 public sealed record ManualShoppingItemResponse(
     Guid Id,
     string Name,
     decimal? Quantity,
     string Unit,
     string Store,
-    IngredientGroup Group);
+    IngredientGroup Group,
+    StoreArea Area);
