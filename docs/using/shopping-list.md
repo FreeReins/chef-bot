@@ -26,6 +26,8 @@ you add by hand. Once the plan is confirmed, it's your list for the shop.
 
 - Tick each item as you buy it, or press **Mark all as bought**. Before the plan is confirmed, that button only marks
   the items you added by hand.
+- When the list covers more than one store, each store's card has its own **Mark all as bought**, for when you're
+  done at one shop and still have another to go.
 - Bought items go into the pantry with an expiry date.
 - The list works with no signal. See [Offline on your phone](offline-on-your-phone.md).
 - **Copy list**, **Share list**, **Print** and **Download CSV** give the list to other apps or paper.

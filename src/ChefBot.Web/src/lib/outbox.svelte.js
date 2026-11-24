@@ -104,13 +104,14 @@ export function buyManualOffline(id) {
 }
 
 /** Ticks off everything on the list one by one, so nothing added on another device meanwhile is bought by mistake. */
-export function buyAllOffline(withPlan) {
+export function buyAllOffline(withPlan, store = null) {
+  const atStore = (item) => !store || item.store === store;
   if (withPlan) {
     for (const line of app.ingredients?.ingredients ?? []) {
-      if (line.status === 'ToBuy' && line.shoppingItemId) buyPlanItemOffline(line.shoppingItemId);
+      if (line.status === 'ToBuy' && line.shoppingItemId && atStore(line)) buyPlanItemOffline(line.shoppingItemId);
     }
   }
-  for (const item of app.manualItems.slice()) buyManualOffline(item.id);
+  for (const item of app.manualItems.filter(atStore)) buyManualOffline(item.id);
 }
 
 // ---------- sending ----------

@@ -132,6 +132,43 @@ public class ManualShoppingTests
     }
 
     [Test]
+    public async Task Buying_everything_at_one_store_leaves_the_other_stores_items()
+    {
+        var core = WithLibrary();
+        var plans = core.PlanManager();
+        await plans.SaveStoresAsync(Stores(new("Hy-Vee", true, null, false, null), new("Costco", false, null, false, null)), default);
+        var staged = await plans.StageAsync(new StagePlanRequest(), default);
+        await plans.ConfirmAsync(staged.Id, default);
+        var moved = await plans.SetShoppingStoreAsync(staged.Id, staged.Shopping.First().Id, new ShoppingStoreRequest("Costco"), default);
+        var atCostco = moved.Shopping.Where(item => item.Store == "Costco").Select(item => item.Id).ToHashSet();
+        await plans.AddManualItemAsync(new NewShoppingItem("oats"), default);
+
+        var plan = await plans.PurchaseAllAsync(staged.Id, new PurchaseAllRequest(Store: " costco "), default);
+
+        await Assert.That(atCostco.Count).IsGreaterThan(0);
+        await Assert.That(plan.Shopping.Where(item => atCostco.Contains(item.Id)).All(item => item.IsPurchased)).IsTrue();
+        await Assert.That(plan.Shopping.Where(item => !atCostco.Contains(item.Id)).Any(item => item.IsPurchased)).IsFalse();
+        await Assert.That(core.ShoppingList.Rows.Count).IsEqualTo(1);
+        await Assert.That(core.Pantry.Rows.Count).IsEqualTo(atCostco.Count);
+    }
+
+    [Test]
+    public async Task Buying_hand_added_items_at_one_store_keeps_the_rest()
+    {
+        var core = new TestCore();
+        var plans = core.PlanManager();
+        await plans.SaveStoresAsync(Stores(new("Hy-Vee", true, null, false, null), new("Costco", false, null, false, null)), default);
+        await plans.AddManualItemAsync(new NewShoppingItem("oats"), default);
+        var added = await plans.AddManualItemAsync(new NewShoppingItem("cod"), default);
+        await plans.SetManualItemStoreAsync(added.Single(item => item.Name == "cod").Id, new ShoppingStoreRequest("Costco"), default);
+
+        var left = await plans.PurchaseAllManualItemsAsync(new PurchaseAllRequest(Store: "costco"), default);
+
+        await Assert.That(left.Single().Name).IsEqualTo("oats");
+        await Assert.That(core.Pantry.Rows.Single().Key).IsEqualTo("cod");
+    }
+
+    [Test]
     public async Task Buying_every_hand_added_item_empties_the_list()
     {
         var core = new TestCore();

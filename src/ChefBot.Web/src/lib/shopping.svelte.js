@@ -69,26 +69,29 @@ export const buyPlanItem = (itemId) => run(() => online(
 /**
  * Marks everything on the shopping list as bought, once the person confirms: `count` is how many items that is. With a
  * confirmed plan one request covers the plan's items and the hand-added ones; otherwise only the hand-added items
- * can be bought.
+ * can be bought. With `store`, only what is bought at that store.
  */
-export async function buyEverything(count) {
+export async function buyEverything(count, store = null) {
+  const what = count === 1 ? 'this item' : `all ${count} items`;
   if (!(await ask({
-    title: `Mark ${count === 1 ? 'this item' : `all ${count} items`} as bought?`,
+    title: store ? `Mark ${what} from ${store} as bought?` : `Mark ${what} as bought?`,
     message: 'They come off the shopping list and go into your pantry.',
     confirmLabel: 'Mark as bought',
   }))) return;
-  await buyAll();
+  await buyAll(store);
 }
 
-const buyAll = () => run(() => online(async () => {
+/** Buys everything left on the list, or only what is bought at `store`. */
+const buyAll = (store) => run(() => online(async () => {
+  const body = store ? { store } : {};
   if (isConfirmed()) {
-    await applyPlan(await api('POST', `/api/plans/${app.plan.id}/shopping/purchase-all`, {}));
+    await applyPlan(await api('POST', `/api/plans/${app.plan.id}/shopping/purchase-all`, body));
     await loadManualItems();
   } else {
-    app.manualItems = await api('POST', '/api/shopping/items/purchase-all', {});
+    app.manualItems = await api('POST', '/api/shopping/items/purchase-all', body);
     await refreshAfterPantryChange();
   }
-}, () => buyAllOffline(isConfirmed())));
+}, () => buyAllOffline(isConfirmed(), store)));
 
 /** Buys a hand-added item's ingredient at another store from now on. Open plans' lists follow, so they reload too. */
 export const setManualStore = (id, store) => run(async () => {

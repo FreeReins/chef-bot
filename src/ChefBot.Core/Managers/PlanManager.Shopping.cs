@@ -38,7 +38,7 @@ internal sealed partial class PlanManager
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var plan = await validation.PlanAsync(planId, cancellationToken);
         ValidationEngine.CanShopFor(plan);
-        var toBuy = plan.ShoppingItems.Where(item => !item.IsPurchased).ToList();
+        var toBuy = plan.ShoppingItems.Where(item => !item.IsPurchased && AtStore(item.Store, request.Store)).ToList();
         foreach (var item in toBuy)
         {
             await StockAsync(item, new PurchaseDetails(request.PurchasedOn), cancellationToken);
@@ -72,6 +72,10 @@ internal sealed partial class PlanManager
         await messages.CommitAsync(cancellationToken);
         return plan.ToResponse([]);
     }
+
+    /// <summary>Whether something bought at <paramref name="store"/> is wanted: everything when no store is asked for.</summary>
+    private static bool AtStore(string store, string? wanted) =>
+        wanted is null || string.Equals(store, wanted.Trim(), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Ticks a plan's shopping item off and puts it in the pantry.</summary>
     private async Task StockAsync(ShoppingItem item, PurchaseDetails details, CancellationToken cancellationToken)

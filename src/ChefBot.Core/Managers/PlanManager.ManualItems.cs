@@ -94,10 +94,20 @@ internal sealed partial class PlanManager
         await shoppingList.RemoveAsync(item.Id, cancellationToken);
     }
 
-    /// <summary>Buys everything added by hand on the same day. Returns how many things were bought.</summary>
+    /// <summary>
+    /// Buys everything added by hand on the same day, or only what is bought at the store asked for (worked out as the
+    /// list shows it). Returns how many things were bought.
+    /// </summary>
     private async Task<int> StockManualItemsAsync(PurchaseAllRequest request, CancellationToken cancellationToken)
     {
-        var list = await shoppingList.ListAsync(cancellationToken);
+        IReadOnlyList<ManualShoppingItem> list = await shoppingList.ListAsync(cancellationToken);
+        if (request.Store is not null)
+        {
+            var stores = await settings.ListStoresAsync(cancellationToken);
+            var month = clock.Today().Month;
+            list = list.Where(item => AtStore(shopping.StoreFor(item, month, stores), request.Store)).ToList();
+        }
+
         foreach (var item in list)
         {
             await StockAsync(item, new PurchaseDetails(request.PurchasedOn), cancellationToken);

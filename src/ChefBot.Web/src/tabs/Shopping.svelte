@@ -39,7 +39,8 @@
   })));
   const toBuy = $derived([...planToBuy, ...handAdded]);
   // What "Mark all as bought" covers: everything once the plan is confirmed, otherwise only the hand-added items.
-  const buyable = $derived(isConfirmed() ? toBuy.length : handAdded.length);
+  const buyableIn = (list) => (isConfirmed() ? list.length : list.filter((line) => line.manualId).length);
+  const buyable = $derived(buyableIn(toBuy));
 
   // Items with a store go under it, in the order the stores were saved, split by area of the store; the rest get a
   // card per area. Areas come in walking order (STORE_AREAS), and items are A to Z within an area.
@@ -138,6 +139,14 @@
 
   const buyAll = pendingClick(() => buyEverything(buyable));
 
+  // A store's own button, for when one shop is done but another is still to come. Only when the list covers more than
+  // that store, so it never does the same as "Mark all as bought".
+  const storeBuyable = (section) => {
+    const count = section.byStore ? buyableIn(section.lines) : 0;
+    return count > 0 && count < buyable ? count : 0;
+  };
+  const buyStore = (section) => pendingClick(() => buyEverything(storeBuyable(section), section.title));
+
   // Buying the last thing on the list is worth a moment: the cart hops and a few sprinkles fly.
   let emptyIcon = $state();
   let cleared = $state(false);
@@ -215,8 +224,16 @@
   {/if}
   <div class="lists">
     {#each sections as section (section.key)}
+      {@const storeCount = storeBuyable(section)}
       <div class="card">
-        <h3>{section.title} <span class="count">{section.lines.length}</span></h3>
+        <div class="section-head">
+          <h3>{section.title} <span class="count">{section.lines.length}</span></h3>
+          {#if storeCount}
+            <button class="small with-icon no-print" aria-label="Mark all as bought from {section.title}" onclick={buyStore(section)}>
+              <CheckCheck size={14} />Mark all as bought
+            </button>
+          {/if}
+        </div>
         {#each section.areas as group (group.area)}
           <div class="area">
             {#if section.byStore}<h4>{group.title} <span class="count">{group.lines.length}</span></h4>{/if}
@@ -283,6 +300,7 @@
   @media (prefers-reduced-motion: no-preference) { .empty-icon.hop :global(svg) { animation: hop .6s cubic-bezier(.3, 1.6, .5, 1); } }
   @keyframes hop { 30% { transform: translateY(-6px) rotate(-8deg); } 60% { transform: translateY(0) rotate(4deg); } }
   h3 { margin-bottom: .25rem; }
+  .section-head { display: flex; flex-wrap: wrap; gap: .25rem .75rem; align-items: baseline; justify-content: space-between; }
   h4 { margin: .75rem 0 .1rem; color: var(--muted); font-size: .78rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
   .area:first-of-type h4 { margin-top: .35rem; }
   .count { color: var(--muted); font-weight: 400; font-size: .9rem; }

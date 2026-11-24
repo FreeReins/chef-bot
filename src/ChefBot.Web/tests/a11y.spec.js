@@ -103,7 +103,12 @@ const VIEWS = [
   { name: 'shopping', path: '/shopping' },
   {
     name: 'shopping, asking before marking everything bought', path: '/shopping',
-    act: (page) => page.getByRole('button', { name: 'Mark all as bought' }).click()
+    act: (page) => page.getByRole('button', { name: 'Mark all as bought', exact: true }).click()
+      .then(() => page.getByRole('dialog').waitFor()),
+  },
+  {
+    name: 'shopping, asking before marking one store bought', path: '/shopping',
+    act: (page) => page.getByRole('button', { name: 'Mark all as bought from Corner Market' }).click()
       .then(() => page.getByRole('dialog').waitFor()),
   },
   {
