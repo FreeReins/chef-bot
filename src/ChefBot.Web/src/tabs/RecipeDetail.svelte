@@ -294,13 +294,16 @@
   .eyebrow { margin: 0; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .intro h2 { margin: 0; font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.1rem); line-height: 1.15; overflow-wrap: anywhere; }
   .description { margin: 0; color: var(--ink); font-size: 1.02rem; }
-  .facts { list-style: none; margin: .1rem 0; padding: 0; display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); }
-  .facts li { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: .45rem; align-items: center;
-    padding: .5rem .65rem; border-radius: .6rem; background: var(--panel); border: 1px solid var(--line); }
+  /* One joined strip that the facts share equally, however many there are, so no empty cell is left beside them. */
+  .facts { list-style: none; margin: .1rem 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+    border-radius: .6rem; background: var(--panel); border: 1px solid var(--line); overflow: hidden; }
+  .facts li { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: .45rem;
+    align-items: center; padding: .5rem .65rem; min-width: 0; }
+  .facts li + li { border-left: 1px solid var(--line); }
   .facts li :global(svg) { grid-row: span 2; color: var(--area-recipes); }
   .facts .label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
   .facts .value { font-weight: 700; font-variant-numeric: tabular-nums; }
-  .facts li.scaled { border-color: var(--area-recipes); background: color-mix(in srgb, var(--area-recipes) 9%, var(--panel)); }
+  .facts li.scaled { background: color-mix(in srgb, var(--area-recipes) 12%, var(--panel)); box-shadow: inset 0 -2px var(--area-recipes); }
   .row-actions { align-items: stretch; }
   .tags { list-style: none; margin: 0; padding: 0; }
   .tags + .tags { margin-top: .4rem; }
@@ -340,9 +343,18 @@
       text-decoration: none; }
     section[tabindex], .cook :global(section[tabindex]) { scroll-margin-top: 3.5rem; }
   }
-  /* Phones: the two main actions share the row, and the photo runs edge to edge. */
+  /* Phones: "Start cooking" takes a row of its own, with "Add to plan", the heart and ⋯ beneath it (the ⋯ menu unfolds
+     under them); each fact stacks its label over its value; and the photo runs edge to edge. */
   @media (max-width: 40rem) {
-    .row-actions .grow { flex: 1 1 9rem; justify-content: center; }
+    .row-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; }
+    .row-actions .grow { justify-content: center; }
+    .row-actions .primary { grid-column: 1 / -1; }
+    .row-actions > :global(.favourite) { min-width: 2.75rem; justify-content: center; }
+    .facts li { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; justify-items: center; text-align: center;
+      row-gap: .1rem; padding: .5rem .3rem; }
+    .facts li :global(svg) { grid-row: auto; }
+    .facts .label { font-size: .66rem; }
+    .facts .value { overflow-wrap: anywhere; }
     .masthead:not(.bare) .cover { border-radius: 0; margin: 0 -1rem; width: calc(100% + 2rem); max-width: none; }
     .masthead.bare .intro { grid-column: 1 / -1; }
   }

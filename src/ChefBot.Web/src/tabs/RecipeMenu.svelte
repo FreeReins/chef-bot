@@ -98,9 +98,12 @@
   .menu-panel :is(button, a):hover { background: var(--chip); }
   .menu-panel .bad-text { color: var(--bad); }
   hr { border: 0; border-top: 1px solid var(--line); margin: .3rem .2rem; }
-  /* Phones: the menu unfolds in place on its own line, pushing the page down rather than covering what is below. */
+  /* Phones: the menu unfolds in place across the whole action row, pushing the page down rather than covering what is
+     below. The row is a grid there (RecipeDetail.svelte), so the panel takes every column of a row of its own. */
   @media (max-width: 40rem) {
     .menu { display: contents; }
-    .menu-panel { position: static; flex: 1 1 100%; order: 1; box-shadow: none; }
+    .toggle { min-width: 2.75rem; justify-content: center; }
+    .menu-panel { position: static; grid-column: 1 / -1; box-shadow: none; }
+    .menu-panel :global(:is(button, a)) { min-height: 2.75rem; padding: .55rem .8rem; align-items: center; }
   }
 </style>
