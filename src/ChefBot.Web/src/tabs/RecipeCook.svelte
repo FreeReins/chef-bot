@@ -8,6 +8,7 @@
 <script>
   import { onDestroy, untrack } from 'svelte';
   import { app, ask } from '../lib/app.svelte.js';
+  import { toggle, partsOf, clock, chime } from '../lib/cooking.js';
   import QuickReview from '../components/QuickReview.svelte';
   import X from '@lucide/svelte/icons/x';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
@@ -116,27 +117,6 @@
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) turnTo(at + (dx < 0 ? 1 : -1));
   }
 
-  /**
-   * The step's own words cut around each time it gives, so each time can be shown as a button that starts a timer.
-   * A time not found in the words (the text changed) is marked loose and shown after them.
-   */
-  function partsOf(current) {
-    const found = [];
-    let from = 0;
-    for (const timer of current.timers) {
-      const index = current.text.indexOf(timer.text, from);
-      if (index < 0) { found.push({ timer, loose: true }); continue; }
-      found.push({ text: current.text.slice(from, index) }, { timer });
-      from = index + timer.text.length;
-    }
-    found.push({ text: current.text.slice(from) });
-    return found;
-  }
-
-  // ---------- the checklists ----------
-
-  const toggle = (list, index) => (list.includes(index) ? list.filter((item) => item !== index) : [...list, index]);
-
   // ---------- timers ----------
 
   let audio = null;
@@ -166,34 +146,6 @@
 
   const stop = (timer) => { timers = timers.filter((item) => item.id !== timer.id); };
 
-  /** "4:05", or "1:04:05" past an hour. */
-  function clock(ms) {
-    const total = Math.ceil(ms / 1000);
-    const hours = Math.floor(total / 3600);
-    const minutes = Math.floor((total % 3600) / 60);
-    const seconds = String(total % 60).padStart(2, '0');
-    return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${seconds}` : `${minutes}:${seconds}`;
-  }
-
-  /** Three short beeps. */
-  function chime() {
-    if (!audio) return;
-    try {
-      const start = audio.currentTime;
-      for (const offset of [0, 0.25, 0.5]) {
-        const tone = audio.createOscillator();
-        const volume = audio.createGain();
-        tone.frequency.value = 880;
-        volume.gain.setValueAtTime(0.0001, start + offset);
-        volume.gain.exponentialRampToValueAtTime(0.3, start + offset + 0.02);
-        volume.gain.exponentialRampToValueAtTime(0.0001, start + offset + 0.2);
-        tone.connect(volume).connect(audio.destination);
-        tone.start(start + offset);
-        tone.stop(start + offset + 0.22);
-      }
-    } catch { /* no sound; the timer still shows and vibrates */ }
-  }
-
   // Counts down while any timer runs or rings. Timers keep their end time, so a sleeping tab catches up on waking.
   const busy = (timer, at) => Boolean(timer.endsAt) || (timer.doneAt !== null && at - timer.doneAt < RING_MS);
   $effect(() => {
@@ -210,7 +162,7 @@
         }
         if (timer.doneAt && now - timer.doneAt < RING_MS && now - timer.rangAt >= 3000) {
           timer.rangAt = now;
-          chime();
+          chime(audio);
         }
       }
     }, 250);
