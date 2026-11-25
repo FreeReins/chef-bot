@@ -22,8 +22,11 @@
   import Hourglass from '@lucide/svelte/icons/hourglass';
   import Check from '@lucide/svelte/icons/check';
 
-  /** recipe: the RecipeResponse to cook. serves, lines: its servings and ingredient lines, scaled. onclose(): asked to leave. */
-  let { recipe, serves = recipe.servings, lines = recipe.ingredients, onclose } = $props();
+  /**
+   * recipe: the RecipeResponse to cook. serves, lines: its servings and ingredient lines, scaled. onclose(): asked to
+   * leave. onreviewed(answer): told the recipe's reviews and rating after a review is saved on the last page.
+   */
+  let { recipe, serves = recipe.servings, lines = recipe.ingredients, onclose, onreviewed = null } = $props();
 
   /** How long this browser remembers where cooking got to. */
   const REMEMBER_MS = 12 * 60 * 60 * 1000;
@@ -393,7 +396,7 @@
             <Check size={48} />
             <h3 class="page-title">That's every step</h3>
             <p class="lead">Enjoy {recipe.name}.</p>
-            {#if !app.offline}<QuickReview {recipe} />{/if}
+            {#if !app.offline}<QuickReview {recipe} onsaved={onreviewed} />{/if}
             {#if recipe.notes}<p class="muted notes">{recipe.notes}</p>{/if}
           </div>
         {/if}

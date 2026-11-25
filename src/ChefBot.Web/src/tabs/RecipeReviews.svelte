@@ -22,8 +22,8 @@
   const me = $derived(app.session?.user?.id);
   const day = (at) => new Date(at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
-  /** Shows the reviews and rating the server sent back. */
-  function show(answer) {
+  /** Shows the reviews and rating the server sent back. The recipe page calls it for a review saved in cooking mode. */
+  export function show(answer) {
     if (!answer) return;
     reviews = answer.reviews;
     onrating?.(answer.rating);

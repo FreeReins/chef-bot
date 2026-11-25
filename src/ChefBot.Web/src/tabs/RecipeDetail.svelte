@@ -52,6 +52,7 @@
 
   let recipe = $state(null);
   let loaded = $state(false);
+  let reviews = $state(); // the RecipeReviews section, told about a review saved in cooking mode
   let shownId = $state(null); // the photo shown large; the cover when none was picked
   let chosen = $state(servesFrom(location.search, null)); // servings picked on this page; null for the recipe's own
 
@@ -253,11 +254,12 @@
         {/if}
       </section>
     {/if}
-    {#if !app.offline}<RecipeReviews {recipe} onrating={(rating) => (recipe.rating = rating)} />{/if}
+    {#if !app.offline}<RecipeReviews bind:this={reviews} {recipe} onrating={(rating) => (recipe.rating = rating)} />{/if}
   </article>
 
   {#if app.recipeDialog === 'cook'}
-    <RecipeCook {recipe} {serves} lines={scaledLines(recipe, serves).map((line) => line.text)} onclose={close} />
+    <RecipeCook {recipe} {serves} lines={scaledLines(recipe, serves).map((line) => line.text)} onclose={close}
+                onreviewed={(answer) => reviews?.show(answer)} />
   {:else if app.recipeDialog === 'plan'}
     <RecipeAddToPlan {recipe} {serves} onclose={close} />
   {:else if app.recipeDialog === 'edit'}
