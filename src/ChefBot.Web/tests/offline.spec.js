@@ -1,5 +1,5 @@
-// Offline mode: the shopping list and pantry saved in the browser when ChefBot can't be reached, and the changes made
-// meanwhile sent once it answers again (src/lib/offline.svelte.js, src/lib/outbox.svelte.js). `api.offline` makes
+// Offline mode: the shopping list, pantry and the plan's recipes saved in the browser when ChefBot can't be reached,
+// and the changes made meanwhile sent once it answers again (src/lib/offline.svelte.js, src/lib/outbox.svelte.js). `api.offline` makes
 // every API request fail as with no signal. The service worker isn't part of these tests: Vite's dev server serves
 // the page, and the page registers it only in a build.
 import { test, expect, open, reply, expectInbox } from './fixtures.js';
@@ -15,10 +15,17 @@ const banner = (page) => page.getByRole('status').filter({ hasText: 'Offline.' }
 const changes = (api, from) => api.requests.slice(from)
   .filter((request) => !request.startsWith('GET ') && !request.startsWith('POST /api/inbox'));
 
+/** The ids of the recipes the browser has kept for reading offline. */
+const keptRecipes = (page) => page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('chefbot-offline-recipes') ?? '{}').recipes ?? {}).sort());
+// The recipes plan() follows, once each: the tacos' leftovers follow the same recipe.
+const planRecipes = [data.ids.tacos, data.ids.stew, data.ids.curry, data.ids.oats, data.ids.granola, data.ids.crumble].sort();
+const staged = { 'GET /api/plans': [data.summary(data.plan('Staged'))], 'GET /api/plans/*': data.plan('Staged') };
+
 /** Opens the Shopping tab while connected, so the browser saves it, then reloads it with no connection. */
 async function openOffline(page, api, path = '/shopping') {
   await open(page, path);
   await page.waitForFunction(() => localStorage.getItem('chefbot-offline'));
+  await expect.poll(() => keptRecipes(page)).toEqual(planRecipes);
   api.offline = true;
   await page.reload();
   await expect(banner(page)).toBeVisible();
@@ -151,4 +158,46 @@ test('signing out forgets the saved list', async ({ page, api }) => {
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('chefbot-offline'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('chefbot-offline-recipes'))).toBeNull();
+});
+
+test("a recipe on the plan opens offline from the shopping list, and cooking mode works", async ({ page, api }) => {
+  await openOffline(page, api);
+  await expect(page.getByRole('heading', { name: 'Recipes on this plan (6)' })).toBeVisible();
+  await page.getByRole('link', { name: 'Slaw Fish Tacos', exact: true }).click();
+
+  await expect(page.getByRole('heading', { name: 'Slaw Fish Tacos' })).toBeVisible();
+  await expect(page.getByText('Season the fish and roast it for 8 to 10 minutes.')).toBeVisible();
+  await expect(page.getByText('Saved on this device for offline use.')).toBeVisible();
+  await expect(page.locator('img.cover')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Add to plan' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Reviews' })).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'Start cooking' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByText('This needs ChefBot.')).toHaveCount(0);
+});
+
+test("a draft plan's recipes are kept for offline too", async ({ page, api }) => {
+  api.set(staged);
+  await openOffline(page, api);
+  await expect(page.getByRole('heading', { name: 'Recipes in the draft (6)' })).toBeVisible();
+  await page.getByRole('link', { name: 'Chickpea Curry', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Chickpea Curry' })).toBeVisible();
+});
+
+test('a recipe not on the plan still needs ChefBot offline', async ({ page, api }) => {
+  await openOffline(page, api);
+  await page.goto('/recipes/00000000-0000-4000-8000-0000000000b9');
+  await expect(page.getByText('This needs ChefBot.')).toBeVisible();
+});
+
+test('a recipe taken off the plan is no longer kept', async ({ page, api }) => {
+  const plan = data.plan();
+  plan.meals = plan.meals.filter((meal) => meal.recipeId !== data.ids.curry);
+  await open(page, '/shopping');
+  await expect.poll(() => keptRecipes(page)).toEqual(planRecipes);
+  api.set({ 'GET /api/plans/*': plan });
+  await page.reload();
+  await expect.poll(() => keptRecipes(page)).toEqual(planRecipes.filter((id) => id !== data.ids.curry));
 });

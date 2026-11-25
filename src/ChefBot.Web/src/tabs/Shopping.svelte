@@ -13,6 +13,7 @@
   import { canShare, share, download, shoppingText, shoppingCsv } from '../lib/exporting.js';
   import Chip from '../components/Chip.svelte';
   import IngredientLine from './IngredientLine.svelte';
+  import ShoppingRecipes from './ShoppingRecipes.svelte';
   import Share2 from '@lucide/svelte/icons/share-2';
   import Copy from '@lucide/svelte/icons/copy';
   import Printer from '@lucide/svelte/icons/printer';
@@ -259,6 +260,8 @@
       </div>
     {/each}
   </div>
+
+  <ShoppingRecipes />
 
   {#if restock.length}
     <h2 class="no-print">Running out in the pantry ({restock.length})</h2>

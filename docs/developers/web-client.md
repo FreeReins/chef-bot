@@ -32,6 +32,8 @@ path that isn't a file, `/api` or `/help` with `index.html`.
 
 - `public/sw.js` keeps the page itself (`index.html` and `/assets`), never `/api`, `/docs`, `/mcp` or `/help`.
 - `lib/offline.svelte.js` saves what the Shopping and Pantry tabs show, and shows it when ChefBot can't be reached.
+  It also keeps the recipes of `app.plan`'s meals (draft or confirmed, without photos) under their own key, so
+  `/recipes/{id}` and cooking mode open offline for those.
 - `lib/outbox.svelte.js` queues shopping changes made offline and sends them in order once ChefBot answers.
 
 ## Live updates

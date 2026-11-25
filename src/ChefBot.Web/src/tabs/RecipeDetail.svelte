@@ -77,7 +77,7 @@
     { key: 'ingredients', label: 'Ingredients' },
     { key: 'steps', label: 'Steps' },
     ...(hasMore ? [{ key: 'more', label: 'Notes and source' }] : []),
-    { key: 'reviews', label: 'Reviews' },
+    ...(app.offline ? [] : [{ key: 'reviews', label: 'Reviews' }]),
   ]);
 
   /** Shows a recipe the server sent back, and names the browser tab after it. */
@@ -166,6 +166,8 @@
               {/each}
             </div>
           {/if}
+        {:else if app.offline}
+          <div class="placeholder"><BookOpenText size={34} aria-hidden="true" /></div>
         {:else}
           <a class="placeholder" href={link('photos')}>
             <BookOpenText size={34} aria-hidden="true" /><span><ImagePlus size={14} aria-hidden="true" /> Add a photo</span>
@@ -189,12 +191,16 @@
 
         <div class="row-actions">
           <a class="button primary with-icon grow" href={link('cook')}><CookingPot size={16} />Start cooking</a>
-          <a class="button with-icon grow" href={link('plan')}><CalendarPlus size={16} />Add to plan</a>
-          <FavouriteButton {recipe} size={18} onchange={(list) => (recipe.favouredBy = list)} />
-          <RecipeMenu {recipe} {link} />
+          {#if !app.offline}
+            <a class="button with-icon grow" href={link('plan')}><CalendarPlus size={16} />Add to plan</a>
+            <FavouriteButton {recipe} size={18} onchange={(list) => (recipe.favouredBy = list)} />
+            <RecipeMenu {recipe} {link} />
+          {/if}
         </div>
 
-        {#if recipe.hasSuggestion}
+        {#if app.offline}
+          <p class="offline-note muted">Saved on this device for offline use. Photos, editing, favourites and reviews need ChefBot.</p>
+        {:else if recipe.hasSuggestion}
           <p class="suggested"><a class="with-icon" href={link('improve')}><Sparkles size={16} />Suggestions are ready to review</a></p>
         {:else if missing.length}
           <p class="missing muted">Missing {listWords(missing)} · <a href={link('edit')}>Edit</a>{#if app.aiFeatures?.recipeDetails} · <a href={link('improve')}>Improve with AI</a>{/if}</p>
@@ -247,7 +253,7 @@
         {/if}
       </section>
     {/if}
-    <RecipeReviews {recipe} onrating={(rating) => (recipe.rating = rating)} />
+    {#if !app.offline}<RecipeReviews {recipe} onrating={(rating) => (recipe.rating = rating)} />{/if}
   </article>
 
   {#if app.recipeDialog === 'cook'}
@@ -270,7 +276,8 @@
 <style>
   .back-row { margin: 1rem 0 0; }
   .suggested { margin: .75rem 0 0; }
-  .missing { margin: .75rem 0 0; font-size: .9rem; }
+  .missing, .offline-note { margin: .75rem 0 0; font-size: .9rem; }
+  .offline-note { padding-left: .6rem; border-left: 4px solid var(--warn); }
   .suggested a { display: inline-flex; align-items: center; gap: .4rem; font-weight: 600; }
 
   /* The photo beside the name and what to do with it; stacked on narrow screens. Without a photo, a small tile stands in. */

@@ -135,6 +135,14 @@ const VIEWS = [
   },
   { name: 'pantry, offline', path: '/pantry', act: goOffline },
   { name: 'recipes, offline', path: '/recipes', act: goOffline },
+  {
+    name: 'a recipe, offline', path: `/recipes/${data.ids.tacos}`,
+    act: async (page, api) => {
+      await page.waitForFunction((id) => localStorage.getItem('chefbot-offline-recipes')?.includes(id), data.ids.tacos);
+      await goOffline(page, api);
+      await page.getByText('Saved on this device for offline use.').waitFor();
+    },
+  },
   { name: 'pantry with a plan', path: '/pantry' },
   { name: 'pantry without a plan', path: '/pantry', answers: noPlan },
   { name: 'pantry, many items to use soon', path: '/pantry', answers: { ...noPlan, 'GET /api/pantry': data.pantryToUseSoon() } },

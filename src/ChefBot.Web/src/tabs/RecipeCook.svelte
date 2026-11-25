@@ -7,7 +7,7 @@
      remembers the page, the ticked ingredients and the timers for half a day, so a reload or a closed tab picks up where it was. -->
 <script>
   import { onDestroy, untrack } from 'svelte';
-  import { ask } from '../lib/app.svelte.js';
+  import { app, ask } from '../lib/app.svelte.js';
   import QuickReview from '../components/QuickReview.svelte';
   import X from '@lucide/svelte/icons/x';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
@@ -393,7 +393,7 @@
             <Check size={48} />
             <h3 class="page-title">That's every step</h3>
             <p class="lead">Enjoy {recipe.name}.</p>
-            <QuickReview {recipe} />
+            {#if !app.offline}<QuickReview {recipe} />{/if}
             {#if recipe.notes}<p class="muted notes">{recipe.notes}</p>{/if}
           </div>
         {/if}

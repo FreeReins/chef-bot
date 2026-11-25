@@ -156,10 +156,10 @@
     {#key app.tab}
       <div in:rise={{ duration: 160 }}>
         {#if needsConnection()}
-          <!-- Offline, only the shopping list and the pantry were saved on this device. -->
+          <!-- Offline, only the shopping list, the pantry and the plan's recipes were saved on this device. -->
           <div class="card needs-connection">
             <span class="empty-icon" style="--area: var(--area-{app.tab})" aria-hidden="true"><WifiOff size={24} /></span>
-            <p class="muted">This needs ChefBot. The <a href="/shopping">Shopping</a> and <a href="/pantry">Pantry</a> tabs work offline.</p>
+            <p class="muted">This needs ChefBot. The <a href="/shopping">Shopping</a> and <a href="/pantry">Pantry</a> tabs work offline, and the recipes of the plan open from Shopping.</p>
           </div>
         {:else}
           <View />

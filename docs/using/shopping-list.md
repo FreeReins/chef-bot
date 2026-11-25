@@ -36,6 +36,7 @@ you add by hand. Once the plan is confirmed, it's your list for the shop.
 - When the list covers more than one store, each store's card has its own **Mark all as bought**, for when you're
   done at one shop and still have another to go.
 - Bought items go into the pantry with an expiry date.
+- **Recipes on this plan** under the list links to each meal's recipe. Those recipes open with no signal too.
 - The list works with no signal. See [Offline on your phone](offline-on-your-phone.md).
 - **Copy list**, **Share list**, **Print** and **Download CSV** give the list to other apps or paper.
 

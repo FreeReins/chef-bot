@@ -1,6 +1,7 @@
 import { api, upload } from './api.js';
-import { app } from './state.svelte.js';
+import { app, wentOffline } from './state.svelte.js';
 import { onLive } from './live.svelte.js';
+import { savedRecipe } from './offline.svelte.js';
 
 // ---------- recipes ----------
 
@@ -14,13 +15,24 @@ export async function loadRecipes() {
 // A recipe was added or changed, or its photos arrived, here or on another device.
 onLive('recipes', () => loadRecipes());
 
-/** Loads one recipe for its page and gives it to `show`; null when it is gone. */
+/**
+ * Loads one recipe for its page and gives it to `show`; null when it is gone. Offline, the copy kept on this device
+ * for the plan's meals (offline.svelte.js) is shown instead, when there is one.
+ */
 export async function loadRecipePage(id, show) {
+  const kept = savedRecipe(id);
+  if (app.offline && kept) return show(kept);
   try {
     show(await api('GET', `/api/recipes/${id}`));
   } catch (error) {
-    if (error.status !== 404) throw error;
-    show(null);
+    if (error.offline && kept) {
+      wentOffline();
+      show(kept);
+    } else if (error.status === 404) {
+      show(null);
+    } else {
+      throw error;
+    }
   }
 }
 

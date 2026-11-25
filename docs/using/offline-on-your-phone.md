@@ -1,13 +1,16 @@
 # Offline on your phone
 
-The **Shopping** and **Pantry** tabs keep working with no connection, for example in a shop with no signal. This page
-shows how to set a phone up for it. It takes a few minutes, once per phone.
+The **Shopping** and **Pantry** tabs keep working with no connection, for example in a shop with no signal, and so do
+the recipes on the plan. This page shows how to set a phone up for it. It takes a few minutes, once per phone.
 
 ## What works offline
 
 - **Shopping:** tick items off, add items, remove the ones you added, and mark everything as bought. Your changes are
   sent to ChefBot as soon as the phone can reach it again. Items count as bought on the day you ticked them.
 - **Pantry:** read only.
+- **Recipes on the plan:** read them and use **Start cooking**, from the list of recipes under the shopping list
+  (**Recipes on this plan**, or **Recipes in the draft** before the plan is confirmed). Photos aren't kept, and editing,
+  favourites and reviews need ChefBot. A recipe that isn't on the plan needs ChefBot too.
 - **Everything else** needs ChefBot.
 
 When ChefBot can't be reached, a banner says so and shows when the list was last loaded.
@@ -35,7 +38,10 @@ After that, open ChefBot as usual. The page is kept on the phone, and the shoppi
 ## Good to know
 
 - **Over plain HTTP,** the page still works offline while it stays open, but reloading it needs the connection.
-- **Signing out** removes the saved list from the phone.
+- **Recipes are saved with the plan.** Recipes on the plan you're looking at are saved each time the page loads
+  while connected, and again whenever a meal changes. The list says **(not saved on this device)** beside any recipe
+  that wasn't saved in time.
+- **Signing out** removes the saved list and recipes from the phone.
 - **A renewed certificate** has to be installed again. ChefBot's own certificate lasts about two years. See
   [HTTPS and certificates](../admin/https-and-certificates.md).
 

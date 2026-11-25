@@ -22,7 +22,7 @@ Inviting others is optional.
 
 ## Can I use it on my phone?
 
-Yes. It's a web page that works on any phone, and the shopping list works with no signal once the phone trusts
+Yes. It's a web page that works on any phone, and the shopping list and the plan's recipes work with no signal once the phone trusts
 ChefBot's certificate. Add it to your home screen to open it like an app. See
 [Offline on your phone](../using/offline-on-your-phone.md).
 
