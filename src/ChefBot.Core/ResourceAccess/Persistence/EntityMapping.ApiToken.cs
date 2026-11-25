@@ -12,6 +12,9 @@ internal static partial class EntityMapping
         Name = entity.Name,
         TokenHash = entity.TokenHash,
         CreatedAt = entity.CreatedAt,
+        ExpiresAt = entity.ExpiresAt,
+        LastUsedAt = entity.LastUsedAt,
+        ReadOnly = entity.ReadOnly,
     };
 
     public static ApiTokenEntity ToEntity(this ApiToken token) => new()
@@ -21,5 +24,8 @@ internal static partial class EntityMapping
         Name = token.Name,
         TokenHash = token.TokenHash,
         CreatedAt = token.CreatedAt,
+        ExpiresAt = token.ExpiresAt,
+        LastUsedAt = token.LastUsedAt,
+        ReadOnly = token.ReadOnly,
     };
 }

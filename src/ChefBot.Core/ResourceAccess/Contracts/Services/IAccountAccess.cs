@@ -53,4 +53,10 @@ internal interface IAccountAccess
     Task SaveApiTokenAsync(ApiToken token, CancellationToken cancellationToken);
 
     Task RemoveApiTokenAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Records that a token was used at <paramref name="now"/>, unless that was already recorded after
+    /// <paramref name="since"/>. It is saved straight away, without waiting for a commit.
+    /// </summary>
+    Task MarkApiTokenUsedAsync(Guid id, DateTimeOffset now, DateTimeOffset since, CancellationToken cancellationToken);
 }

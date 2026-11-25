@@ -11,4 +11,10 @@ internal sealed class ApiTokenEntity
     public string TokenHash { get; set; } = string.Empty;
 
     public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset? ExpiresAt { get; set; }
+
+    public DateTimeOffset? LastUsedAt { get; set; }
+
+    public bool ReadOnly { get; set; }
 }

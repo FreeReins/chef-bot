@@ -109,4 +109,14 @@ internal sealed class FakeAccounts : IAccountAccess
         ApiTokens.RemoveAll(t => t.Id == id);
         return Task.CompletedTask;
     }
+
+    public Task MarkApiTokenUsedAsync(Guid id, DateTimeOffset now, DateTimeOffset since, CancellationToken cancellationToken)
+    {
+        if (ApiTokens.FirstOrDefault(t => t.Id == id) is { } token && (token.LastUsedAt is null || token.LastUsedAt < since))
+        {
+            token.LastUsedAt = now;
+        }
+
+        return Task.CompletedTask;
+    }
 }

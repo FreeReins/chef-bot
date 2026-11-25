@@ -18,7 +18,10 @@
   run(async () => { tokens = await api('GET', '/api/tokens'); });
 
   const command = $derived(`claude mcp add --transport http chefbot ${address} --header "Authorization: Bearer ${issued?.token ?? '<token>'}"`);
-  const made = (token) => new Date(token.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' });
+  const day = (when) => new Date(when).toLocaleDateString(undefined, { dateStyle: 'medium' });
+  /** How long a token has, in days, by the choice offered: 0 lasts until it is revoked. */
+  const LASTS = [{ days: 90, label: '90 days' }, { days: 30, label: '30 days' }, { days: 365, label: 'A year' }, { days: 0, label: 'Until I revoke it' }];
+  const expired = (token) => token.expiresAt && new Date(token.expiresAt) <= new Date();
 
   const copy = (text, what) => run(async () => {
     await copyText(text);
@@ -28,10 +31,13 @@
   function create(event) {
     event.preventDefault();
     const form = event.currentTarget;
-    const name = new FormData(form).get('name');
+    const data = new FormData(form);
+    const days = Number(data.get('lasts'));
+    const request = { name: data.get('name'), expiresInDays: days > 0 ? days : null, readOnly: data.get('readOnly') === 'on' };
     pending(event, () => run(async () => {
-      issued = await api('POST', '/api/tokens', { name });
-      tokens = [{ id: issued.id, name: issued.name, createdAt: issued.createdAt }, ...tokens];
+      issued = await api('POST', '/api/tokens', request);
+      tokens = [{ id: issued.id, name: issued.name, createdAt: issued.createdAt, expiresAt: issued.expiresAt,
+        lastUsedAt: null, readOnly: issued.readOnly }, ...tokens];
       form.reset();
       toast('The token was made. Copy it now: it won\'t be shown again.');
     }));
@@ -83,7 +89,8 @@
     <h4>2. Your tokens</h4>
     <p class="muted small">
       Give each assistant its own token. It sends it as the header <code>Authorization: Bearer &lt;token&gt;</code>.
-      A token acts as you until you revoke it, even after you change your password.
+      A token acts as you until it expires or you revoke it. A read-only one can look things up but not change them:
+      give an assistant more only when it needs it.
     </p>
 
     {#if issued}
@@ -110,7 +117,15 @@
         <ul class="tokens">
           {#each tokens as token (token.id)}
             <li>
-              <span><strong>{token.name}</strong> <span class="muted">made {made(token)}</span></span>
+              <span>
+                <strong>{token.name}</strong>
+                {#if token.readOnly}<span class="chip">Read-only</span>{/if}
+                <span class="muted small-line">
+                  made {day(token.createdAt)},
+                  {#if !token.expiresAt}lasts until revoked{:else if expired(token)}<span class="bad-text">expired {day(token.expiresAt)}</span>{:else}expires {day(token.expiresAt)}{/if},
+                  {token.lastUsedAt ? `last used ${day(token.lastUsedAt)}` : 'not used yet'}
+                </span>
+              </span>
               <button type="button" class="bad-text" onclick={() => revoke(token)} aria-label="Revoke {token.name}">Revoke</button>
             </li>
           {/each}
@@ -122,6 +137,12 @@
       <label>Name for a new token, such as the assistant it is for
         <input id="token-name" name="name" required maxlength="80" autocomplete="off">
       </label>
+      <label>Lasts
+        <select id="token-lasts" name="lasts">
+          {#each LASTS as choice (choice.days)}<option value={choice.days}>{choice.label}</option>{/each}
+        </select>
+      </label>
+      <label class="check"><input id="token-read-only" name="readOnly" type="checkbox"> Read-only: it can look things up but not change them</label>
       <div class="row-actions"><button type="submit">Make a token</button></div>
     </form>
   </div>
@@ -141,6 +162,7 @@
   #mcp-address, #token-secret, #token-command { font-family: ui-monospace, monospace; font-size: .85rem; }
   .issued { border-color: var(--accent); }
   .tokens { list-style: none; padding: 0; margin: 0; display: grid; gap: .25rem; }
+  .small-line { display: block; font-size: .9rem; }
   .tokens li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
     padding: .4rem 0; border-bottom: 1px solid var(--line); }
 </style>

@@ -14,6 +14,9 @@ public sealed class ApiTokenAuthentication(
     IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
+    /// <summary>What a request with an expired, revoked or unknown token is told.</summary>
+    public const string Refused = "That API token doesn't work: it may have expired or been revoked. Make a new one under Settings, AI assistants.";
+
     /// <summary>The name of the authentication scheme.</summary>
     public const string SchemeName = "ApiToken";
 
@@ -30,7 +33,7 @@ public sealed class ApiTokenAuthentication(
         var accounts = Context.RequestServices.GetRequiredService<IAccountManager>();
         var session = await accounts.FindApiTokenSessionAsync(header[BearerPrefix.Length..].Trim(), Context.RequestAborted);
         return session is null
-            ? AuthenticateResult.Fail("That API token doesn't work. Make a new one under Settings, AI assistants.")
-            : AuthenticateResult.Success(new AuthenticationTicket(Sessions.Principal(session, SchemeName), SchemeName));
+            ? AuthenticateResult.Fail(Refused)
+            : AuthenticateResult.Success(new AuthenticationTicket(Sessions.Principal(session.Session, SchemeName, session.ReadOnly), SchemeName));
     }
 }

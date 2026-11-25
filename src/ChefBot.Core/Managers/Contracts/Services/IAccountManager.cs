@@ -19,9 +19,14 @@ public interface IAccountManager
 
     /// <summary>
     /// Checks a username and password. Wrong passwords are counted, and too many in a row lock the account for a while.
+    /// A device that signed in to the account before (<paramref name="knownDeviceUserId"/> is the account's id) isn't
+    /// held up by the lockout and doesn't add to it, so someone guessing passwords can't lock the owner out.
     /// </summary>
+    /// <param name="request">The username and password.</param>
+    /// <param name="knownDeviceUserId">The account this device signed in to before, from its known-device cookie, or null.</param>
+    /// <param name="cancellationToken">Stops the work.</param>
     /// <exception cref="NotSignedInException">The details are wrong, or the account is locked.</exception>
-    Task<AccountSession> SignInAsync(SignInRequest request, CancellationToken cancellationToken);
+    Task<AccountSession> SignInAsync(SignInRequest request, Guid? knownDeviceUserId, CancellationToken cancellationToken);
 
     /// <summary>What an opened link is for, so the page can show the right form.</summary>
     Task<LinkDetails> DescribeLinkAsync(string token, CancellationToken cancellationToken);
@@ -29,11 +34,23 @@ public interface IAccountManager
     /// <summary>Creates an account from an invite link and uses the invite up.</summary>
     Task<AccountSession> AcceptInviteAsync(AcceptInviteRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Sets a new password from a reset link, uses the link up and unlocks the account.</summary>
+    /// <summary>
+    /// Sets a new password from a reset link, uses the link up and unlocks the account. Its sessions end and its API
+    /// tokens are revoked, since a reset is how a lost or stolen account is taken back.
+    /// </summary>
     Task<AccountSession> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Changes the signed-in person's own password. Their other sessions are signed out.</summary>
+    /// <summary>
+    /// Changes the signed-in person's own password. Their other sessions are signed out, and their API tokens are
+    /// revoked when the request asks for that.
+    /// </summary>
     Task<AccountSession> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Ends every session the person has, on every device. The session returned is a new one, for the device that
+    /// asked. API tokens keep working.
+    /// </summary>
+    Task<AccountSession> SignOutEverywhereAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>Every account, oldest first.</summary>
     Task<IReadOnlyList<UserResponse>> ListUsersAsync(CancellationToken cancellationToken);
@@ -77,17 +94,21 @@ public interface IAccountManager
 
     /// <summary>
     /// Creates an API token that signs in as an account, for an assistant such as an MCP client. It keeps working
-    /// after a password change, until it is revoked or the account is removed. The secret is returned only here.
+    /// until it expires, is revoked, its owner resets their password or the account is removed. A read-only token can
+    /// only use tools that change nothing. The secret is returned only here.
     /// </summary>
-    /// <exception cref="RuleViolationException">The name is blank or too long.</exception>
+    /// <exception cref="RuleViolationException">The name is blank or too long, or the expiry is out of range.</exception>
     Task<IssuedApiToken> CreateApiTokenAsync(Guid userId, CreateApiTokenRequest request, CancellationToken cancellationToken);
 
     /// <summary>Stops one of an account's API tokens from working.</summary>
     /// <exception cref="NotFoundException">The account has no token with that id.</exception>
     Task RevokeApiTokenAsync(Guid userId, Guid id, CancellationToken cancellationToken);
 
-    /// <summary>The account an API token signs in as, as it is now. Null when the token or its account no longer exists.</summary>
-    Task<SessionInfo?> FindApiTokenSessionAsync(string token, CancellationToken cancellationToken);
+    /// <summary>
+    /// The account an API token signs in as, as it is now, and whether the token is read-only. Records that the token
+    /// was used. Null when the token has expired or it or its account no longer exists.
+    /// </summary>
+    Task<ApiTokenSession?> FindApiTokenSessionAsync(string token, CancellationToken cancellationToken);
 
     /// <summary>A person's inbox: the newest messages, newest first, and how many are unread.</summary>
     Task<InboxResponse> GetInboxAsync(Guid userId, CancellationToken cancellationToken);

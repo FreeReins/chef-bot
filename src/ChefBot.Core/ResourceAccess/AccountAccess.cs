@@ -132,4 +132,8 @@ internal sealed class AccountAccess(ChefBotDbContext db) : IAccountAccess
             db.ApiTokens.Remove(token);
         }
     }
+
+    public Task MarkApiTokenUsedAsync(Guid id, DateTimeOffset now, DateTimeOffset since, CancellationToken cancellationToken) =>
+        db.ApiTokens.Where(token => token.Id == id && (token.LastUsedAt == null || token.LastUsedAt < since))
+            .ExecuteUpdateAsync(set => set.SetProperty(token => token.LastUsedAt, now), cancellationToken);
 }

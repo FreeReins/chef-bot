@@ -81,9 +81,10 @@ Under **Connect your assistant** there are two steps: **1. ChefBot's address** s
 **2. Your tokens** lists your tokens and makes new ones.
 
 1. Open **Settings → AI assistants**.
-2. Under **2. Your tokens**, in **Name for a new token**, enter the assistant it's for, and press **Make a token**.
-3. Copy the token. It's shown only once.
-4. Give the assistant the **MCP address**, `https://<ChefBot's address>:8443/mcp`, and the token, sent as the header
+2. Under **2. Your tokens**, in **Name for a new token**, enter the assistant it's for.
+3. Pick how long it lasts in **Lasts**, and tick **Read-only** if the assistant only needs to look things up.
+4. Press **Make a token**, and copy the token. It's shown only once.
+5. Give the assistant the **MCP address**, `https://<ChefBot's address>:8443/mcp`, and the token, sent as the header
    `Authorization: Bearer <token>`.
 
 #### Claude Code
@@ -101,7 +102,13 @@ Any client that supports MCP over Streamable HTTP with a custom header takes the
 ### Tokens
 
 - A token acts as the person who made it. Each person makes and revokes their own.
-- It keeps working after a password change, and stops when it's revoked or its account is removed.
+- **Read-only** tokens can only use the tools that change nothing, such as `search_recipes` and `get_current_plan`.
+  The assistant isn't offered the others, and is told the token is read-only if it tries one. Things an assistant
+  reads, such as imported recipe pages, could try to steer it, so give a token write access only when it needs it.
+- A token lasts 30 days, 90 days, a year or until you revoke it, as chosen when it was made. The list shows when each
+  one expires and when an assistant last used it.
+- It stops working when it expires, is revoked or its account is removed, and when its owner's password is reset
+  with a reset link. Changing your own password keeps your tokens unless you tick **Also revoke my API tokens**.
 - **Revoke** a token on the same page when you stop using an assistant.
 - Tokens aren't kept in backups, so after a restore, make new ones.
 - Tokens only work on `/mcp`, not on the rest of the API.

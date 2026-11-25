@@ -62,6 +62,8 @@ public static class CoreRegistration
         services.AddScoped<IShoppingListAccess, ShoppingListAccess>();
         services.AddScoped<IAccountAccess, AccountAccess>();
         services.AddScoped<IInboxAccess, InboxAccess>();
+        services.AddDataProtection();
+        services.AddSingleton<SecretBox>();
         services.AddScoped<ISettingsAccess, SettingsAccess>();
         services.AddScoped<IMessageAccess, MessageAccess>();
         services.AddScoped<IHistoryAccess, HistoryAccess>();

@@ -30,8 +30,8 @@ public class ApiTokenTests
 
         await Assert.That(issued.Name).IsEqualTo("Claude Desktop");
         await Assert.That(issued.Token).StartsWith(SecurityEngine.ApiTokenPrefix);
-        await Assert.That(session?.UserId).IsEqualTo(admin);
-        await Assert.That(session!.IsAdmin).IsTrue();
+        await Assert.That(session?.Session.UserId).IsEqualTo(admin);
+        await Assert.That(session!.Session.IsAdmin).IsTrue();
     }
 
     [Test]
@@ -114,7 +114,93 @@ public class ApiTokenTests
 
         await accounts.ChangePasswordAsync(admin, new ChangePasswordRequest(Jamie.Password, "a brand new password"), default);
 
-        await Assert.That((await accounts.FindApiTokenSessionAsync(issued.Token, default))?.UserId).IsEqualTo(admin);
+        await Assert.That((await accounts.FindApiTokenSessionAsync(issued.Token, default))?.Session.UserId).IsEqualTo(admin);
+    }
+
+    [Test]
+    public async Task Changing_the_password_can_revoke_tokens_too()
+    {
+        var (accounts, core, admin, _) = await CreateAsync();
+        var issued = await accounts.CreateApiTokenAsync(admin, new CreateApiTokenRequest("Claude"), default);
+
+        await accounts.ChangePasswordAsync(admin, new ChangePasswordRequest(Jamie.Password, "a brand new password", RevokeApiTokens: true), default);
+
+        await Assert.That(await accounts.FindApiTokenSessionAsync(issued.Token, default)).IsNull();
+        await Assert.That(core.Accounts.ApiTokens).IsEmpty();
+    }
+
+    [Test]
+    public async Task A_password_reset_revokes_the_accounts_tokens()
+    {
+        var (accounts, _, admin, member) = await CreateAsync();
+        var samsToken = await accounts.CreateApiTokenAsync(member, new CreateApiTokenRequest("Sam's"), default);
+        var adminsToken = await accounts.CreateApiTokenAsync(admin, new CreateApiTokenRequest("Jamie's"), default);
+        var reset = await accounts.CreatePasswordResetAsync(member, admin, default);
+
+        await accounts.ResetPasswordAsync(new ResetPasswordRequest(reset.Token, "taken back at last"), default);
+
+        await Assert.That(await accounts.FindApiTokenSessionAsync(samsToken.Token, default)).IsNull();
+        await Assert.That(await accounts.FindApiTokenSessionAsync(adminsToken.Token, default)).IsNotNull();
+    }
+
+    [Test]
+    public async Task A_token_made_to_expire_stops_working_then()
+    {
+        var (accounts, core, admin, _) = await CreateAsync();
+        var issued = await accounts.CreateApiTokenAsync(admin, new CreateApiTokenRequest("Trial", ExpiresInDays: 30), default);
+
+        await Assert.That(issued.ExpiresAt).IsEqualTo(core.Clock.Now.AddDays(30));
+        core.Clock.Now += TimeSpan.FromDays(30) - TimeSpan.FromMinutes(1);
+        await Assert.That(await accounts.FindApiTokenSessionAsync(issued.Token, default)).IsNotNull();
+        core.Clock.Now += TimeSpan.FromMinutes(1);
+        await Assert.That(await accounts.FindApiTokenSessionAsync(issued.Token, default)).IsNull();
+        await Assert.That((await accounts.ListApiTokensAsync(admin, default)).Single().ExpiresAt).IsEqualTo(issued.ExpiresAt);
+    }
+
+    [Test]
+    [Arguments(0)]
+    [Arguments(-1)]
+    [Arguments(SecurityEngine.MaxApiTokenDays + 1)]
+    public async Task A_token_lasts_a_sensible_number_of_days(int days)
+    {
+        var (accounts, core, admin, _) = await CreateAsync();
+
+        var refused = await TestData.Caught<RuleViolationException>(
+            () => accounts.CreateApiTokenAsync(admin, new CreateApiTokenRequest("Claude", ExpiresInDays: days), default));
+
+        await Assert.That(refused).IsNotNull();
+        await Assert.That(core.Accounts.ApiTokens).IsEmpty();
+    }
+
+    [Test]
+    public async Task A_read_only_token_says_so()
+    {
+        var (accounts, _, admin, _) = await CreateAsync();
+        var reader = await accounts.CreateApiTokenAsync(admin, new CreateApiTokenRequest("Reader", ReadOnly: true), default);
+        var writer = await accounts.CreateApiTokenAsync(admin, new CreateApiTokenRequest("Writer"), default);
+
+        await Assert.That(reader.ReadOnly).IsTrue();
+        await Assert.That((await accounts.FindApiTokenSessionAsync(reader.Token, default))!.ReadOnly).IsTrue();
+        await Assert.That((await accounts.FindApiTokenSessionAsync(writer.Token, default))!.ReadOnly).IsFalse();
+        await Assert.That((await accounts.ListApiTokensAsync(admin, default)).Single(token => token.Name == "Reader").ReadOnly).IsTrue();
+    }
+
+    [Test]
+    public async Task A_tokens_last_use_is_recorded_every_few_minutes()
+    {
+        var (accounts, core, admin, _) = await CreateAsync();
+        var issued = await accounts.CreateApiTokenAsync(admin, new CreateApiTokenRequest("Claude"), default);
+        await Assert.That((await accounts.ListApiTokensAsync(admin, default)).Single().LastUsedAt).IsNull();
+
+        var first = core.Clock.Now;
+        await accounts.FindApiTokenSessionAsync(issued.Token, default);
+        core.Clock.Now += TimeSpan.FromMinutes(1);
+        await accounts.FindApiTokenSessionAsync(issued.Token, default);
+        await Assert.That((await accounts.ListApiTokensAsync(admin, default)).Single().LastUsedAt).IsEqualTo(first);
+
+        core.Clock.Now += SecurityEngine.LastUsedPrecision;
+        await accounts.FindApiTokenSessionAsync(issued.Token, default);
+        await Assert.That((await accounts.ListApiTokensAsync(admin, default)).Single().LastUsedAt).IsEqualTo(core.Clock.Now);
     }
 
     [Test]

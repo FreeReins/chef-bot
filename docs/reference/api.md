@@ -82,13 +82,14 @@ try each call. Both need you to be signed in.
 | `POST /api/ai/models/{id}/test` | Ask a saved model a short question (admin). Answers `{"worked", "problem"}` |
 | `GET /api/ai/features` | Which AI features have a model set up: `{"recipeFromPhoto", "recipeDetails"}` |
 | `GET /api/session` | Whether setup is needed and who is signed in |
-| `POST /api/setup/account`, `POST /api/account/sign-in`, `POST /api/account/sign-out` | First account, signing in and out |
+| `POST /api/setup/account`, `POST /api/account/sign-in`, `POST /api/account/sign-out` | First account, signing in and out. Too many wrong passwords in a row lock an account for a while, except on devices that signed in to it before |
 | `GET` `POST /api/setup/samples` | Review the sample recipes (with their description and total time) and add chosen ones by name (admin) |
 | `POST /api/invites`, `POST /api/users/{id}/password-reset` | Create an invite or a password reset link (admin) |
 | `GET /api/links`, `POST /api/links/{id}/regenerate`, `DELETE /api/links/{id}` | List, replace or revoke unused links (admin) |
-| `POST /api/account/accept-invite`, `POST /api/account/reset-password` | Use an invite or reset link |
-| `POST /api/account/password` | Change your own password |
-| `GET` `POST /api/tokens`, `DELETE /api/tokens/{id}` | List, make (`{"name": "Claude Code"}`, answers with the `token` once) or revoke your own API tokens for AI assistants |
+| `POST /api/account/accept-invite`, `POST /api/account/reset-password` | Use an invite or reset link. A reset also revokes the account's API tokens |
+| `POST /api/account/password` | Change your own password; your other devices are signed out. `"revokeApiTokens": true` revokes your API tokens too |
+| `POST /api/account/sign-out-everywhere` | Sign out on every other device; this one gets a new session. API tokens keep working |
+| `GET` `POST /api/tokens`, `DELETE /api/tokens/{id}` | List (`{"id", "name", "createdAt", "expiresAt", "lastUsedAt", "readOnly"}`, newest first), make (`{"name": "Claude Code", "expiresInDays": 90, "readOnly": true}`, answers with the `token` once) or revoke your own API tokens for AI assistants. `expiresInDays` is 1 to 3650, or null for a token that lasts until it is revoked; a `readOnly` token can only use the MCP tools that change nothing |
 | `GET /api/users`, `DELETE /api/users/{id}`, `POST /api/users/{id}/unlock` | See, remove and unlock accounts (admin) |
 | `GET` `PUT /api/system/security` | Lockout rules and "always use HTTPS" (admin) |
 | `GET /api/system/https`, `GET` `POST /api/system/https/certificate` | HTTPS status, download or recreate the certificate |
@@ -102,6 +103,10 @@ Everything except the session, setup-account, sign-in, invite and reset endpoint
 Endpoints marked *admin* answer `403` with the detail "Only an admin can do that." for other accounts.
 Changing the pantry (`POST`, `PATCH` or `DELETE /api/pantry`) also updates the shopping lists of plans whose week
 hasn't ended, a moment later, as `POST /api/plans/{planId}/refresh` does.
+Sign-in, setup, accept-invite, reset-password and the link lookup (`GET /api/account/link`) take 10 calls a minute
+from one network address; more get `429` with `Retry-After`. A `POST`, `PUT`, `PATCH` or `DELETE` that a browser says
+came from another web address (`Sec-Fetch-Site` other than `same-origin`, or an `Origin` for another host) gets
+`403`. Scripts outside a browser send neither header and aren't affected.
 For scripts, sign in first and keep the cookie:
 
 ```sh

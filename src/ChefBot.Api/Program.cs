@@ -40,6 +40,7 @@ if (OperatingSystem.IsWindows())
 
 builder.Services.AddChefBot(builder.Configuration);
 builder.Services.AddChefBotSignIn(builder.Configuration);
+builder.Services.AddChefBotSignInLimits();
 builder.Logging.AddChefBotLogViewer();
 
 // HTTP always; HTTPS too when Https:Mode is SelfSigned or Certificate.
@@ -73,13 +74,17 @@ builder.Services.AddMcpServer(mcp => mcp.ServerInfo = new() { Name = "ChefBot", 
     .WithTools<RecipeTools>(McpJsonContext.ToolOptions)
     .WithTools<PlanTools>(McpJsonContext.ToolOptions)
     .WithTools<ShoppingTools>(McpJsonContext.ToolOptions)
-    .WithTools<PantryTools>(McpJsonContext.ToolOptions);
+    .WithTools<PantryTools>(McpJsonContext.ToolOptions)
+    // A read-only API token only sees and runs the tools marked ReadOnly.
+    .WithRequestFilters(ReadOnlyTokens.Add);
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseChefBotSecurityHeaders();
 app.UseChefBotProxyHeaders();
+app.UseChefBotCrossSiteCheck();
+app.UseRateLimiter();
 app.UseChefBotHttpsRedirect();
 app.UseChefBotWebPage();
 app.UseAuthentication();

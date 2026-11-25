@@ -52,6 +52,11 @@ internal sealed partial class ValidationEngine
             : throw new RuleViolationException($"A token's name can have at most {ApiTokenNameLength} characters.");
     }
 
+    /// <summary>How many days a new API token lasts: null for until it is revoked, otherwise 1 to <see cref="SecurityEngine.MaxApiTokenDays"/>.</summary>
+    public static int? ApiTokenDays(int? days) => days is null or (>= 1 and <= SecurityEngine.MaxApiTokenDays)
+        ? days
+        : throw new RuleViolationException($"A token can last 1 to {SecurityEngine.MaxApiTokenDays} days, or until you revoke it. Pick one of those.");
+
     /// <summary>A trimmed inbox note: not blank, and at most <see cref="InboxNoteLength"/> characters.</summary>
     public static string InboxNote(string? text)
     {

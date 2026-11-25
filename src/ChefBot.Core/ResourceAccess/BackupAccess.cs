@@ -18,11 +18,36 @@ internal sealed partial class BackupAccess(ChefBotDbContext db, string folder) :
 {
     private const string Pattern = "chefbot-backup-*.json.gz";
 
+    /// <summary>How a backup file is created: readable only by ChefBot's own user, outside Windows.</summary>
+    private static FileStreamOptions PrivateFile
+    {
+        get
+        {
+            var options = new FileStreamOptions { Mode = FileMode.Create, Access = FileAccess.Write };
+            if (!OperatingSystem.IsWindows())
+            {
+                options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            }
+
+            return options;
+        }
+    }
+
     public async Task<StoredBackup> CreateAsync(string name, CancellationToken cancellationToken)
     {
-        Directory.CreateDirectory(folder);
+        // A backup holds every account's password hash and everything else ChefBot stores, so on Linux and macOS
+        // only ChefBot's own user can read it. On Windows the folder's permissions decide, as for the rest of Data:Root.
+        if (OperatingSystem.IsWindows())
+        {
+            Directory.CreateDirectory(folder);
+        }
+        else
+        {
+            Directory.CreateDirectory(folder, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+
         var path = Path.Combine(folder, name);
-        await using (var file = File.Create(path))
+        await using (var file = new FileStream(path, PrivateFile))
         await using (var zip = new GZipStream(file, CompressionLevel.Optimal))
         await using (var writer = new Utf8JsonWriter(zip))
         {

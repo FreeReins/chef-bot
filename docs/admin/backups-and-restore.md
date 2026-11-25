@@ -9,6 +9,9 @@ restore one.
 - An admin changes the time, how many to keep, and a maximum age under **Settings → Backups**.
 - Backups are compressed JSON files with all of ChefBot's own data: recipes and their photos, plans, the pantry,
   accounts, settings and to-do app tokens. API tokens for AI assistants aren't included.
+- AI API keys are stored encrypted, with the keys in ChefBot's keys folder (`Data:SessionKeys`), which isn't in the
+  backup. A backup restored on another install, without that folder, has the models but not their API keys.
+- On Linux and macOS, backup files can only be read by the user ChefBot runs as.
 
 ## Make, download and delete backups
 
@@ -70,6 +73,8 @@ After a restore:
 - **Everyone signs in again,** the admin who restored included.
 - **Passwords go back** to what they were when the backup was made. Sessions from before the restore stop working.
 - **AI assistants need new tokens.**
+- **AI models need their API keys entered again** if the backup came from another install whose keys folder wasn't
+  copied across. The log says which models.
 
 ## Move ChefBot to another machine
 
@@ -78,7 +83,8 @@ After a restore:
 3. Copy the backup into the new backups folder and restore it.
 4. Sign in with your old account.
 
-Devices that trusted the old certificate need the new one. Or copy the keys volume across too, to keep it.
+Devices that trusted the old certificate need the new one. Or copy the keys folder across too, to keep it: that
+also keeps the AI models' API keys readable and everyone's known devices.
 
 ## If something goes wrong
 

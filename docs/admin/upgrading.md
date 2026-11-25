@@ -67,6 +67,10 @@ says so rather than touching it.
 From the version that added the bell's messages (the `InboxEntries` table) on, upgrades apply database changes by
 themselves.
 
+- **API token limits:** added the `ExpiresAt`, `LastUsedAt` and `ReadOnly` columns to the `ApiTokens` table. Existing
+  tokens last until revoked and can make changes, as before. AI models' API keys are encrypted the first time
+  ChefBot reads them.
+
 - **One line per ingredient:** added the `ExtraAmounts` column to the `ShoppingItems` and `ManualShoppingItems`
   tables. At startup, saved recipes' ingredients are filed under the catalog's current names (shallots no longer as
   onion), and the open plans' shopping lists follow. Pantry items and hand-added items saved before keep their names.

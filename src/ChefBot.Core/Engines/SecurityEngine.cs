@@ -21,11 +21,22 @@ internal sealed class SecurityEngine
 
     public static readonly TimeSpan PasswordResetLifetime = TimeSpan.FromDays(1);
 
+    /// <summary>How often a token's last use is recorded: once in this long is enough to tell whether it is in use.</summary>
+    public static readonly TimeSpan LastUsedPrecision = TimeSpan.FromMinutes(5);
+
+    /// <summary>The longest an API token can be made to last, in days, short of lasting until it is revoked.</summary>
+    public const int MaxApiTokenDays = 3650;
+
     public bool IsLocked(UserAccount user, DateTimeOffset now) => user.LockedUntil is DateTimeOffset until && until > now;
 
-    public string LockedMessage(UserAccount user, DateTimeOffset now) => LockedMessage(user.LockedUntil!.Value - now);
-
-    public string LockedMessage(DateTimeOffset until, DateTimeOffset now) => LockedMessage(until - now);
+    /// <summary>
+    /// What a refused sign-in says, whatever the reason: no such account, a wrong password or a locked account. It is
+    /// the same for all three, so sign-in can't be used to find out which usernames exist. It explains the lockout
+    /// rules, which are the same for every account.
+    /// </summary>
+    public string RefusedMessage(SecuritySettings rules) => CountsSignIns(rules)
+        ? $"{WrongDetails} After {rules.MaxFailedSignIns} wrong passwords in a row an account is locked for {rules.LockoutMinutes} minutes, except on devices that have signed in to it before; an admin can unlock it sooner."
+        : WrongDetails;
 
     /// <summary>True when the rules lock accounts, so sign-in attempts need counting.</summary>
     public bool CountsSignIns(SecuritySettings rules) => rules.MaxFailedSignIns > 0;
@@ -50,7 +61,7 @@ internal sealed class SecurityEngine
     public void SetPassword(UserAccount user, string passwordHash)
     {
         user.PasswordHash = passwordHash;
-        user.SessionVersion++;
+        EndSessions(user);
         Unlock(user);
     }
 
@@ -70,13 +81,30 @@ internal sealed class SecurityEngine
         return new NewLink(link, token);
     }
 
-    /// <summary>A new API token for an account. Its secret starts with <see cref="ApiTokenPrefix"/>.</summary>
-    public NewApiToken IssueApiToken(Guid userId, string name, DateTimeOffset now)
+    /// <summary>
+    /// A new API token for an account. Its secret starts with <see cref="ApiTokenPrefix"/>. It lasts
+    /// <paramref name="days"/> days, or until it is revoked when that is null.
+    /// </summary>
+    public NewApiToken IssueApiToken(Guid userId, string name, int? days, bool readOnly, DateTimeOffset now)
     {
         var secret = ApiTokenPrefix + Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
-        var token = new ApiToken { UserId = userId, Name = name, TokenHash = HashToken(secret), CreatedAt = now };
+        var token = new ApiToken
+        {
+            UserId = userId,
+            Name = name,
+            TokenHash = HashToken(secret),
+            CreatedAt = now,
+            ExpiresAt = days is int d ? now.AddDays(d) : null,
+            ReadOnly = readOnly,
+        };
         return new NewApiToken(token, secret);
     }
+
+    /// <summary>True when the token has an expiry date and it has passed.</summary>
+    public bool IsExpired(ApiToken token, DateTimeOffset now) => token.ExpiresAt is DateTimeOffset until && now >= until;
+
+    /// <summary>Ends the account's sessions everywhere: each sign-in cookie made before stops working.</summary>
+    public void EndSessions(UserAccount user) => user.SessionVersion++;
 
     public string HashToken(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token.Trim())));
 
@@ -85,7 +113,4 @@ internal sealed class SecurityEngine
     /// <summary>True when the link exists, hasn't expired and is for <paramref name="purpose"/> (any purpose when null).</summary>
     public bool IsUsable(AccessLink? link, LinkPurpose? purpose, DateTimeOffset now) =>
         link is not null && !IsExpired(link, now) && (purpose is null || link.Purpose == purpose);
-
-    private static string LockedMessage(TimeSpan remaining) =>
-        $"This account is locked after too many wrong passwords. Try again in {Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes))} minutes, or ask an admin to unlock it.";
 }

@@ -439,6 +439,13 @@ const VIEWS = [
       .then(() => page.getByRole('dialog').waitFor()),
   },
   { name: 'settings: login', path: '/settings/login' },
+  {
+    name: 'settings: login, asking before signing out everywhere', path: '/settings/login',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'Sign out everywhere' }).click();
+      await page.getByRole('dialog').waitFor();
+    },
+  },
   { name: 'settings: appearance', path: '/settings/appearance' },
   {
     // Phones only: the sidebar opened from the menu button. Wide screens show it all the time.

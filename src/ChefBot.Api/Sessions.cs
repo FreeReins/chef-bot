@@ -21,6 +21,9 @@ public static class Sessions
 
     private const string VersionClaim = "chefbot:session-version";
 
+    /// <summary>The claim a read-only API token's identity carries.</summary>
+    private const string ReadOnlyClaim = "chefbot:read-only";
+
     public static Task SignInAsync(HttpContext http, SessionInfo session) =>
         http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, Principal(session));
 
@@ -31,8 +34,11 @@ public static class Sessions
     public static ClaimsPrincipal Principal(SessionInfo session) =>
         Principal(session, CookieAuthenticationDefaults.AuthenticationScheme);
 
-    /// <summary>The identity for an account as it is now, signed in with <paramref name="scheme"/>.</summary>
-    public static ClaimsPrincipal Principal(SessionInfo session, string scheme)
+    /// <summary>
+    /// The identity for an account as it is now, signed in with <paramref name="scheme"/>. A
+    /// <paramref name="readOnly"/> one may only use MCP tools that change nothing.
+    /// </summary>
+    public static ClaimsPrincipal Principal(SessionInfo session, string scheme, bool readOnly = false)
     {
         var claims = new List<Claim>
         {
@@ -46,8 +52,16 @@ public static class Sessions
             claims.Add(new Claim(ClaimTypes.Role, AdminRole));
         }
 
+        if (readOnly)
+        {
+            claims.Add(new Claim(ReadOnlyClaim, "true"));
+        }
+
         return new ClaimsPrincipal(new ClaimsIdentity(claims, scheme));
     }
+
+    /// <summary>True when the identity came from a read-only API token.</summary>
+    public static bool IsReadOnly(ClaimsPrincipal? principal) => principal?.HasClaim(ReadOnlyClaim, "true") ?? false;
 
     /// <summary>The id of the signed-in account, or null when nobody is signed in.</summary>
     public static Guid? UserId(ClaimsPrincipal? principal) =>

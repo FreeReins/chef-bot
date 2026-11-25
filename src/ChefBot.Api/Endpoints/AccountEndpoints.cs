@@ -23,12 +23,15 @@ public static class AccountEndpoints
         NewAccount request, HttpContext http, [FromServices] IAccountManager accounts, CancellationToken cancellationToken) =>
         await StartSessionAsync(http, await accounts.CreateFirstAdminAsync(request, cancellationToken));
 
-    /// <summary>Signs in. Too many wrong passwords in a row lock the account for a while.</summary>
+    /// <summary>
+    /// Signs in. Too many wrong passwords in a row lock the account for a while, except on devices that signed in to it
+    /// before. One address can try 10 times a minute.
+    /// </summary>
     [AllowAnonymous]
     [WolverinePost("/api/account/sign-in")]
     public static async Task<UserResponse> SignIn(
         SignInRequest request, HttpContext http, [FromServices] IAccountManager accounts, CancellationToken cancellationToken) =>
-        await StartSessionAsync(http, await accounts.SignInAsync(request, cancellationToken));
+        await StartSessionAsync(http, await accounts.SignInAsync(request, KnownDevices.Read(http), cancellationToken));
 
     [AllowAnonymous]
     [WolverinePost("/api/account/sign-out")]
@@ -64,9 +67,16 @@ public static class AccountEndpoints
         CancellationToken cancellationToken) =>
         await StartSessionAsync(http, await accounts.ChangePasswordAsync(Sessions.RequireUserId(principal), request, cancellationToken));
 
+    /// <summary>Signs you out on every device, apart from this one, which gets a new session. API tokens keep working.</summary>
+    [WolverinePost("/api/account/sign-out-everywhere")]
+    public static async Task<UserResponse> SignOutEverywhere(
+        HttpContext http, ClaimsPrincipal principal, [FromServices] IAccountManager accounts, CancellationToken cancellationToken) =>
+        await StartSessionAsync(http, await accounts.SignOutEverywhereAsync(Sessions.RequireUserId(principal), cancellationToken));
+
     private static async Task<UserResponse> StartSessionAsync(HttpContext http, AccountSession account)
     {
         await Sessions.SignInAsync(http, account.Session);
+        KnownDevices.Remember(http, account.User.Id);
         return account.User;
     }
 }

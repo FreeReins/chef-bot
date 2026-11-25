@@ -57,11 +57,11 @@ public class AccountTests
         var (accounts, _) = Create();
         await accounts.CreateFirstAdminAsync(Jamie, default);
 
-        var user = await accounts.SignInAsync(SignIn(" JAMIE ", Jamie.Password), default);
+        var user = await accounts.SignInAsync(SignIn(" JAMIE ", Jamie.Password), null, default);
 
         await Assert.That(user.User.Username).IsEqualTo("jamie");
-        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default))).IsTrue();
-        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("nobody", Jamie.Password), default))).IsTrue();
+        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default))).IsTrue();
+        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("nobody", Jamie.Password), null, default))).IsTrue();
     }
 
     [Test]
@@ -137,16 +137,68 @@ public class AccountTests
 
         for (var attempt = 0; attempt < 3; attempt++)
         {
-            await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default))).IsTrue();
+            await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default))).IsTrue();
         }
 
         // Locked: even the right password is refused.
         await Assert.That(core.Accounts.User("jamie").LockedUntil > core.Clock.Now).IsTrue();
-        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", Jamie.Password), default))).IsTrue();
+        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", Jamie.Password), null, default))).IsTrue();
 
         core.Clock.Now += TimeSpan.FromMinutes(11);
-        await Assert.That((await accounts.SignInAsync(SignIn("jamie", Jamie.Password), default)).User.Id == admin.User.Id).IsTrue();
+        await Assert.That((await accounts.SignInAsync(SignIn("jamie", Jamie.Password), null, default)).User.Id == admin.User.Id).IsTrue();
         await Assert.That(core.Accounts.User("jamie").FailedSignIns).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task A_refused_sign_in_doesnt_say_whether_the_account_exists_or_is_locked()
+    {
+        var (accounts, core) = Create();
+        await accounts.CreateFirstAdminAsync(Jamie, default);
+        await accounts.UpdateSecurityAsync(Rules(maxFailed: 2, lockoutMinutes: 10), default);
+
+        var unknown = await TestData.Caught<NotSignedInException>(() => accounts.SignInAsync(SignIn("nobody", "wrong password"), null, default));
+        var wrong = await TestData.Caught<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
+        var locking = await TestData.Caught<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
+        var locked = await TestData.Caught<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", Jamie.Password), null, default));
+
+        await Assert.That(core.Accounts.User("jamie").LockedUntil > core.Clock.Now).IsTrue();
+        await Assert.That(unknown!.Message).Contains("10 minutes");
+        await Assert.That(string.Join("|", new[] { wrong, locking, locked }.Select(error => error!.Message).Distinct())).IsEqualTo(unknown.Message);
+    }
+
+    [Test]
+    public async Task A_device_that_signed_in_before_isnt_locked_out_by_someone_guessing()
+    {
+        var (accounts, core) = Create();
+        var admin = await accounts.CreateFirstAdminAsync(Jamie, default);
+        await accounts.UpdateSecurityAsync(Rules(maxFailed: 2, lockoutMinutes: 10), default);
+
+        // A stranger locks the account from their own device.
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "guess one"), null, default));
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "guess two"), null, default));
+        await Assert.That(core.Accounts.User("jamie").LockedUntil > core.Clock.Now).IsTrue();
+
+        // The owner's own device still gets in, and its typo doesn't count towards a lock.
+        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "typo"), admin.User.Id, default))).IsTrue();
+        await Assert.That((await accounts.SignInAsync(SignIn("jamie", Jamie.Password), admin.User.Id, default)).User.Id).IsEqualTo(admin.User.Id);
+
+        // A cookie from someone else's account doesn't help, and new devices stay locked out.
+        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", Jamie.Password), Guid.CreateVersion7(), default))).IsTrue();
+        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", Jamie.Password), null, default))).IsTrue();
+    }
+
+    [Test]
+    public async Task Signing_out_everywhere_ends_every_session_and_keeps_tokens()
+    {
+        var (accounts, _) = Create();
+        var admin = await accounts.CreateFirstAdminAsync(Jamie, default);
+        var token = await accounts.CreateApiTokenAsync(admin.User.Id, new CreateApiTokenRequest("Claude"), default);
+
+        var fresh = await accounts.SignOutEverywhereAsync(admin.User.Id, default);
+
+        await Assert.That(fresh.Session.SessionVersion).IsGreaterThan(admin.Session.SessionVersion);
+        await Assert.That((await accounts.FindSessionAsync(admin.User.Id, default))!.SessionVersion).IsEqualTo(fresh.Session.SessionVersion);
+        await Assert.That(await accounts.FindApiTokenSessionAsync(token.Token, default)).IsNotNull();
     }
 
     [Test]
@@ -156,16 +208,16 @@ public class AccountTests
         var admin = await accounts.CreateFirstAdminAsync(Jamie, default);
         await accounts.UpdateSecurityAsync(Rules(maxFailed: 2, lockoutMinutes: 10), default);
 
-        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
-        await accounts.SignInAsync(SignIn("jamie", Jamie.Password), default);
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
+        await accounts.SignInAsync(SignIn("jamie", Jamie.Password), null, default);
         await Assert.That(core.Accounts.User("jamie").FailedSignIns).IsEqualTo(0);
 
-        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
-        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
         await Assert.That(core.Accounts.User("jamie").LockedUntil > core.Clock.Now).IsTrue();
 
         await accounts.UnlockUserAsync(admin.User.Id, default);
-        await Assert.That((await accounts.SignInAsync(SignIn("jamie", Jamie.Password), default)).User.Id == admin.User.Id).IsTrue();
+        await Assert.That((await accounts.SignInAsync(SignIn("jamie", Jamie.Password), null, default)).User.Id == admin.User.Id).IsTrue();
     }
 
     [Test]
@@ -179,7 +231,7 @@ public class AccountTests
         core.Accounts.User("jamie").FailedSignIns = 3;
 
         // A fourth isn't checked, so even the right password is refused.
-        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", Jamie.Password), default))).IsTrue();
+        await Assert.That(await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", Jamie.Password), null, default))).IsTrue();
         await Assert.That(core.Accounts.User("jamie").FailedSignIns).IsEqualTo(4);
     }
 
@@ -190,17 +242,17 @@ public class AccountTests
         await accounts.CreateFirstAdminAsync(Jamie, default);
         await accounts.UpdateSecurityAsync(Rules(maxFailed: 3, lockoutMinutes: 10), default);
 
-        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
-        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
         await Assert.That(core.Accounts.User("jamie").FailedSignIns).IsEqualTo(2);
         await Assert.That(core.Accounts.User("jamie").LockedUntil is null).IsTrue();
 
         // The attempt that reaches the limit locks the account. Once the lockout ends, counting starts again.
-        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
         await Assert.That(core.Accounts.User("jamie").LockedUntil).IsEqualTo(core.Clock.Now.AddMinutes(10));
 
         core.Clock.Now += TimeSpan.FromMinutes(11);
-        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
+        await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
         await Assert.That(core.Accounts.User("jamie").FailedSignIns).IsEqualTo(1);
         await Assert.That(core.Accounts.User("jamie").LockedUntil is null).IsTrue();
     }
@@ -214,7 +266,7 @@ public class AccountTests
 
         for (var attempt = 0; attempt < 20; attempt++)
         {
-            await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), default));
+            await Throws<NotSignedInException>(() => accounts.SignInAsync(SignIn("jamie", "wrong password"), null, default));
         }
 
         await Assert.That(core.Accounts.User("jamie").LockedUntil is null).IsTrue();
@@ -267,7 +319,7 @@ public class AccountTests
 
         await Assert.That(details.Purpose).IsEqualTo(LinkPurpose.PasswordReset);
         await Assert.That(details.Username).IsEqualTo("jamie");
-        await Assert.That((await accounts.SignInAsync(SignIn("jamie", "a brand new password"), default)).User.Id == admin.User.Id).IsTrue();
+        await Assert.That((await accounts.SignInAsync(SignIn("jamie", "a brand new password"), null, default)).User.Id == admin.User.Id).IsTrue();
         await Assert.That(after.Session.SessionVersion > admin.Session.SessionVersion).IsTrue();
         await Assert.That(await Throws<NotFoundException>(() => accounts.ResetPasswordAsync(new ResetPasswordRequest(reset.Token, "yet another password"), default))).IsTrue();
     }
@@ -305,7 +357,7 @@ public class AccountTests
             accounts.ChangePasswordAsync(admin.User.Id, new ChangePasswordRequest("not it", "a brand new password"), default))).IsTrue();
         await accounts.ChangePasswordAsync(admin.User.Id, new ChangePasswordRequest(Jamie.Password, "a brand new password"), default);
 
-        await Assert.That((await accounts.SignInAsync(SignIn("jamie", "a brand new password"), default)).User.Id == admin.User.Id).IsTrue();
+        await Assert.That((await accounts.SignInAsync(SignIn("jamie", "a brand new password"), null, default)).User.Id == admin.User.Id).IsTrue();
     }
 
     [Test]

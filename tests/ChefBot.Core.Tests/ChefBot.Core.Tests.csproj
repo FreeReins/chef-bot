@@ -7,6 +7,8 @@
   <ItemGroup>
     <PackageReference Include="TUnit" />
     <ProjectReference Include="../../src/ChefBot.Core/ChefBot.Core.csproj" />
+    <!-- The Api's request checks (cross-site, sign-in limits, read-only tokens) are plain functions tested here too. -->
+    <ProjectReference Include="../../src/ChefBot.Api/ChefBot.Api.csproj" />
   </ItemGroup>
   <ItemGroup>
     <!-- The shipped data files, so tests can check they agree with each other. -->

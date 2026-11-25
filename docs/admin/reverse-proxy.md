@@ -38,7 +38,8 @@ HTTPS, the listed address doesn't match the proxy.
 
 ## What the proxy must do
 
-- **Pass the original `Host` header**, so links ChefBot makes (invites, the calendar feed) use your public name.
+- **Pass the original `Host` header**, so links ChefBot makes (invites, the calendar feed) use your public name, and
+  so older browsers' changes are recognised as coming from ChefBot's own page.
 - **Send `X-Forwarded-For` and `X-Forwarded-Proto`.**
 - **Allow large uploads:** a Mealie backup can be up to 200 MB.
 - **Don't buffer `/api/live`.** It's a live stream that tells open pages when something changes on another device.
@@ -93,7 +94,9 @@ ChefBot is built for a home network. It has password hashing, lockout and HTTPS,
 expose it:
 
 - use a strong password for every account;
-- keep the [lockout](people-and-accounts.md#lockout) on;
+- keep the [lockout](people-and-accounts.md#lockout) on, and set `Https__TrustedProxies` so the limit of 10 sign-in
+  tries a minute counts each visitor, not the proxy;
+- give AI assistants [read-only tokens that expire](ai-assistants.md#tokens) where you can;
 - consider a VPN (WireGuard, [Tailscale](tailscale.md)) or your proxy's own sign-in in front of it instead.
 
 Exposing it does let Google Calendar and Outlook on the web reach the [calendar feed](../using/calendar.md), and

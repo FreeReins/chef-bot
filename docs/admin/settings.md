@@ -12,7 +12,8 @@ are grouped in the sidebar under **You**, **Household**, **Recipes**, **Connecti
 
 | Setting | Default | Who |
 |---|---|---|
-| **Your password:** change your own. Your other devices are signed out | | Everyone |
+| **Your password:** change your own. Your other devices are signed out. **Also revoke my API tokens** stops assistants too | | Everyone |
+| **Your devices:** **Sign out everywhere** signs you out on every other device, without changing your password | | Everyone |
 | **Wrong passwords in a row before an account is locked** (0 turns lockout off) | 5 | Admin |
 | **Minutes an account stays locked** | 15 | Admin |
 

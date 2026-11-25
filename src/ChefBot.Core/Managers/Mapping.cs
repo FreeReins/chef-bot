@@ -228,6 +228,9 @@ internal static partial class Mapping
 
     public static AccountSession ToAccountSession(this UserAccount user) => new(user.ToResponse(), user.ToSession());
 
+    public static ApiTokenResponse ToResponse(this ApiToken token) =>
+        new(token.Id, token.Name, token.CreatedAt, token.ExpiresAt, token.LastUsedAt, token.ReadOnly);
+
     public static SecurityResponse ToResponse(this SecuritySettings rules) =>
         new(rules.MaxFailedSignIns, rules.LockoutMinutes, rules.RequireHttps);
 

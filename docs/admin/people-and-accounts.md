@@ -23,9 +23,13 @@ pantry stay, because they belong to the household.
 
 ## Passwords
 
-- **Change your own password** under **Settings → Login**. Your other devices are signed out.
+- **Change your own password** under **Settings → Login**. Your other devices are signed out. Tick **Also revoke my
+  API tokens** to stop assistants too.
+- **Sign out everywhere** under **Settings → Login** signs you out on every other device, such as a lost phone,
+  without changing your password. API tokens keep working.
 - **Someone forgot theirs:** press **Reset password** next to their name on the People tab and send them the link.
-  It works once and expires after 24 hours.
+  It works once and expires after 24 hours. Using it signs them out everywhere and revokes their API tokens, since a
+  reset is also how a stolen account is taken back.
 
 ## Lockout
 
@@ -36,6 +40,14 @@ many tries**.
 - **Change the rules** under **Settings → Login → Sign-in lockout**: how many wrong passwords in a row (0 turns lockout
   off), and how many minutes an account stays locked.
 - Sign-ins sent all at once count too: only the first 5 have their passwords checked.
+- **Devices that have signed in before aren't locked out.** Each browser that signs in to an account is remembered
+  for a year, and lockout doesn't apply to it or count its mistakes. So someone guessing passwords can lock out new
+  devices, but not yours.
+- **One network address can try 10 times a minute** at signing in, setup, invites and reset links. More get "Too
+  many tries from this network in a short time." Behind a reverse proxy, set `Https__TrustedProxies` so each
+  visitor's own address counts, not the proxy's ([Behind a reverse proxy](reverse-proxy.md)).
+- A refused sign-in says the same whether the username exists, the password is wrong or the account is locked, so
+  sign-in can't be used to find out who has an account.
 
 ## Lost the admin password
 

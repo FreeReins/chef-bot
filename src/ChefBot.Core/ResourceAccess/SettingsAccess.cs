@@ -2,12 +2,14 @@ using ChefBot.Core.ResourceAccess.Contracts.Messages;
 using ChefBot.Core.ResourceAccess.Contracts.Services;
 using ChefBot.Core.ResourceAccess.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace ChefBot.Core.ResourceAccess;
 
 /// <inheritdoc cref="ISettingsAccess"/>
-internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
+internal sealed partial class SettingsAccess(ChefBotDbContext db, SecretBox secrets, ILogger<SettingsAccess> logger) : ISettingsAccess
 {
+    // AI models' API keys are encrypted by SecretBox before they are stored.
     public async Task<SecuritySettings> GetSecurityAsync(CancellationToken cancellationToken) =>
         await RowAsync<SecuritySettingsEntity>(cancellationToken) is { } row
             ? new SecuritySettings
@@ -261,19 +263,50 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
         }
     }
 
-    public async Task<AiSettings> GetAiAsync(CancellationToken cancellationToken) => new()
+    public async Task<AiSettings> GetAiAsync(CancellationToken cancellationToken)
     {
-        Models = (await db.AiModels.ToListAsync(cancellationToken))
-            .OrderBy(model => model.Position)
-            .Select(model => model.ToContract())
-            .ToList(),
-        Routes = (await db.AiRoutes.ToListAsync(cancellationToken)).Select(route => route.ToContract()).ToList(),
-    };
+        var rows = await db.AiModels.ToListAsync(cancellationToken);
+        var models = new List<AiModel>();
+        foreach (var row in rows.OrderBy(model => model.Position))
+        {
+            // A key stored before keys were encrypted is encrypted now, straight away, like sign-in counters.
+            if (SecretBox.IsPlain(row.ApiKey))
+            {
+                var sealedKey = secrets.Seal(row.ApiKey);
+                await db.AiModels.Where(model => model.Id == row.Id)
+                    .ExecuteUpdateAsync(set => set.SetProperty(model => model.ApiKey, sealedKey), cancellationToken);
+            }
+
+            var model = row.ToContract();
+            if (secrets.Open(row.ApiKey) is { } key)
+            {
+                model.ApiKey = key;
+            }
+            else
+            {
+                model.ApiKey = string.Empty;
+                LogUnreadableKey(model.Name);
+            }
+
+            models.Add(model);
+        }
+
+        return new AiSettings
+        {
+            Models = models,
+            Routes = (await db.AiRoutes.ToListAsync(cancellationToken)).Select(route => route.ToContract()).ToList(),
+        };
+    }
 
     public async Task SaveAiAsync(AiSettings ai, CancellationToken cancellationToken)
     {
         var tracked = await db.AiModels.ToDictionaryAsync(model => model.Id, cancellationToken);
         var wanted = ai.Models.Select(model => model.ToEntity()).ToList();
+        foreach (var model in wanted)
+        {
+            model.ApiKey = secrets.Seal(model.ApiKey);
+        }
+
         var wantedIds = wanted.Select(model => model.Id).ToHashSet();
 
         db.AiModels.RemoveRange(tracked.Values.Where(model => !wantedIds.Contains(model.Id)));
@@ -324,4 +357,9 @@ internal sealed class SettingsAccess(ChefBotDbContext db) : ISettingsAccess
             db.Set<TRow>().Add(fresh);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message =
+        "The API key for the AI model {Model} can't be read: it was saved by another ChefBot, such as before restoring a " +
+        "backup on a new computer. Enter the key again under Settings, AI assistants.")]
+    private partial void LogUnreadableKey(string model);
 }
