@@ -47,6 +47,16 @@ internal static partial class EntityMapping
         }
     }
 
+    private static List<ShoppingAmount> ReadAmounts(string? json) =>
+        string.IsNullOrWhiteSpace(json) ? [] : JsonSerializer.Deserialize(json, AmountJson.Default.ListShoppingAmount) ?? [];
+
+    private static string WriteAmounts(List<ShoppingAmount> amounts) => JsonSerializer.Serialize(amounts, AmountJson.Default.ListShoppingAmount);
+
+    /// <summary>The JSON shape of a shopping line's extra amounts, as stored in its row, made at build time.</summary>
+    [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+    [JsonSerializable(typeof(List<ShoppingAmount>))]
+    private sealed partial class AmountJson : JsonSerializerContext;
+
     /// <summary>The JSON shape of a plan style's rules, as stored in its row, made at build time.</summary>
     [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
     [JsonSerializable(typeof(List<PlanRule>))]

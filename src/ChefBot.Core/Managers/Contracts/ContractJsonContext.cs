@@ -83,6 +83,8 @@ namespace ChefBot.Core.Managers.Contracts;
 [JsonSerializable(typeof(SendReminder))]
 [JsonSerializable(typeof(AchievementsUnlocked))]
 [JsonSerializable(typeof(CheckAchievements))]
+[JsonSerializable(typeof(RefreshIngredientNames))]
+[JsonSerializable(typeof(IngredientNamesChanged))]
 [JsonSerializable(typeof(AchievementsSeenRequest))]
 [JsonSerializable(typeof(RecipesAdded))]
 [JsonSerializable(typeof(RecipeChanged))]

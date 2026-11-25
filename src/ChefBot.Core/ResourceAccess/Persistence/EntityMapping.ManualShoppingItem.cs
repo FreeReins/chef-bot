@@ -13,6 +13,7 @@ internal static partial class EntityMapping
         DisplayName = entity.DisplayName,
         Quantity = entity.Quantity,
         Unit = entity.Unit,
+        ExtraAmounts = ReadAmounts(entity.ExtraAmounts),
         AddedOn = entity.AddedOn,
     };
 
@@ -24,6 +25,7 @@ internal static partial class EntityMapping
         DisplayName = item.DisplayName,
         Quantity = item.Quantity,
         Unit = item.Unit,
+        ExtraAmounts = WriteAmounts(item.ExtraAmounts),
         AddedOn = item.AddedOn,
     };
 }

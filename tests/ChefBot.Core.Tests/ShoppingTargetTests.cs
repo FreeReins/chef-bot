@@ -2,6 +2,7 @@ using ChefBot.Core.Engines;
 using ChefBot.Core.Engines.Contracts.Messages;
 using ChefBot.Core.Managers.Contracts;
 using ChefBot.Core.Managers.Contracts.Messages;
+using ChefBot.Core.ResourceAccess.Contracts.Messages;
 
 namespace ChefBot.Core.Tests;
 
@@ -153,14 +154,26 @@ public class ShoppingTargetTests
     public async Task Items_read_as_an_amount_with_their_store_and_meals()
     {
         var items = ShoppingEngine.ToDoItems([
-            new OverviewLine("limes", IngredientStatus.ToBuy, 3, string.Empty, null, IngredientGroup.Fruit, null, false, [], null, StoreArea.Produce),
-            new OverviewLine("fish fillets", IngredientStatus.ToBuy, 600, "g", "Corner Market", IngredientGroup.Protein, null, false, ["Slaw Fish Tacos"], null, StoreArea.MeatAndSeafood),
-            new OverviewLine("coconut milk", IngredientStatus.ToBuy, null, "can", string.Empty, IngredientGroup.Other, null, true, ["Curry", "Soup"], null, StoreArea.CannedAndDry),
+            new OverviewLine("limes", IngredientStatus.ToBuy, 3, string.Empty, null, IngredientGroup.Fruit, null, false, [], null, StoreArea.Produce, [], null),
+            new OverviewLine("fish fillets", IngredientStatus.ToBuy, 600, "g", "Corner Market", IngredientGroup.Protein, null, false, ["Slaw Fish Tacos"], null, StoreArea.MeatAndSeafood, [], null),
+            new OverviewLine("coconut milk", IngredientStatus.ToBuy, null, "can", string.Empty, IngredientGroup.Other, null, true, ["Curry", "Soup"], null, StoreArea.CannedAndDry, [], null),
         ]);
 
         await Assert.That(items.Select(item => item.Title)).IsEquivalentTo(["fish fillets, 600 g", "coconut milk", "limes, 3"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
         await Assert.That(items[0].Description).IsEqualTo("Corner Market · For Slaw Fish Tacos");
         await Assert.That(items[1].Description).IsEqualTo("For Curry, Soup · Optional");
         await Assert.That(items[2].Description).IsNull();
+    }
+
+    [Test]
+    public async Task Items_list_every_amount_and_what_could_be_used_instead()
+    {
+        var items = ShoppingEngine.ToDoItems([
+            new OverviewLine("shallot", IngredientStatus.ToBuy, 2, string.Empty, null, IngredientGroup.Herb, null, false, [], null, StoreArea.Produce,
+                [new ShoppingAmount(3, "tbsp")], "onion"),
+        ]);
+
+        await Assert.That(items[0].Title).IsEqualTo("shallot, 2 + 3 tbsp");
+        await Assert.That(items[0].Description).IsEqualTo("Or onion");
     }
 }

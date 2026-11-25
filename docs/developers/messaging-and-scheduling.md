@@ -21,6 +21,8 @@ gets a `.v2` identity.
 | `MealAddedHandler` | `MealAdded` | Brings a plan's leftover lunches and shopping list in line after a recipe is added from its page (`IPlanManager.CatchUpAsync`) |
 | `PlanningSettingsChangedHandler` | `PlanningSettingsChanged` | Rebuilds open shopping lists after the advanced settings change |
 | `SecuritySettingsChangedHandler` | `SecuritySettingsChanged` | Applies a changed "Always use HTTPS" to the running server |
+| `RefreshIngredientNamesHandler` | `RefreshIngredientNames`, at startup | Files saved recipes' ingredients under the ingredient catalog's current names (`IRecipeManager.RefreshIngredientNamesAsync`); a second run changes nothing |
+| `IngredientNamesChangedHandler` | `IngredientNamesChanged` | Rebuilds the open plans' shopping lists after recipes' ingredients were filed under new names |
 | `GroceryStoresChangedHandler` | `GroceryStoresChanged` | Re-splits open shopping lists between stores |
 | `CookbookRemovedHandler` | `CookbookRemoved` | Takes a deleted cookbook out of the plan styles' cookbook rules, dropping a rule left with none (`IPlanManager.ForgetCookbookAsync`) |
 | `HistoryProjectionHandler` | kitchen events | Writes the food history |

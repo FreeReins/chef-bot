@@ -35,17 +35,14 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
         }
 
         var items = new List<ShoppingItem>();
-        foreach (var group in needed.GroupBy(requirement => (requirement.Ingredient.Key, Family: Units.Family(requirement.Unit))))
+        foreach (var group in needed.GroupBy(requirement => requirement.Ingredient.Key))
         {
             var ingredient = group.First().Ingredient;
-            var unit = Units.Normalize(group.First().Unit);
-            var amounts = group
-                .Where(requirement => requirement.Quantity is not null)
-                .Select(requirement => Units.TryConvert(requirement.Quantity!.Value, requirement.Unit, unit, out var converted) ? converted : 0m)
-                .ToList();
-            decimal? wanted = amounts.Count > 0 ? amounts.Sum() : null;
+            var entry = catalog.Get(ingredient.CatalogName);
+            var (wanted, unit, extra) = AmountTotals.Combine(
+                entry, ingredient, group.Select(requirement => (requirement.Quantity, requirement.Unit)).ToList());
 
-            var (isCovered, toBuy) = SubtractPantry(pantry.WithKey(ingredient.Key), wanted, unit);
+            var (isCovered, toBuy) = SubtractPantry(entry, ingredient, pantry.WithKey(ingredient.Key), wanted, unit);
             if (isCovered)
             {
                 covered.Add(ingredient.DisplayName);
@@ -64,6 +61,7 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
                 DisplayName = ingredient.DisplayName,
                 Quantity = toBuy,
                 Unit = unit,
+                ExtraAmounts = extra,
                 Store = StoreFor(ingredient, plan.WeekStart.Month, stores),
                 IsOptional = group.All(requirement => requirement.IsOptional),
             });
@@ -85,33 +83,33 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
     }
 
     /// <summary>
-    /// Puts something typed in on the hand-added list. When the same ingredient is already there in a unit the amount
-    /// can be converted to (tbsp and cup, oz and lb), that line grows instead of a second one appearing. Returns the line to save.
+    /// Puts something typed in on the hand-added list. When the same ingredient is already there, that line grows
+    /// instead of a second one appearing: amounts that measure the same thing are added (tbsp and cup, oz and lb, a
+    /// lemon and its juice), and any other amount is kept beside them. Returns the line to save.
     /// </summary>
-    public static ManualShoppingItem AddToList(
+    public ManualShoppingItem AddToList(
         IReadOnlyList<ManualShoppingItem> list, IIngredientRef ingredient, decimal? quantity, string unit, DateOnly today)
     {
-        if (list.FirstOrDefault(item => item.Key == ingredient.Key && Units.Comparable(item.Unit, unit)) is { } existing)
+        if (list.FirstOrDefault(item => item.Key == ingredient.Key) is { } existing)
         {
-            if (existing.Quantity is decimal had && quantity is decimal more && Units.TryConvert(more, unit, existing.Unit, out var added))
-            {
-                (existing.Quantity, existing.Unit) = Units.Readable(had + added, existing.Unit);
-            }
-            else if (existing.Quantity is null)
-            {
-                (existing.Quantity, existing.Unit) = (quantity, unit);
-            }
-
+            var amounts = existing.ExtraAmounts
+                .Select(amount => ((decimal?)amount.Quantity, amount.Unit))
+                .Prepend((existing.Quantity, existing.Unit))
+                .Append((quantity, unit))
+                .ToList();
+            (existing.Quantity, existing.Unit, existing.ExtraAmounts) = AmountTotals.Combine(catalog.Get(existing.CatalogName), existing, amounts);
             return existing;
         }
 
+        var (combined, combinedUnit, extra) = AmountTotals.Combine(catalog.Get(ingredient.CatalogName), ingredient, [(quantity, unit)]);
         return new ManualShoppingItem
         {
             Key = ingredient.Key,
             CatalogName = ingredient.CatalogName,
             DisplayName = ingredient.DisplayName,
-            Quantity = quantity,
-            Unit = unit,
+            Quantity = combined,
+            Unit = combinedUnit,
+            ExtraAmounts = extra,
             AddedOn = today,
         };
     }
@@ -234,9 +232,9 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
         var entry = catalog.Get(ingredient.CatalogName);
 
         OverviewLine Line(string name, IngredientStatus status, decimal? quantity = null, string unit = "",
-            string? store = null, DateOnly? expiresOn = null, Guid? shoppingItemId = null) =>
+            string? store = null, DateOnly? expiresOn = null, Guid? shoppingItemId = null, IReadOnlyList<ShoppingAmount>? extra = null) =>
             new(name, status, quantity, unit, store, entry?.Group ?? IngredientGroup.Other, expiresOn, optional, usedIn, shoppingItemId,
-                entry?.Area ?? StoreArea.Other);
+                entry?.Area ?? StoreArea.Other, extra ?? [], ingredient.OrInstead());
 
         if (entry?.PantryStaple == true)
         {
@@ -248,7 +246,8 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
         var open = listed.Where(item => !item.IsPurchased).ToList();
         foreach (var item in open)
         {
-            yield return Line(item.DisplayName, IngredientStatus.ToBuy, item.Quantity, item.Unit, item.Store, shoppingItemId: item.Id);
+            yield return Line(
+                item.DisplayName, IngredientStatus.ToBuy, item.Quantity, item.Unit, item.Store, shoppingItemId: item.Id, extra: item.ExtraAmounts);
         }
 
         var onHand = pantry.WithKey(ingredient.Key);
@@ -267,21 +266,27 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
     /// Compares what is wanted with what is on hand, converting between units that measure the same thing. When
     /// amounts can't be compared (no amount, or units such as cups and pounds) having some is taken to be enough.
     /// </summary>
-    private static (bool IsCovered, decimal? ToBuy) SubtractPantry(IReadOnlyList<PantryItem> onHand, decimal? wanted, string unit)
+    private static (bool IsCovered, decimal? ToBuy) SubtractPantry(
+        CatalogEntry? entry, IIngredientRef ingredient, IReadOnlyList<PantryItem> onHand, decimal? wanted, string unit)
     {
         if (onHand.Count == 0)
         {
             return (false, wanted);
         }
 
-        var comparable = onHand.Where(item => item.Quantity is not null && Units.Comparable(item.Unit, unit)).ToList();
-        if (wanted is null || comparable.Count != onHand.Count)
+        var have = 0m;
+        foreach (var item in onHand)
         {
-            return (true, null);
+            if (wanted is null || item.Quantity is null
+                || !AmountTotals.TryConvert(entry, ingredient, item.Quantity.Value, item.Unit, unit, out var converted))
+            {
+                return (true, null);
+            }
+
+            have += converted;
         }
 
-        var have = comparable.Sum(item => Units.TryConvert(item.Quantity!.Value, item.Unit, unit, out var converted) ? converted : 0m);
-        var remaining = wanted.Value - have;
+        var remaining = wanted!.Value - have;
         return remaining <= 0m ? (true, null) : (false, remaining);
     }
 
@@ -296,11 +301,15 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
             .ThenBy(line => line.Name, StringComparer.OrdinalIgnoreCase)
             .Select(line =>
             {
-                var amount = line.Quantity is decimal quantity
-                    ? string.Join(' ', new[] { quantity.ToString("0.##", CultureInfo.InvariantCulture), line.Unit }.Where(part => part.Length > 0))
-                    : null;
+                var amounts = line.ExtraAmounts
+                    .Select(extra => Amount(extra.Quantity, extra.Unit))
+                    .Prepend(line.Quantity is decimal quantity ? Amount(quantity, line.Unit) : null)
+                    .OfType<string>()
+                    .ToList();
+                var amount = amounts.Count > 0 ? string.Join(" + ", amounts) : null;
                 var notes = new[]
                 {
+                    line.OrInstead is { } kind ? $"Or {kind}" : null,
                     line.Store,
                     line.UsedIn.Count > 0 ? $"For {string.Join(", ", line.UsedIn)}" : null,
                     line.IsOptional ? "Optional" : null,
@@ -308,4 +317,7 @@ internal sealed class ShoppingEngine(IngredientCatalog catalog)
                 return new ToDoItem(amount is null ? line.Name : $"{line.Name}, {amount}", notes.Count > 0 ? string.Join(" · ", notes) : null);
             })
             .ToList();
+
+    private static string Amount(decimal quantity, string unit) =>
+        string.Join(' ', new[] { quantity.ToString("0.##", CultureInfo.InvariantCulture), unit }.Where(part => part.Length > 0));
 }

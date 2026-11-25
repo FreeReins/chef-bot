@@ -16,6 +16,9 @@ internal sealed class ShoppingItemEntity
 
     public string Unit { get; set; } = string.Empty;
 
+    /// <summary>Amounts that couldn't be added to <see cref="Quantity"/>, as a JSON list of quantity and unit.</summary>
+    public string ExtraAmounts { get; set; } = "[]";
+
     public string Store { get; set; } = string.Empty;
 
     public bool IsOptional { get; set; }

@@ -80,7 +80,7 @@ internal sealed partial class PlanManager
     /// <summary>Ticks a plan's shopping item off and puts it in the pantry.</summary>
     private async Task StockAsync(ShoppingItem item, PurchaseDetails details, CancellationToken cancellationToken)
     {
-        item.PurchasedOn = await AddToPantryAsync(item, item.Quantity, item.Unit, details, cancellationToken);
+        item.PurchasedOn = await AddAmountsToPantryAsync(item, item.Quantity, item.Unit, item.ExtraAmounts, details, cancellationToken);
         item.IsPurchased = true;
     }
 
@@ -112,6 +112,26 @@ internal sealed partial class PlanManager
             await messages.PublishAsync(new ShoppingDone(
                 planId, bought, request.PurchasedOn ?? today, request.PurchasedOn is { } on && on != today ? null : clock.GetUtcNow()));
         }
+    }
+
+    /// <summary>
+    /// Saves something bought to the pantry: its main amount and, unless the person said how much they bought, each
+    /// amount that couldn't be added to it. Returns the day it was bought.
+    /// </summary>
+    private async Task<DateOnly> AddAmountsToPantryAsync(
+        IIngredientRef ingredient, decimal? listed, string unit, IReadOnlyList<ShoppingAmount> extra, PurchaseDetails details,
+        CancellationToken cancellationToken)
+    {
+        var purchasedOn = await AddToPantryAsync(ingredient, listed, unit, details, cancellationToken);
+        if (details.Quantity is null)
+        {
+            foreach (var amount in extra)
+            {
+                await AddToPantryAsync(ingredient, amount.Quantity, amount.Unit, details, cancellationToken);
+            }
+        }
+
+        return purchasedOn;
     }
 
     /// <summary>Saves something bought to the pantry. Returns the day it was bought.</summary>

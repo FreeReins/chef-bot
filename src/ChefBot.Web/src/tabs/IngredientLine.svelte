@@ -1,5 +1,7 @@
 <!-- One line of the shopping list. A line still to buy has a box to tick it off: a plan's line once the plan is
-     confirmed, a line added by hand (it has a manualId) any time. Lines added by hand can also be removed. An `actions` snippet adds the caller's own buttons beside the line's. -->
+     confirmed, a line added by hand (it has a manualId) any time. Lines added by hand can also be removed. A plan's line
+     can carry a hand-added one of the same thing (alsoManualId): ticking it buys both. A variety names what it could be
+     swapped for (orInstead), such as onion for shallot. An `actions` snippet adds the caller's own buttons beside the line's. -->
 <script>
   import { app, isConfirmed, buyPlanItem, setShoppingStore, buyManual, removeManualItem, setManualStore } from '../lib/app.svelte.js';
   import { amount, shortDate } from '../lib/format.js';
@@ -22,6 +24,7 @@
   const buy = async () => {
     buying = true;
     await (manual ? buyManual(line.manualId) : buyPlanItem(line.shoppingItemId));
+    if (!manual && line.alsoManualId) await buyManual(line.alsoManualId);
     buying = false;
   };
   const move = (store) => (manual ? setManualStore(line.manualId, store) : setShoppingStore(line.shoppingItemId, store));
@@ -34,7 +37,8 @@
   {/if}
   <!-- The name ticks the box too, a bigger target than the box alone. -->
   <svelte:element this={canBuy ? 'label' : 'div'} class="what" for={canBuy ? `tick-${itemId}` : undefined}>
-    <strong>{line.name}</strong> <span class="amount">{amount(line.quantity, line.unit)}</span>
+    <strong>{line.name}</strong> <span class="amount">{amount(line.quantity, line.unit, line.moreAmounts)}</span>
+    {#if line.orInstead}<span class="muted instead">or {line.orInstead}</span>{/if}
     {#if line.isOptional || line.expiresOn || line.pending}
       <span class="chips">
         {#if line.pending}<Chip tone="warn">Not sent yet</Chip>{/if}
@@ -74,6 +78,7 @@
   @media (prefers-reduced-motion: no-preference) { .buying strong { animation: strike .28s ease-out; } }
   @keyframes strike { from { background-size: 0 2px; } }
   .amount { color: var(--muted); }
+  .instead { font-size: .85rem; font-style: italic; }
   .what .chips { display: inline-flex; margin: 0 0 0 .25rem; vertical-align: middle; }
   .for { display: block; font-size: .82rem; }
   /* Quiet until used: the section heading already says which store. */

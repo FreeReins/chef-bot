@@ -7,7 +7,7 @@ namespace ChefBot.Api.Messaging;
 /// Once the app has started, asks each scheduled job to look now and schedule its next run: the weekly plan, the
 /// daily reminders and the daily backup. From then on each job schedules its own next run in the database, so they
 /// survive restarts; a run missed while ChefBot was off happens straight away. It also records the achievements
-/// reached so far, so only new ones are announced.
+/// reached so far, so only new ones are announced, and files saved recipes' ingredients under the catalog's current names.
 /// </summary>
 internal sealed class StartupJobs(IServiceProvider services, IHostApplicationLifetime lifetime, ILogger<StartupJobs> logger) : IHostedService
 {
@@ -29,6 +29,7 @@ internal sealed class StartupJobs(IServiceProvider services, IHostApplicationLif
             await bus.PublishAsync(new SendDueReminders());
             await bus.PublishAsync(new RunDueBackup());
             await bus.PublishAsync(new CheckAchievements());
+            await bus.PublishAsync(new RefreshIngredientNames());
         }
         catch (Exception exception)
         {

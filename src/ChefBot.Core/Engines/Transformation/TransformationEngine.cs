@@ -305,6 +305,27 @@ internal sealed partial class TransformationEngine(
 
     private static List<string> Tags(IEnumerable<string>? tags) => TidyList(tags).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
+    /// <summary>
+    /// Looks each of a recipe's ingredients up in the catalog again from the line the recipe writes, so a change to
+    /// the catalog (shallot no longer filed as onion) reaches recipes saved before it. Lines saved without their text
+    /// are left alone. Changes <paramref name="recipe"/> in place; returns true when anything changed.
+    /// </summary>
+    public bool RefreshIngredientNames(Recipe recipe)
+    {
+        var changed = false;
+        foreach (var ingredient in recipe.Ingredients.Where(ingredient => !string.IsNullOrWhiteSpace(ingredient.Text)))
+        {
+            var identity = catalog.Identify(IngredientLineParser.Parse(ingredient.Text).Name);
+            if (identity.Key != ingredient.Key || identity.CatalogName != ingredient.CatalogName || identity.DisplayName != ingredient.DisplayName)
+            {
+                (ingredient.Key, ingredient.CatalogName, ingredient.DisplayName) = (identity.Key, identity.CatalogName, identity.DisplayName);
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
     /// <summary>Swaps in a new ingredient list, leaving the stored rows alone when nothing changed.</summary>
     private static void ReplaceIngredients(Recipe recipe, IReadOnlyList<RecipeIngredient> fresh)
     {

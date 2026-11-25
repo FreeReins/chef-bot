@@ -43,9 +43,11 @@ breakfasts to 0 in the plan style.
 
 ## Something you have is still on the shopping list
 
-- **Different units.** ChefBot doesn't convert between units: it doesn't know 1 cup of rice in grams. When the pantry
-  and the recipe use different units, having some counts as having enough. If it's still on the list, check the
-  pantry item's ingredient name.
+- **Different units.** ChefBot doesn't convert between volume and weight: it doesn't know 1 cup of rice in grams.
+  When the pantry and the recipe use different units, having some counts as having enough. If it's still on the
+  list, check the pantry item's ingredient name.
+- **A different variety.** The recipe asks for shallots and the pantry has onions: varieties are bought by name. The
+  line says "or onion" if you'd rather use what you have.
 - **Not enough.** The week's meals need more than you have.
 
 ## "… has moved since you chose it"

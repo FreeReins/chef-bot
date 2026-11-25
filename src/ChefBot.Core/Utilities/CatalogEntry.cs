@@ -43,10 +43,16 @@ internal sealed record CatalogEntry
     public bool PantryStaple { get; init; }
 
     /// <summary>
-    /// True when the exact variety matters at the store, so "butternut squash"
-    /// stays on the list under that name while still matching "winter squash" for planning.
+    /// True when the entry's aliases are varieties rather than other spellings or forms of it, so "butternut squash"
+    /// or "shallot" stays on the list under that name while still matching "winter squash" or "onion" for planning.
     /// </summary>
     public bool KeepSpecificName { get; init; }
+
+    /// <summary>
+    /// How much one whole item gives, for example 3 tbsp of juice from a lemon, so a measured amount can be bought as
+    /// whole items. Null when it isn't known.
+    /// </summary>
+    public CatalogSize? Each { get; init; }
 
     public bool IsFreshProduce => Group is IngredientGroup.Vegetable or IngredientGroup.Fruit or IngredientGroup.Herb;
 

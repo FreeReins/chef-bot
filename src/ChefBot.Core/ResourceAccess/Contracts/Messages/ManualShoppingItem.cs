@@ -21,5 +21,8 @@ internal sealed class ManualShoppingItem : IIngredientRef
 
     public string Unit { get; set; } = string.Empty;
 
+    /// <summary>Amounts that couldn't be added to <see cref="Quantity"/>, such as 100 g beside 2 tbsp.</summary>
+    public List<ShoppingAmount> ExtraAmounts { get; set; } = [];
+
     public DateOnly AddedOn { get; set; }
 }

@@ -7,7 +7,7 @@
 <script>
   import { untrack } from 'svelte';
   import { app, isConfirmed, run, loadPantry, addToShoppingList, buyEverything, toast } from '../lib/app.svelte.js';
-  import { STORE_AREAS, shortDate, weekName, freshness, plural, todayIso } from '../lib/format.js';
+  import { STORE_AREAS, shortDate, weekName, freshness, plural, todayIso, addAmounts } from '../lib/format.js';
   import { pending, pendingClick } from '../lib/pending.js';
   import { celebrate } from '../lib/motion.js';
   import { canShare, share, download, shoppingText, shoppingCsv } from '../lib/exporting.js';
@@ -34,10 +34,24 @@
   const planToBuy = $derived(byStatus('ToBuy'));
   const bought = $derived(byStatus('Purchased'));
   const handAdded = $derived(app.manualItems.map((item) => ({
-    name: item.name, status: 'ToBuy', quantity: item.quantity, unit: item.unit, store: item.store || null,
-    group: item.group, area: item.area ?? 'Other', isOptional: false, usedIn: [], manualId: item.id, pending: item.pending,
+    name: item.name, status: 'ToBuy', quantity: item.quantity, unit: item.unit, moreAmounts: item.moreAmounts ?? [],
+    orInstead: item.orInstead ?? null, store: item.store || null, group: item.group, area: item.area ?? 'Other',
+    isOptional: false, usedIn: [], manualId: item.id, pending: item.pending,
   })));
-  const toBuy = $derived([...planToBuy, ...handAdded]);
+  // Once the plan is confirmed, something added by hand that the plan needs too shares the plan's line, at the same
+  // store, and ticking that line buys both. Before then only the hand-added one can be ticked, so it keeps its own.
+  const sameLine = (a, b) => a.name.toLowerCase() === b.name.toLowerCase() && (a.store ?? null) === (b.store ?? null);
+  const toBuy = $derived.by(() => {
+    if (!isConfirmed()) return [...planToBuy, ...handAdded];
+    const folded = new Set();
+    const lines = planToBuy.map((line) => {
+      const extra = handAdded.find((item) => !folded.has(item.manualId) && !item.pending && sameLine(line, item));
+      if (!extra) return line;
+      folded.add(extra.manualId);
+      return { ...line, ...addAmounts([line, extra]), alsoManualId: extra.manualId };
+    });
+    return [...lines, ...handAdded.filter((item) => !folded.has(item.manualId))];
+  });
   // What "Mark all as bought" covers: everything once the plan is confirmed, otherwise only the hand-added items.
   const buyableIn = (list) => (isConfirmed() ? list.length : list.filter((line) => line.manualId).length);
   const buyable = $derived(buyableIn(toBuy));

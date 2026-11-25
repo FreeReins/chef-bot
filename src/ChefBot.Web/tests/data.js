@@ -133,7 +133,7 @@ export const planStyles = () => {
 /** IngredientLine */
 const line = (name, status, extra = {}) => ({
   name, status, quantity: 1, unit: '', store: null, group: 'Other', area: 'Other', expiresOn: null, isOptional: false,
-  usedIn: ['Slaw Fish Tacos'], shoppingItemId: null, ...extra,
+  usedIn: ['Slaw Fish Tacos'], shoppingItemId: null, moreAmounts: [], orInstead: null, ...extra,
 });
 
 /** PantryItemResponse */
@@ -160,8 +160,8 @@ export const pantryToUseSoon = () => [
 
 /** ManualShoppingItemResponse[]: things put on the shopping list by hand, one at a store and one without. */
 export const manualItems = () => [
-  { id: '00000000-0000-4000-8000-000000000401', name: 'milk', quantity: 2, unit: 'l', store: 'Corner Market', group: 'Dairy', area: 'DairyAndChilled' },
-  { id: '00000000-0000-4000-8000-000000000402', name: 'dish soap', quantity: null, unit: '', store: '', group: 'Other', area: 'Other' },
+  { id: '00000000-0000-4000-8000-000000000401', name: 'milk', quantity: 2, unit: 'l', store: 'Corner Market', group: 'Dairy', area: 'DairyAndChilled', moreAmounts: [], orInstead: null },
+  { id: '00000000-0000-4000-8000-000000000402', name: 'dish soap', quantity: null, unit: '', store: '', group: 'Other', area: 'Other', moreAmounts: [], orInstead: null },
 ];
 
 /** IngredientsResponse: the shopping list and the pantry for the plan. */
@@ -171,6 +171,7 @@ export const ingredients = () => {
     ingredients: [
       line('fish fillets', 'ToBuy', { quantity: 600, unit: 'g', store: 'Corner Market', group: 'Protein', area: 'MeatAndSeafood', shoppingItemId: '00000000-0000-4000-8000-000000000301' }),
       line('limes', 'ToBuy', { quantity: 3, store: 'Saturday Farmers Market', group: 'Fruit', area: 'Produce', shoppingItemId: '00000000-0000-4000-8000-000000000302' }),
+      line('shallot', 'ToBuy', { quantity: 2, moreAmounts: [{ quantity: 2, unit: 'tbsp' }], orInstead: 'onion', store: 'Corner Market', group: 'Herb', area: 'Produce', shoppingItemId: '00000000-0000-4000-8000-000000000304' }),
       line('coconut milk', 'ToBuy', { unit: 'can', group: 'Other', area: 'CannedAndDry', isOptional: true, usedIn: ['Chickpea Curry'], shoppingItemId: '00000000-0000-4000-8000-000000000303' }),
       line('tortillas', 'Purchased', { quantity: 8, group: 'WholeGrain', area: 'Bakery' }),
       line('cabbage', 'InPantry', { unit: 'head', group: 'Vegetable', area: 'Produce', expiresOn: '2026-11-25' }),

@@ -31,7 +31,7 @@
           <p class="store">{group.store}</p>
           <ul class="plain">
             {#each group.lines as line (line.shoppingItemId ?? line.name)}
-              <li>{line.name}{line.quantity != null ? `, ${amount(line.quantity, line.unit)}` : ''}{line.isOptional ? ' (optional)' : ''}</li>
+              <li>{line.name}{amount(line.quantity, line.unit, line.moreAmounts) ? `, ${amount(line.quantity, line.unit, line.moreAmounts)}` : ''}{line.isOptional ? ' (optional)' : ''}</li>
             {/each}
           </ul>
         </div>

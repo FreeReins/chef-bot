@@ -25,7 +25,8 @@ internal static partial class Mapping
             .ThenBy(item => item.Store, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
             .Select(item => new ShoppingItemResponse(
-                item.Id, item.DisplayName, item.Quantity, item.Unit, item.Store, item.IsOptional, item.IsPurchased, item.PurchasedOn))
+                item.Id, item.DisplayName, item.Quantity, item.Unit, item.Store, item.IsOptional, item.IsPurchased, item.PurchasedOn,
+                item.ExtraAmounts.ToResponse(), item.OrInstead()))
             .ToList();
 
         return new PlanResponse(plan.Id, plan.WeekStart, WeekLayout.WeekEnd(plan.WeekStart), plan.Status, meals, shopping, plan.StyleName, notes.ToList());
@@ -62,7 +63,8 @@ internal static partial class Mapping
 
     public static IngredientsResponse ToResponse(this IngredientOverview overview, DateOnly today, int expiringSoonDays, IngredientCatalog catalog) => new(
         overview.Ingredients.Select(line => new IngredientLine(
-            line.Name, line.Status, line.Quantity, line.Unit, line.Store, line.Group, line.ExpiresOn, line.IsOptional, line.UsedIn, line.ShoppingItemId, line.Area)).ToList(),
+            line.Name, line.Status, line.Quantity, line.Unit, line.Store, line.Group, line.ExpiresOn, line.IsOptional, line.UsedIn, line.ShoppingItemId, line.Area,
+            line.ExtraAmounts.ToResponse(), line.OrInstead)).ToList(),
         overview.Pantry.Select(line => new PantryUseResponse(
             line.Item.ToResponse(today, expiringSoonDays, catalog),
             line.UsedByPlan,
@@ -87,7 +89,12 @@ internal static partial class Mapping
         item.Unit,
         store,
         catalog.Get(item.CatalogName)?.Group ?? IngredientGroup.Other,
-        catalog.Get(item.CatalogName)?.Area ?? StoreArea.Other);
+        catalog.Get(item.CatalogName)?.Area ?? StoreArea.Other,
+        item.ExtraAmounts.ToResponse(),
+        item.OrInstead());
+
+    public static IReadOnlyList<AmountResponse> ToResponse(this IEnumerable<ShoppingAmount> amounts) =>
+        amounts.Select(amount => new AmountResponse(amount.Quantity, amount.Unit)).ToList();
 
     /// <param name="recipe">The recipe.</param>
     /// <param name="favouredBy">Who has it as a favourite.</param>

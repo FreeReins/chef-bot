@@ -48,14 +48,31 @@ public class ManualShoppingTests
     }
 
     [Test]
-    public async Task A_different_unit_is_a_separate_line()
+    public async Task An_amount_in_another_unit_goes_on_the_same_line()
     {
         var plans = new TestCore().PlanManager();
 
         await plans.AddManualItemAsync(new NewShoppingItem("cod", 1, "lb"), default);
         var list = await plans.AddManualItemAsync(new NewShoppingItem("cod", 2), default);
 
-        await Assert.That(list.Count).IsEqualTo(2);
+        await Assert.That(list.Count).IsEqualTo(1);
+        await Assert.That(list.Single().Quantity).IsEqualTo(1m);
+        await Assert.That(list.Single().Unit).IsEqualTo("lb");
+        await Assert.That(list.Single().MoreAmounts).IsEquivalentTo([new AmountResponse(2m, string.Empty)]);
+    }
+
+    [Test]
+    public async Task Buying_a_line_with_two_amounts_stocks_both()
+    {
+        var core = new TestCore();
+        var plans = core.PlanManager();
+        await plans.AddManualItemAsync(new NewShoppingItem("cod", 1, "lb"), default);
+        var list = await plans.AddManualItemAsync(new NewShoppingItem("cod", 2), default);
+
+        await plans.PurchaseManualItemAsync(list.Single().Id, new PurchaseDetails(), default);
+
+        await Assert.That(core.Pantry.Rows.Count).IsEqualTo(2);
+        await Assert.That(core.ShoppingList.Rows.Count).IsEqualTo(0);
     }
 
     [Test]

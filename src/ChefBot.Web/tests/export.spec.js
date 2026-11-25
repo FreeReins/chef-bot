@@ -57,8 +57,8 @@ test('the shopping list is copied as a checklist grouped by store and area of th
 
   await expectInbox(page, 'The shopping list was copied.');
   const [{ text }] = await handedOver(page);
-  expect(text).toMatch(/^Shopping list, week of .+ \(3 items\)\n/);
-  expect(text).toContain('Corner Market\nMeat and seafood:\n☐ fish fillets, 600 g');
+  expect(text).toMatch(/^Shopping list, week of .+ \(4 items\)\n/);
+  expect(text).toContain('Corner Market\nFruit and vegetables:\n☐ shallot, 2 + 2 tbsp (or onion)\nMeat and seafood:\n☐ fish fillets, 600 g');
   expect(text).toContain('Saturday Farmers Market\nFruit and vegetables:\n☐ limes, 3');
   expect(text).toContain('Canned and dry goods\n☐ coconut milk, 1 can (optional)');
   expect(text).not.toContain('tortillas'); // already bought
@@ -74,9 +74,10 @@ test('the shopping list downloads as CSV', async ({ page }) => {
   expect(file.suggestedFilename()).toMatch(/^shopping-list-\d{4}-\d\d-\d\d\.csv$/);
   const csv = await readFile(await file.path(), 'utf8');
   const rows = csv.replace(/^\uFEFF/, '').split('\r\n');
-  expect(rows[0]).toBe('Name,Quantity,Unit,Store,Area,Food group,Optional,For');
-  expect(rows).toContain('fish fillets,600,g,Corner Market,Meat and seafood,Protein,,Slaw Fish Tacos');
-  expect(rows).toContain('coconut milk,1,can,,Canned and dry goods,Other,yes,Chickpea Curry');
+  expect(rows[0]).toBe('Name,Quantity,Unit,Also,Or instead,Store,Area,Food group,Optional,For');
+  expect(rows).toContain('fish fillets,600,g,,,Corner Market,Meat and seafood,Protein,,Slaw Fish Tacos');
+  expect(rows).toContain('shallot,2,,2 tbsp,onion,Corner Market,Fruit and vegetables,Herb,,Slaw Fish Tacos');
+  expect(rows).toContain('coconut milk,1,can,,,,Canned and dry goods,Other,yes,Chickpea Curry');
 });
 
 test('a recipe and the whole library download as PDF, Markdown, text and schema.org files', async ({ page }) => {

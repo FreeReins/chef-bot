@@ -10,7 +10,7 @@ import { loadPantry, loadPlan } from './plan.svelte.js';
 import { loadStores } from './settings.svelte.js';
 import { loadManualItems } from './shopping.svelte.js';
 import { app, toast } from './state.svelte.js';
-import { plural, todayIso } from './format.js';
+import { addAmounts, plural, todayIso } from './format.js';
 
 const KEY = 'chefbot-outbox';
 
@@ -60,13 +60,13 @@ export function buyPlanItemOffline(itemId) {
 }
 
 /**
- * Puts something on the list by hand. The same thing in the same unit adds to the amount already listed, as on the
- * server; anything new shows with a temporary id until it is sent.
+ * Puts something on the list by hand. The same thing already listed takes the amount too, as on the server: added to
+ * it in the same unit, otherwise kept beside it. Anything new shows with a temporary id until it is sent.
  */
 export function addManualOffline({ name, quantity = null, unit = null }) {
-  const same = app.manualItems.find((item) => item.name.toLowerCase() === name.toLowerCase() && (item.unit || '') === (unit || ''));
+  const same = app.manualItems.find((item) => item.name.toLowerCase() === name.toLowerCase());
   if (same) {
-    if (quantity != null) same.quantity = (same.quantity ?? 0) + quantity;
+    Object.assign(same, addAmounts([same, { quantity, unit: unit ?? '' }]));
     same.pending = true;
     queue({ kind: 'add-manual', tempId: null, name, quantity, unit });
     return;

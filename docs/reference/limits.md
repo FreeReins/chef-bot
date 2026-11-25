@@ -20,8 +20,9 @@ What ChefBot doesn't do, or does differently than you might expect.
 
 ## Planning and shopping
 
-- **Amounts are only compared in the same unit.** ChefBot doesn't convert cups to grams. When it can't compare,
-  having some of an ingredient counts as having enough.
+- **Amounts are only compared in units that measure the same thing.** ChefBot doesn't convert cups to grams. It knows
+  how much a few whole items give (lemons, limes, garlic cloves, eggs), so "2 tbsp lemon juice" counts as a lemon.
+  When it can't compare, having some of an ingredient counts as having enough.
 - **Seasons are guesses** from the ingredient catalog, tuned for the Kansas City area. You can
   [change them](../admin/customising-catalogs.md).
 - **Stores only know what you tell them.** There are no live prices or stock.

@@ -27,6 +27,9 @@ internal static class TestData
         Entry("cilantro", IngredientGroup.Herb, 7, season: [5, 6, 9, 10]),
         Entry("basil", IngredientGroup.Herb, 5, season: [6, 7, 8, 9]),
         Entry("green onion", IngredientGroup.Herb, 10, aliases: ["scallion"]),
+        Entry("onion", IngredientGroup.Herb, 45, aliases: ["shallot"], keepSpecific: true),
+        Entry("lemon", IngredientGroup.Herb, 21, aliases: ["lemon juice", "lemon zest"], each: new(3m, "tbsp")),
+        Entry("garlic", IngredientGroup.Herb, 60, each: new(1m, "tsp", "clove")),
         Entry("chicken", IngredientGroup.Protein, 2, aliases: ["chicken thigh", "chicken breast"]),
         Entry("beef", IngredientGroup.Protein, 2, aliases: ["stew meat"]),
         Entry("white fish", IngredientGroup.Protein, 2, aliases: ["cod"]),
@@ -126,7 +129,7 @@ internal static class TestData
     private static CatalogEntry Entry(
         string name, IngredientGroup group, int? shelfLife,
         int[]? season = null, string[]? aliases = null, bool staple = false, bool keepSpecific = false,
-        StoreArea? area = null) => new()
+        StoreArea? area = null, CatalogSize? each = null) => new()
     {
         Name = name,
         Group = group,
@@ -136,5 +139,6 @@ internal static class TestData
         PantryStaple = staple,
         KeepSpecificName = keepSpecific,
         ListedArea = area,
+        Each = each,
     };
 }

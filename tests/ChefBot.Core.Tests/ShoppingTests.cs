@@ -252,4 +252,88 @@ public class ShoppingTests
         await Assert.That(finished).IsEmpty();
         await Assert.That(Math.Round(stock.Quantity!.Value)).IsEqualTo(263m);
     }
+
+    [Test]
+    public async Task A_lemon_and_its_juice_and_zest_are_one_line_of_whole_lemons()
+    {
+        var bars = TestData.NewRecipe("Lemon Bars", RecipeCourse.Sweet, false, "2 lemons", "2 tbsp lemon juice", "1 tsp lemon zest");
+        var draft = TestData.Shopping.BuildList(PlanOf(bars), PantrySnapshot.Empty, []);
+
+        var lemons = draft.Items.Where(item => item.Key == "lemon").ToList();
+        await Assert.That(lemons.Count).IsEqualTo(1);
+        await Assert.That(lemons[0].Quantity).IsEqualTo(3m);
+        await Assert.That(lemons[0].Unit).IsEqualTo(string.Empty);
+        await Assert.That(lemons[0].ExtraAmounts).IsEmpty();
+    }
+
+    [Test]
+    public async Task Garlic_by_the_clove_and_by_the_spoon_is_counted_in_cloves()
+    {
+        var stir = TestData.NewRecipe("Stir Fry", RecipeCourse.Main, false, "3 cloves garlic", "2 tsp garlic");
+        var draft = TestData.Shopping.BuildList(PlanOf(stir), PantrySnapshot.Empty, []);
+
+        var garlic = draft.Items.Single(item => item.Key == "garlic");
+        await Assert.That(garlic.Quantity).IsEqualTo(5m);
+        await Assert.That(garlic.Unit).IsEqualTo("clove");
+    }
+
+    [Test]
+    public async Task Amounts_that_cannot_be_added_share_one_line()
+    {
+        var curry = TestData.NewRecipe("Curry", RecipeCourse.Main, false, "1 cup cilantro", "1 bunch cilantro");
+        var draft = TestData.Shopping.BuildList(PlanOf(curry), PantrySnapshot.Empty, []);
+
+        var cilantro = draft.Items.Where(item => item.Key == "cilantro").ToList();
+        await Assert.That(cilantro.Count).IsEqualTo(1);
+        await Assert.That(cilantro[0].Quantity).IsEqualTo(1m);
+        await Assert.That(cilantro[0].Unit).IsEqualTo("cup");
+        await Assert.That(cilantro[0].ExtraAmounts).IsEquivalentTo([new ShoppingAmount(1m, "bunch")]);
+    }
+
+    [Test]
+    public async Task A_meal_without_amounts_adds_to_a_recipe_line_rather_than_beside_it()
+    {
+        var plan = PlanOf(TestData.NewRecipe("Lemon Fish", RecipeCourse.Main, false, "2 lemons"));
+        plan.Meals.Add(new PlannedMeal
+        {
+            Slot = MealSlot.Lunch, Date = TestData.Sunday, Title = "Salad", Portions = 2,
+            CustomIngredients = TestData.Transformation.ToMealIngredients(["lemon"]),
+        });
+
+        var draft = TestData.Shopping.BuildList(plan, PantrySnapshot.Empty, []);
+
+        await Assert.That(draft.Items.Count(item => item.Key == "lemon")).IsEqualTo(1);
+        await Assert.That(Find(draft, "lemon")?.Quantity).IsEqualTo(2m);
+    }
+
+    [Test]
+    public async Task A_variety_keeps_its_own_line_and_names_what_it_could_be_swapped_for()
+    {
+        var plan = PlanOf(
+            TestData.NewRecipe("Vinaigrette", RecipeCourse.Main, false, "2 shallots"),
+            TestData.NewRecipe("Soup", RecipeCourse.Main, false, "1 onion"));
+        var pantry = TestData.PantryOf(TestData.Stocked("onion", 5m));
+
+        var draft = TestData.Shopping.BuildList(plan, pantry, []);
+        TestData.Shopping.ApplyList(plan, draft);
+        var overview = TestData.Shopping.BuildOverview(plan, pantry.Usable, TestData.Sunday, AdvancedSettings.DefaultExpiringSoonDays);
+
+        await Assert.That(Find(draft, "shallot")?.Quantity).IsEqualTo(2m);
+        await Assert.That(Find(draft, "shallot")?.DisplayName).IsEqualTo("shallot");
+        await Assert.That(Find(draft, "onion") is null).IsTrue();
+        await Assert.That(overview.Ingredients.Single(line => line.Name == "shallot").Status).IsEqualTo(IngredientStatus.ToBuy);
+        await Assert.That(overview.Ingredients.Single(line => line.Name == "shallot").OrInstead).IsEqualTo("onion");
+        await Assert.That(overview.Ingredients.Single(line => line.Name == "onion").OrInstead is null).IsTrue();
+    }
+
+    [Test]
+    public async Task Lemon_juice_in_the_pantry_counts_against_whole_lemons()
+    {
+        var bars = TestData.NewRecipe("Lemon Bars", RecipeCourse.Main, false, "3 lemons");
+        var pantry = TestData.PantryOf(TestData.Stocked("lemon juice", 6m, "tbsp"));
+
+        var draft = TestData.Shopping.BuildList(PlanOf(bars), pantry, []);
+
+        await Assert.That(Find(draft, "lemon")?.Quantity).IsEqualTo(1m);
+    }
 }

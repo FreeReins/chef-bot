@@ -210,6 +210,13 @@ public interface IRecipeManager
     Task<IReadOnlyList<AchievementUnlockResponse>> CheckAchievementsAsync(Guid? causedBy, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Looks every saved recipe's ingredients up in the ingredient catalog again, from the lines the recipes write, so
+    /// a change to the catalog reaches recipes saved before it. Announces <see cref="IngredientNamesChanged"/> when any
+    /// recipe changed. Safe to run any number of times: a second run changes nothing. Returns how many recipes changed.
+    /// </summary>
+    Task<int> RefreshIngredientNamesAsync(RefreshIngredientNames command, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Writes what an event means for the food history, and announces it (<see cref="HistoryRecorded"/>) when the
     /// history changed. Safe to run more than once for the same message: it adds nothing the second time.
     /// </summary>

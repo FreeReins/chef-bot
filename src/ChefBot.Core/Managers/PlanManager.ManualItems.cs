@@ -16,7 +16,7 @@ internal sealed partial class PlanManager
         ValidationEngine.ShoppingRequest(request);
         using var _ = await writeLock.AcquireAsync(cancellationToken);
         var list = await shoppingList.ListAsync(cancellationToken);
-        var item = ShoppingEngine.AddToList(list, catalog.Identify(request.Name), request.Quantity, Units.Normalize(request.Unit), clock.Today());
+        var item = shopping.AddToList(list, catalog.Identify(request.Name), request.Quantity, Units.Normalize(request.Unit), clock.Today());
 
         await shoppingList.SaveAsync(item, cancellationToken);
         await messages.PublishAsync(new ManualShoppingChanged());
@@ -90,7 +90,7 @@ internal sealed partial class PlanManager
     /// <summary>Takes a hand-added item off the list and puts it in the pantry.</summary>
     private async Task StockAsync(ManualShoppingItem item, PurchaseDetails details, CancellationToken cancellationToken)
     {
-        await AddToPantryAsync(item, item.Quantity, item.Unit, details, cancellationToken);
+        await AddAmountsToPantryAsync(item, item.Quantity, item.Unit, item.ExtraAmounts, details, cancellationToken);
         await shoppingList.RemoveAsync(item.Id, cancellationToken);
     }
 

@@ -22,6 +22,25 @@ public class IngredientTests
     }
 
     [Test]
+    public async Task The_catalog_keeps_varieties_apart_and_forms_together()
+    {
+        var file = Path.Combine(AppContext.BaseDirectory, "config", "ingredients.json");
+        var catalog = IngredientCatalog.FromJson(File.ReadAllText(file));
+
+        var shallot = catalog.Identify("2 shallots, minced");
+        var juice = catalog.Identify("lemon juice");
+
+        await Assert.That(shallot.Key).IsEqualTo("shallot");
+        await Assert.That(shallot.DisplayName).IsEqualTo("shallot");
+        await Assert.That(shallot.OrInstead()).IsEqualTo("onion");
+        await Assert.That(catalog.Identify("cherry tomatoes").Key).IsEqualTo("cherry tomato");
+        await Assert.That(juice.Key).IsEqualTo("lemon");
+        await Assert.That(juice.OrInstead() is null).IsTrue();
+        await Assert.That(catalog.Get("lemon")?.Each).IsEqualTo(new CatalogSize(3m, "tbsp"));
+        await Assert.That(catalog.Get("garlic")?.Each?.CountUnit).IsEqualTo("clove");
+    }
+
+    [Test]
     public async Task Recognizes_aliases_and_plurals()
     {
         await Assert.That(TestData.Catalog.Find("Scallions, thinly sliced")?.Name).IsEqualTo("green onion");

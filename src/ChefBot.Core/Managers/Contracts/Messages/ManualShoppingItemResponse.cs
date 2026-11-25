@@ -8,6 +8,8 @@ namespace ChefBot.Core.Managers.Contracts.Messages;
 /// <param name="Store">Where to buy it, chosen from the household's stores. Empty when no store applies.</param>
 /// <param name="Group">The ingredient's food group.</param>
 /// <param name="Area">The part of the store it is found in, which the list groups by.</param>
+/// <param name="MoreAmounts">Amounts that couldn't be added to <paramref name="Quantity"/>, such as 100 g beside 2 tbsp.</param>
+/// <param name="OrInstead">The general kind a variety belongs to, for finding a substitute ("onion" for shallot), or null.</param>
 public sealed record ManualShoppingItemResponse(
     Guid Id,
     string Name,
@@ -15,4 +17,6 @@ public sealed record ManualShoppingItemResponse(
     string Unit,
     string Store,
     IngredientGroup Group,
-    StoreArea Area);
+    StoreArea Area,
+    IReadOnlyList<AmountResponse> MoreAmounts,
+    string? OrInstead);

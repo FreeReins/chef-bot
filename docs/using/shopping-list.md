@@ -10,6 +10,13 @@ you add by hand. Once the plan is confirmed, it's your list for the shop.
   instead. A recipe is bought in half batches, so 6 servings of a recipe for 4 buys one and a half times its amounts.
 - **It follows the plan by itself.** After a recipe is added from its page, or the pantry changes, the list catches
   up a moment later in the background, and open pages show the new list without a reload.
+- **One line per ingredient.** "2 lemons" and "2 tbsp lemon juice" from two recipes are one **lemon** line. Where
+  ChefBot knows how much one item gives (a lemon, a lime, a clove of garlic, an egg), measured amounts are turned into
+  whole items and rounded up, so that line reads "lemon 3". Amounts it can't add up are listed together on the line,
+  such as "1 cup + 1 bunch".
+- **Varieties keep their name.** A recipe asking for shallots lists **shallot**, not onion, with "or onion" beside it
+  in case your store has none. The same goes for cherry tomatoes, romaine, kidney beans, spaghetti and the like.
+  Onions in the pantry don't count as shallots.
 - **Staples are left off,** such as salt, pepper and oil.
 - **The pantry is taken off:** what you already have isn't on the list. Amounts are only compared in the same unit,
   so having some of an ingredient in another unit counts as having enough. See
@@ -20,7 +27,7 @@ you add by hand. Once the plan is confirmed, it's your list for the shop.
   **Canned and dry goods**, **Oils, sauces and condiments**, **International**, **Spices and baking**, **Frozen**,
   **Drinks**, then **Everything else** for anything ChefBot doesn't know. Canned tomatoes are under
   **Canned and dry goods**, for example. Copying, sharing and printing keep the same groups, and the CSV has an
-  **Area** column.
+  **Area** column, plus **Also** for amounts that couldn't be added up and **Or instead** for a variety's general kind.
 
 ## Shop
 
@@ -35,7 +42,9 @@ you add by hand. Once the plan is confirmed, it's your list for the shop.
 ## Add things by hand
 
 Use **Add to the list** for anything else: milk, paper towels, whatever you need. An amount and a unit are optional.
-Adding the same thing again adds to its amount. Hand-added items need no plan. Remove them when you change your mind.
+Adding the same thing again adds to its amount, or lists the new amount beside it when the units can't be added.
+Once the plan is confirmed, something you added by hand that the plan needs too shares the plan's line, and ticking
+it buys both. Hand-added items need no plan. Remove them when you change your mind.
 
 ## Stores
 

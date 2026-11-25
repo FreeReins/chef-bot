@@ -85,14 +85,22 @@ internal sealed class ChefBotDbContext(DbContextOptions<ChefBotDbContext> option
             meal.HasMany(m => m.CustomIngredients).WithOne().HasForeignKey(i => i.PlannedMealId).OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.Entity<PlannedMealIngredientEntity>().ToTable("PlannedMealIngredients");
-        modelBuilder.Entity<ShoppingItemEntity>().ToTable("ShoppingItems");
+        modelBuilder.Entity<ShoppingItemEntity>(item =>
+        {
+            item.ToTable("ShoppingItems");
+            item.Property(i => i.ExtraAmounts).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
+        });
 
         modelBuilder.Entity<PantryItemEntity>(item =>
         {
             item.ToTable("PantryItems");
             item.HasIndex(i => i.Key);
         });
-        modelBuilder.Entity<ManualShoppingItemEntity>().ToTable("ManualShoppingItems");
+        modelBuilder.Entity<ManualShoppingItemEntity>(item =>
+        {
+            item.ToTable("ManualShoppingItems");
+            item.Property(i => i.ExtraAmounts).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
+        });
 
         modelBuilder.Entity<UserEntity>(user =>
         {

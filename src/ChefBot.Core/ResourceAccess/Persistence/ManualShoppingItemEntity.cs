@@ -14,5 +14,8 @@ internal sealed class ManualShoppingItemEntity
 
     public string Unit { get; set; } = string.Empty;
 
+    /// <summary>Amounts that couldn't be added to <see cref="Quantity"/>, as a JSON list of quantity and unit.</summary>
+    public string ExtraAmounts { get; set; } = "[]";
+
     public DateOnly AddedOn { get; set; }
 }

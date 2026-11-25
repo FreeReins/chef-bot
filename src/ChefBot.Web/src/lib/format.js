@@ -77,10 +77,36 @@ export function fullDate(iso, at) {
   return iso ? parseDate(iso).toLocaleDateString(undefined, { dateStyle: 'full' }) : '';
 }
 
-export function amount(quantity, unit) {
-  if (quantity == null) return '';
-  const rounded = Math.round(quantity * 100) / 100;
-  return unit ? `${rounded} ${unit}` : `${rounded}`;
+/**
+ * "600 g", or with the amounts that couldn't be added to it (`more`, a line's `moreAmounts`) "2 tbsp + 100 g".
+ * Empty when no amount is known.
+ */
+export function amount(quantity, unit, more = []) {
+  const one = (q, u) => {
+    const rounded = Math.round(q * 100) / 100;
+    return u ? `${rounded} ${u}` : `${rounded}`;
+  };
+  return [quantity == null ? null : one(quantity, unit), ...(more ?? []).map((extra) => one(extra.quantity, extra.unit))]
+    .filter(Boolean)
+    .join(' + ');
+}
+
+/**
+ * Several lines' amounts as one line's: amounts in the same unit are added, the rest kept apart. Each of `lines` has
+ * { quantity, unit, moreAmounts }; the answer is { quantity, unit, moreAmounts } for the first amount and the rest.
+ */
+export function addAmounts(lines) {
+  const totals = [];
+  for (const line of lines) {
+    for (const part of [{ quantity: line.quantity, unit: line.unit }, ...(line.moreAmounts ?? [])]) {
+      if (part.quantity == null) continue;
+      const same = totals.find((total) => total.unit === (part.unit || ''));
+      if (same) same.quantity += part.quantity;
+      else totals.push({ quantity: part.quantity, unit: part.unit || '' });
+    }
+  }
+  const [first, ...rest] = totals;
+  return { quantity: first?.quantity ?? null, unit: first?.unit ?? lines[0]?.unit ?? '', moreAmounts: rest };
 }
 
 /** "45 min", "1 h", "1 h 10 min". */

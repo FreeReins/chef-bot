@@ -65,10 +65,11 @@ export function recipeText(recipe) {
   return `${parts.join('\n\n')}\n`;
 }
 
-/** "fish fillets, 600 g (optional)": one shopping line as words. */
+/** "fish fillets, 600 g (optional)", or "shallot, 2 (or onion)": one shopping line as words. */
 function item(line) {
-  const howMuch = amount(line.quantity, line.unit);
-  return `${line.name}${howMuch ? `, ${howMuch}` : ''}${line.isOptional ? ' (optional)' : ''}`;
+  const howMuch = amount(line.quantity, line.unit, line.moreAmounts);
+  const notes = [line.orInstead && `or ${line.orInstead}`, line.isOptional && 'optional'].filter(Boolean);
+  return `${line.name}${howMuch ? `, ${howMuch}` : ''}${notes.length ? ` (${notes.join(', ')})` : ''}`;
 }
 
 /**
@@ -97,10 +98,13 @@ function field(value) {
  * as UTF-8, and ends lines with CRLF as RFC 4180 asks.
  */
 export function shoppingCsv(sections) {
-  const rows = [['Name', 'Quantity', 'Unit', 'Store', 'Area', 'Food group', 'Optional', 'For']];
+  const rows = [['Name', 'Quantity', 'Unit', 'Also', 'Or instead', 'Store', 'Area', 'Food group', 'Optional', 'For']];
   for (const section of sections) {
     for (const line of section.lines) {
-      rows.push([line.name, line.quantity, line.unit, line.store, areaName(line.area), line.group, line.isOptional ? 'yes' : '', line.usedIn.join('; ')]);
+      rows.push([
+        line.name, line.quantity, line.unit, amount(null, '', line.moreAmounts), line.orInstead ?? '', line.store,
+        areaName(line.area), line.group, line.isOptional ? 'yes' : '', line.usedIn.join('; '),
+      ]);
     }
   }
   return `\uFEFF${rows.map((row) => row.map(field).join(',')).join('\r\n')}\r\n`;

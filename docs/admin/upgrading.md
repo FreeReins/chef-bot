@@ -67,6 +67,10 @@ says so rather than touching it.
 From the version that added the bell's messages (the `InboxEntries` table) on, upgrades apply database changes by
 themselves.
 
+- **One line per ingredient:** added the `ExtraAmounts` column to the `ShoppingItems` and `ManualShoppingItems`
+  tables. At startup, saved recipes' ingredients are filed under the catalog's current names (shallots no longer as
+  onion), and the open plans' shopping lists follow. Pantry items and hand-added items saved before keep their names.
+
 - **One container:** ChefBot runs its own PostgreSQL, keeping everything in one `/data` volume (or
   `C:\ProgramData\ChefBot`). Installs from before it used a separate database container and three volumes: back up,
   install afresh, and restore the backup.
