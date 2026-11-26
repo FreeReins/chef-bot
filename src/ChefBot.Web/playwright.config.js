@@ -11,6 +11,9 @@ export default defineConfig({
   testDir: 'tests',
   forbidOnly: true,
   retries: 0,
+  // Each test opens its own page with its own stubs, so tests in one file can run side by side. Otherwise a file
+  // runs in a single worker, and a11y.spec.js's hundred-odd rows queue up behind each other.
+  fullyParallel: true,
   // A dot per test in the container (CI=1), so a full run prints a few lines; pass --reporter=list to see each test.
   reporter: process.env.CI ? 'dot' : 'list',
   testMatch: shooting ? 'screenshot.spec.js' : '*.spec.js',
