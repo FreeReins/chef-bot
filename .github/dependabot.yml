@@ -16,6 +16,17 @@ updates:
     groups:
       nuget:
         update-types: [minor, patch]
+    # ChefBot skips .NET 11 (STS) and moves to .NET 12 (LTS). These packages' major versions follow .NET's, so 11.x
+    # needs net11.0; 12.0 still opens a pull request. Remove this and the docker ignore after the upgrade.
+    ignore:
+      - dependency-name: "Microsoft.AspNetCore.*"
+        versions: [">= 11.0, < 12.0"]
+      - dependency-name: "Microsoft.EntityFrameworkCore*"
+        versions: [">= 11.0, < 12.0"]
+      - dependency-name: "Microsoft.Extensions.*"
+        versions: [">= 11.0, < 12.0"]
+      - dependency-name: "Npgsql.EntityFrameworkCore.PostgreSQL"
+        versions: [">= 11.0, < 12.0"]
 
   - package-ecosystem: npm
     directory: /src/ChefBot.Web
@@ -50,6 +61,10 @@ updates:
     groups:
       docker:
         update-types: [minor, patch]
+    # Skips the .NET 11 images until the move to .NET 12 (see the nuget ignore above).
+    ignore:
+      - dependency-name: "dotnet/*"
+        versions: [">= 11.0, < 12.0"]
 
   - package-ecosystem: github-actions
     directory: /
