@@ -4,6 +4,7 @@
     accessors and utilities behind them. Only Contracts/ and CoreRegistration are public.
   -->
   <ItemGroup>
+    <PackageReference Include="WolverineFx" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <!-- Reads recipe web pages: their JSON-LD, microdata, and the HTML that site readers pick apart. -->
     <PackageReference Include="AngleSharp" />
