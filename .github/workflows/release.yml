@@ -138,7 +138,7 @@ jobs:
           SITE_URL= mkdocs build --strict --site-dir site
       - name: Run the tests
         run: dotnet run --project tests/${{ env.APP_NAME }}.Core.Tests
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: artifacts/windows/work/cache
           key: postgres-${{ hashFiles('deploy/windows/postgres.json') }}
