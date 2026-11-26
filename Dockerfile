@@ -21,7 +21,7 @@ COPY mkdocs.yml ./
 COPY docs/ docs/
 RUN SITE_URL= mkdocs build --strict --site-dir /site
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /source
 
 # Restore first so this layer is reused until a project file changes. Debug's packages are fetched too, for the
