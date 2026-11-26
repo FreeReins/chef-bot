@@ -52,7 +52,7 @@ RUN dotnet publish src/ChefBot.Api/ChefBot.Api.csproj --configuration Release --
 # repository, because the base image is Ubuntu 24.04, which only has 16; its key is checked against this checksum.
 # The package is installed here and only the server is copied into the image: its dependencies (LLVM for JIT, Perl
 # and systemd for the cluster tools) would double the image's size, and ChefBot uses none of them.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS postgres
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS postgres
 ARG POSTGRES_MAJOR=17
 ADD --checksum=sha256:0144068502a1eddd2a0280ede10ef607d1ec592ce819940991203941564e8e76 \
     https://www.postgresql.org/media/keys/ACCC4CF8.asc /usr/share/keyrings/postgresql.asc
@@ -68,7 +68,7 @@ RUN chmod 644 /usr/share/keyrings/postgresql.asc \
     && mkdir "/usr/lib/postgresql/${POSTGRES_MAJOR}/libpq" \
     && cp -P /usr/lib/*-linux-gnu/libpq.so.5* "/usr/lib/postgresql/${POSTGRES_MAJOR}/libpq/"
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
 # Links the published image to its repository on the GitHub Container Registry.
 LABEL org.opencontainers.image.source="https://github.com/FreeReins/chef-bot" \
       org.opencontainers.image.title="ChefBot" \
