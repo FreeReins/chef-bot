@@ -121,7 +121,7 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: src/${{ env.APP_NAME }}.Web/package-lock.json
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -237,7 +237,7 @@ jobs:
       TAG: ${{ needs.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
