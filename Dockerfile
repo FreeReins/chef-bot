@@ -3,7 +3,7 @@
 
 # The web page (src/ChefBot.Web, Svelte) is built here into dist/. Only this stage needs Node, and nothing but the
 # final image uses it, so the page and the .NET build run side by side.
-FROM docker.io/library/node:24-alpine AS web
+FROM docker.io/library/node:26-alpine AS web
 WORKDIR /source/src/ChefBot.Web
 COPY src/ChefBot.Web/package.json src/ChefBot.Web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
