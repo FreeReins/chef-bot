@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - id: metadata
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3
       - if: steps.metadata.outputs.update-type != 'version-update:semver-major'
         name: Merge when the checks pass
         run: gh pr merge --auto --squash "$PR_URL"
