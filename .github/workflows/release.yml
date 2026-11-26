@@ -200,7 +200,7 @@ jobs:
       packages: write
     steps:
       - run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/digests
           pattern: digests-*
@@ -248,7 +248,7 @@ jobs:
           pip install -r docs/requirements.txt
           SITE_URL='' USE_DIRECTORY_URLS=false mkdocs build --strict --site-dir "$docs"
           zip -qr "$docs-$TAG.zip" "$docs"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: windows
           path: windows
