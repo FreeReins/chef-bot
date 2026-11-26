@@ -1,19 +1,46 @@
-# Publishes a release when a version tag (v1.2.3) is pushed: the container image for amd64 and arm64 on GHCR, tagged
-# 1.2.3, 1.2 and latest; the Windows installer and portable app; and a GitHub release with notes, the Windows
-# downloads and the documentation as a zip to read offline.
+# Releases on every merge to main whose commits call for one (.github/scripts/next-version.sh reads the Conventional
+# Commit messages: fix: a patch, feat: a minor, ! a major). It publishes the container image for amd64 and arm64 on GHCR,
+# tagged 1.2.3, 1.2 and latest; the Windows installer and portable app; and an immutable GitHub release, with notes, the
+# Windows downloads and the documentation as a zip to read offline. Nothing is tagged or published until every build
+# and check has passed; if one fails, the next merge tries the same version again.
 # Each architecture builds on its own native runner, since the .NET build is slow and unreliable under emulation.
+# One-time setup: see CONTRIBUTING.md, Releases. In another repo with this layout, change APP_NAME.
 name: Release
 
 on:
   push:
-    tags: ["v*.*.*"]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# One release at a time, so two quick merges can't choose the same version. A waiting run isn't cancelled.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  APP_NAME: ChefBot
+
 jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      release: ${{ steps.next.outputs.release }}
+      version: ${{ steps.next.outputs.version }}
+      tag: ${{ steps.next.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: next
+        name: Choose the version
+        run: .github/scripts/next-version.sh
+
   image:
+    needs: version
+    if: needs.version.outputs.release == 'true'
     strategy:
       fail-fast: true
       matrix:
@@ -52,6 +79,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
+          tags: type=raw,value=${{ needs.version.outputs.version }}
       - id: build
         name: Build and push by digest
         uses: docker/build-push-action@v6
@@ -76,8 +104,96 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # The <APP_NAME>.msi installer and portable .exe (deploy/windows/build.ps1), each started and checked before release.
+  windows:
+    needs: version
+    if: needs.version.outputs.release == 'true'
+    runs-on: windows-2025
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/${{ env.APP_NAME }}.Web/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+      - name: Build the web page
+        working-directory: src/${{ env.APP_NAME }}.Web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Build the documentation for /help
+        shell: bash
+        run: |
+          pip install -r docs/requirements.txt
+          SITE_URL= mkdocs build --strict --site-dir site
+      - name: Run the tests
+        run: dotnet run --project tests/${{ env.APP_NAME }}.Core.Tests
+      - uses: actions/cache@v4
+        with:
+          path: artifacts/windows/work/cache
+          key: postgres-${{ hashFiles('deploy/windows/postgres.json') }}
+      - name: Build the installer and the portable app
+        run: pwsh deploy/windows/build.ps1 -Version $env:VERSION
+      - name: Check the portable app starts, and starts again after being killed
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path "artifacts/windows/$env:APP_NAME-$env:VERSION-win-x64-portable.exe"
+          function Wait-Healthy {
+            foreach ($i in 1..90) {
+              try { if ((Invoke-RestMethod http://localhost:8080/health).status -eq "ok") { return } } catch { }
+              Start-Sleep 2
+            }
+            Get-Content (Join-Path (Split-Path $exe) "$env:APP_NAME-data/database/postgres.log") -ErrorAction SilentlyContinue
+            throw "The portable $env:APP_NAME didn't answer /health."
+          }
+          foreach ($run in 1..2) {
+            $process = Start-Process $exe -PassThru -RedirectStandardOutput "portable-$run.log"
+            Wait-Healthy
+            Stop-Process $process -Force
+            Start-Sleep 3
+          }
+          Get-Process postgres -ErrorAction SilentlyContinue | Stop-Process -Force
+      - name: Check the installer installs a running service, and uninstalls
+        shell: pwsh
+        run: |
+          $msi = Resolve-Path "artifacts/windows/$env:APP_NAME-$env:VERSION-win-x64.msi"
+          $install = Start-Process msiexec -ArgumentList "/i `"$msi`" /qn /l*v install.log" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { Get-Content install.log -Tail 80; throw "msiexec /i failed with $($install.ExitCode)." }
+          $healthy = $false
+          foreach ($i in 1..90) {
+            try { if ((Invoke-RestMethod http://localhost:8080/health).status -eq "ok") { $healthy = $true; break } } catch { }
+            Start-Sleep 2
+          }
+          if (-not $healthy) {
+            Get-Service $env:APP_NAME | Format-List
+            Get-Content "$env:ProgramData/$env:APP_NAME/database/postgres.log" -ErrorAction SilentlyContinue
+            Get-EventLog -LogName Application -Source $env:APP_NAME -Newest 20 -ErrorAction SilentlyContinue | Format-List
+            throw "The $env:APP_NAME service didn't answer /health."
+          }
+          $remove = Start-Process msiexec -ArgumentList "/x `"$msi`" /qn" -Wait -PassThru
+          if ($remove.ExitCode -ne 0) { throw "msiexec /x failed with $($remove.ExitCode)." }
+          if (Get-Service $env:APP_NAME -ErrorAction SilentlyContinue) { throw "The $env:APP_NAME service is still there after uninstalling." }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            artifacts/windows/*.msi
+            artifacts/windows/*.exe
+          if-no-files-found: error
+
+  # Tags the image only once the Windows build has passed too, so a failed release leaves no "latest" behind.
   manifest:
-    needs: image
+    needs: [version, image, windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -100,9 +216,9 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.version.outputs.version }}
+            type=raw,value=latest
       - name: Join the architectures into one image
         working-directory: ${{ runner.temp }}/digests
         run: |
@@ -110,102 +226,15 @@ jobs:
           sources=()
           for digest in *; do sources+=("$IMAGE@sha256:$digest"); done
           docker buildx imagetools create "${tags[@]}" "${sources[@]}"
-      - run: docker buildx imagetools inspect "$IMAGE:${{ steps.meta.outputs.version }}"
-
-  # ChefBot.msi and the portable ChefBot.exe (deploy/windows/build.ps1), each started and checked before release.
-  windows:
-    runs-on: windows-2025
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: src/ChefBot.Web/package-lock.json
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-          cache: pip
-          cache-dependency-path: docs/requirements.txt
-      - name: Name the version
-        shell: bash
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then version="${GITHUB_REF_NAME#v}"; else version="0.0.0-dev"; fi
-          echo "VERSION=$version" >> "$GITHUB_ENV"
-      - name: Build the web page
-        working-directory: src/ChefBot.Web
-        run: |
-          npm ci --no-audit --no-fund
-          npm run build
-      - name: Build the documentation for /help
-        shell: bash
-        run: |
-          pip install -r docs/requirements.txt
-          SITE_URL= mkdocs build --strict --site-dir site
-      - name: Run the tests
-        run: dotnet run --project tests/ChefBot.Core.Tests
-      - uses: actions/cache@v4
-        with:
-          path: artifacts/windows/work/cache
-          key: postgres-${{ hashFiles('deploy/windows/postgres.json') }}
-      - name: Build the installer and the portable app
-        run: pwsh deploy/windows/build.ps1 -Version $env:VERSION
-      - name: Check the portable app starts, and starts again after being killed
-        shell: pwsh
-        run: |
-          $exe = Resolve-Path "artifacts/windows/ChefBot-$env:VERSION-win-x64-portable.exe"
-          function Wait-Healthy {
-            foreach ($i in 1..90) {
-              try { if ((Invoke-RestMethod http://localhost:8080/health).status -eq "ok") { return } } catch { }
-              Start-Sleep 2
-            }
-            Get-Content (Join-Path (Split-Path $exe) "ChefBot-data/database/postgres.log") -ErrorAction SilentlyContinue
-            throw "The portable ChefBot didn't answer /health."
-          }
-          foreach ($run in 1..2) {
-            $process = Start-Process $exe -PassThru -RedirectStandardOutput "portable-$run.log"
-            Wait-Healthy
-            Stop-Process $process -Force
-            Start-Sleep 3
-          }
-          Get-Process postgres -ErrorAction SilentlyContinue | Stop-Process -Force
-      - name: Check the installer installs a running service, and uninstalls
-        shell: pwsh
-        run: |
-          $msi = Resolve-Path "artifacts/windows/ChefBot-$env:VERSION-win-x64.msi"
-          $install = Start-Process msiexec -ArgumentList "/i `"$msi`" /qn /l*v install.log" -Wait -PassThru
-          if ($install.ExitCode -ne 0) { Get-Content install.log -Tail 80; throw "msiexec /i failed with $($install.ExitCode)." }
-          $healthy = $false
-          foreach ($i in 1..90) {
-            try { if ((Invoke-RestMethod http://localhost:8080/health).status -eq "ok") { $healthy = $true; break } } catch { }
-            Start-Sleep 2
-          }
-          if (-not $healthy) {
-            Get-Service ChefBot | Format-List
-            Get-Content "$env:ProgramData/ChefBot/database/postgres.log" -ErrorAction SilentlyContinue
-            Get-EventLog -LogName Application -Source ChefBot -Newest 20 -ErrorAction SilentlyContinue | Format-List
-            throw "The ChefBot service didn't answer /health."
-          }
-          $remove = Start-Process msiexec -ArgumentList "/x `"$msi`" /qn" -Wait -PassThru
-          if ($remove.ExitCode -ne 0) { throw "msiexec /x failed with $($remove.ExitCode)." }
-          if (Get-Service ChefBot -ErrorAction SilentlyContinue) { throw "The ChefBot service is still there after uninstalling." }
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows
-          path: |
-            artifacts/windows/*.msi
-            artifacts/windows/*.exe
-          if-no-files-found: error
+      - run: docker buildx imagetools inspect "$IMAGE:${{ needs.version.outputs.version }}"
 
   release:
-    needs: [manifest, windows]
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [version, manifest]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -215,17 +244,24 @@ jobs:
           cache-dependency-path: docs/requirements.txt
       - name: Build the documentation to read offline
         run: |
+          docs="${APP_NAME,,}-docs"
           pip install -r docs/requirements.txt
-          SITE_URL='' USE_DIRECTORY_URLS=false mkdocs build --strict --site-dir chefbot-docs
-          zip -qr "chefbot-docs-${GITHUB_REF_NAME}.zip" chefbot-docs
+          SITE_URL='' USE_DIRECTORY_URLS=false mkdocs build --strict --site-dir "$docs"
+          zip -qr "$docs-$TAG.zip" "$docs"
       - uses: actions/download-artifact@v4
         with:
           name: windows
           path: windows
-      - uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
-          files: |
-            chefbot-docs-*.zip
-            windows/*
+      # Immutable releases lock a release's files when it is published, so it is made as a draft, the files are
+      # uploaded, and only then is it published, which also creates the tag on this commit.
+      - name: Publish the release
+        run: |
+          if [[ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" == "true" ]]; then
+            echo "Replacing the draft $TAG left by an earlier run that failed."
+            gh release delete "$TAG" --yes
+          fi
+          gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "$TAG" --generate-notes \
+            ./*-docs-"$TAG".zip windows/*
+          gh release edit "$TAG" --draft=false
+        env:
+          GH_TOKEN: ${{ github.token }}

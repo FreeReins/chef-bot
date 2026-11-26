@@ -1,0 +1,63 @@
+# Weekly dependency updates. Minor and patch updates come as one pull request per ecosystem and merge themselves once
+# the checks pass (workflows/dependabot-automerge.yml); each major update gets its own pull request to review.
+# Everything except GitHub Actions ships in the release (the web page's devDependencies are built into the page), so
+# those titles start "fix(deps):" and release a patch version; Actions updates start "ci(deps):" and don't release.
+# In another repo with this layout, change the npm directory.
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: fix
+      include: scope
+    groups:
+      nuget:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /src/ChefBot.Web
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: fix
+      prefix-development: fix
+      include: scope
+    groups:
+      npm:
+        update-types: [minor, patch]
+
+  - package-ecosystem: pip
+    directory: /docs
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: fix
+      include: scope
+    groups:
+      pip:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: fix
+      include: scope
+    groups:
+      docker:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        update-types: [minor, patch]

@@ -1,0 +1,26 @@
+# Checks a pull request's title is a Conventional Commit, such as "fix(web): keep the search box focused". Pull requests
+# are squash merged with the title as the commit message, and the release workflow reads those messages to choose the
+# next version (.github/scripts/next-version.sh). Required by the main branch ruleset.
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  title:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check the title
+        run: |
+          types='feat|fix|perf|refactor|docs|test|build|ci|chore|revert|style'
+          if [[ ! "$TITLE" =~ ^($types)(\([a-z0-9._/-]+\))?!?:\ [^[:space:]] ]]; then
+            echo "::error::\"$TITLE\" isn't a Conventional Commit title. Start it with a type, such as \"feat: add" \
+              "a stock report\" or \"fix(web): keep the search box focused\". Types: ${types//|/, }. Add ! before" \
+              "the colon for a breaking change. Then edit the title and this check runs again."
+            exit 1
+          fi
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
