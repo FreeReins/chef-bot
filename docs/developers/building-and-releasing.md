@@ -66,8 +66,11 @@ in CONTRIBUTING.md has the details, including how to run a Release build locally
 
 ## Releases
 
-Pushing a tag such as `v1.2.3` runs
-[`.github/workflows/release.yml`](https://github.com/FreeReins/chef-bot/blob/main/.github/workflows/release.yml):
+Every merge to `main` runs
+[`.github/workflows/release.yml`](https://github.com/FreeReins/chef-bot/blob/main/.github/workflows/release.yml).
+It reads the Conventional Commit messages since the last tag to choose the version (`fix:` a patch, `feat:` a minor,
+`!` a major; [Releases](https://github.com/FreeReins/chef-bot/blob/main/CONTRIBUTING.md#releases) in CONTRIBUTING.md
+has the full table and the one-time GitHub setup). When the commits call for a release, it:
 
 1. Builds the image natively for `linux/amd64` and `linux/arm64`, each running the tests.
 2. Pushes both to `ghcr.io/freereins/chef-bot` and joins them into one multi-arch image tagged
@@ -78,10 +81,7 @@ Pushing a tag such as `v1.2.3` runs
 4. Creates a GitHub release with generated notes, the two Windows downloads, and the documentation as a zip, to read
    with no service running.
 
-```sh
-git tag v1.2.3
-git push origin v1.2.3
-```
+Nothing is tagged or published until every build and check has passed.
 
 A release that changes the database tables carries a migration, which is applied when it starts, so people upgrade
 as usual. Its notes should still say the tables changed, since going back to an older version then needs a restore (see

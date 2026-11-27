@@ -11,6 +11,8 @@
 #                     screenshot an address of the web page, answered from the test stubs, in each test project
 #                     (light, dark, phone) into src/ChefBot.Web/shots/, then exit
 #   ./dev.sh test     run the tests again on every save
+#   ./dev.sh links    check the links in every Markdown file, first inside the repository (as pull requests do),
+#                     then outside links too (as the weekly check does), then exit
 #   ./dev.sh db       start the dev database only
 #   ./dev.sh psql     open a SQL prompt on the dev database
 #   ./dev.sh stop     stop the dev database
@@ -34,7 +36,8 @@ web=src/ChefBot.Web
 web_output=src/ChefBot.Web/dist
 web_container=chefbot-dev-web
 web_test_modules=chefbot-web-test-modules
-node_image=docker.io/library/node:24-alpine
+node_image=docker.io/library/node:26-alpine
+lychee_image=docker.io/lycheeverse/lychee:latest
 
 port_in_use() {
     ss -Hltn "( sport = :$1 )" 2>/dev/null | grep -q .
@@ -118,10 +121,36 @@ web_test() {
         echo "Pin @playwright/test to an exact version in $web/package.json, so the container image can match it." >&2
         exit 1
     fi
-    podman run --rm --init --ipc=host --env NPM_CONFIG_UPDATE_NOTIFIER=false --env CI=1 --env SHOT_PATH \
+    # No limit on processes: a worker per core, each with its own Chromium, passes Podman's default of 2048 on a
+    # many-core machine, and then threads fail to start and tests crash.
+    podman run --rm --init --ipc=host --pids-limit=-1 --env NPM_CONFIG_UPDATE_NOTIFIER=false --env CI=1 --env SHOT_PATH \
         --volume "$PWD/$web:/source/$web:z" --volume "$web_test_modules:/source/$web/node_modules" \
         --workdir "/source/$web" "mcr.microsoft.com/playwright:v$version-noble" \
         sh -c 'npm install --no-audit --no-fund --loglevel=error && exec npx playwright test "$@"' web-test "$@"
+}
+
+# Runs lychee with lychee.toml: this machine's when there is one, otherwise in a container.
+run_lychee() {
+    if command -v lychee >/dev/null 2>&1; then
+        lychee --config lychee.toml --include-fragments "$@"
+    else
+        podman run --rm --init --volume "$PWD:/input:z" --workdir /input "$lychee_image" --config lychee.toml --include-fragments "$@"
+    fi
+}
+
+# Both checks always run, so one report shows every broken link. Fails when either finds one.
+check_links() {
+    local failed=0
+    echo "Checking links inside the repository..."
+    run_lychee --offline './**/*.md' || failed=1
+    echo
+    echo "Checking outside links too..."
+    run_lychee './**/*.md' || failed=1
+    if ((failed)); then
+        echo "Some links are broken: fix the ones listed above, then run ./dev.sh links again." >&2
+        exit 1
+    fi
+    echo "Every link works."
 }
 
 run_app() {
@@ -198,6 +227,9 @@ case "${1:-run}" in
     test)
         exec dotnet watch --project tests/ChefBot.Core.Tests run
         ;;
+    links)
+        check_links
+        ;;
     db)
         start_db
         echo "Database__Mode=External ConnectionStrings__ChefBot=\"$dev_connection\""
@@ -223,7 +255,7 @@ case "${1:-run}" in
         run_app
         ;;
     *)
-        sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
         exit 1
         ;;
 esac

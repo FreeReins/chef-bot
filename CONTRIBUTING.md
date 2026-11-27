@@ -270,6 +270,47 @@ into `src/ChefBot.Web/shots/` (`tests/screenshot.spec.js`, which normal runs ski
   version pinned in `package.json`. Bump both together. The container is Ubuntu, and `node_modules` in the
   source folder may come from the Alpine Node container, so the tests keep their own copy in the
   `chefbot-web-test-modules` volume. `podman volume rm chefbot-web-test-modules` starts it afresh.
+- The tests open a production build of the page (built into `node_modules/.cache/playwright-web` and served by
+  `vite preview`), not Vite's dev server, so each page load is a few files. The service worker is blocked, so the
+  stubs answer every request.
+- In CI (`.github/workflows/ci.yml`), `dorny/paths-filter` picks the checks a pull request needs: the web tests
+  (split across three runners) only when `src/ChefBot.Web/` or `ci.yml` changes, and the image build unless the only
+  changes are Markdown outside `docs/`, workflows or agent files. A skipped check counts as passed for `checks`.
+
+## Releases
+
+Every merge to `main` can release. Pull requests are squash merged, and the title becomes the commit message, so a
+title must be a [Conventional Commit](https://www.conventionalcommits.org); the **PR title** check says how when one
+isn't. The release workflow reads the messages since the last tag and picks the version:
+
+| Title starts with | Release |
+|---|---|
+| `fix:`, `perf:` (`fix(web): ...` with a scope) | patch, 1.4.2 → 1.4.3 |
+| `feat:` | minor, 1.4.2 → 1.5.0 |
+| `feat!:` or any type with `!`, or a `BREAKING CHANGE:` line in the description | major, 1.4.2 → 2.0.0 |
+| `docs:`, `test:`, `refactor:`, `build:`, `ci:`, `chore:`, `style:`, `revert:` | none; they ship with the next release |
+
+`.github/scripts/next-version.sh` prints what the next release would be. The workflow builds and checks everything,
+then publishes the image to GHCR and an immutable GitHub release with that tag. A published release, its files and its
+tag can never change, so a mistake is fixed by a new release. If a build fails, nothing is published and the next
+merge tries that version again.
+
+Dependabot opens weekly updates, with minor and patch updates grouped into one pull request per ecosystem. Those turn
+on auto-merge, merge when **CI** and **PR title** pass, and, as `fix(deps):`, release a patch. Major updates and
+GitHub Actions updates (`ci(deps):`, no release) wait for a person.
+
+One-time setup on GitHub (the same in every repo using these workflows):
+
+1. **Settings → General**: under **Pull Requests**, allow only **squash merging**, with **Default commit message**
+   set to **Pull request title and description**; tick **Allow auto-merge** and **Automatically delete head
+   branches**. Under **Releases**, tick **Enable release immutability**.
+2. **Settings → Rules → Rulesets → New branch ruleset** for the default branch: **Restrict deletions**, **Block force
+   pushes**, **Require a pull request before merging** (0 approvals, so Dependabot's updates can merge) and **Require
+   status checks to pass** with `checks` and `title`.
+3. A fine-grained personal access token with access to this repository and **Contents** and **Pull requests**
+   read and write, saved under **Settings → Secrets and variables → Dependabot** as `AUTOMERGE_TOKEN`. A merge made
+   with the workflow's own token wouldn't start the release workflow.
+4. After the first release, make the image public: the package's **Package settings → Change visibility**.
 
 ## Documentation
 
@@ -277,6 +318,11 @@ User and developer documentation lives in `docs/` as Markdown, and is published 
 [documentation site](https://freereins.github.io/chef-bot/) and built into the image at `/help`. A
 change people will notice needs a docs change in the same pull request. [docs/AGENTS.md](docs/AGENTS.md) has the
 writing rules and says which page covers what.
+
+`./dev.sh links` checks the links in every Markdown file with [lychee](https://lychee.cli.rs/): first the links and
+anchors inside the repository, as pull requests do, then outside links too, as the weekly check does. It uses this
+machine's `lychee` (`brew install lychee`) when there is one, otherwise a lychee container. Its settings are in
+`lychee.toml`, which the Links workflow reads too.
 
 ## Style
 

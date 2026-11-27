@@ -11,7 +11,8 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
  */
 export async function expectAccessible(page, { include, disable = [] } = {}) {
   await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
-  let builder = new AxeBuilder({ page }).withTags(TAGS);
+  // Only the problems: axe otherwise records every element each passing rule matched, which costs more than the check.
+  let builder = new AxeBuilder({ page }).withTags(TAGS).options({ resultTypes: ['violations'] });
   if (include) builder = builder.include(include);
   if (disable.length) builder = builder.disableRules(disable);
   const { violations } = await builder.analyze();

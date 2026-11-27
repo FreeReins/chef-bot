@@ -6,7 +6,7 @@
 dotnet build ChefBot.slnx -v q -nologo            # must have no warnings
 dotnet run --project tests/ChefBot.Core.Tests     # all .NET tests, under a second
 ./dev.sh web                                      # build the web page
-./dev.sh web-test                                 # accessibility and keyboard tests, ~90 s
+./dev.sh web-test                                 # accessibility and keyboard tests, ~70 s
 ```
 
 ## .NET tests
