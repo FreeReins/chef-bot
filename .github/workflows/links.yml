@@ -1,10 +1,11 @@
 # Checks the links in every Markdown file. On pull requests: links and anchors inside the repository only, so the check
-# is fast and never fails because another site is down. Weekly: outside links too, opening an issue when one breaks.
+# is fast and never fails because another site is down. Weekly: outside links too, opening an issue when one breaks
+# (or updating the open one) and closing it once they all work again. Both read lychee.toml, as ./dev.sh links does.
 name: Links
 
 on:
   pull_request:
-    paths: ["**/*.md", ".github/workflows/links.yml"]
+    paths: ["**/*.md", "lychee.toml", ".github/workflows/links.yml"]
   schedule:
     - cron: "17 6 * * 1"
   workflow_dispatch:
@@ -17,10 +18,10 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: lycheeverse/lychee-action@v2
         with:
-          args: --offline --include-fragments --no-progress --exclude-path node_modules --exclude-path evals './**/*.md'
+          args: --config lychee.toml --include-fragments --offline './**/*.md'
           fail: true
 
   external:
@@ -30,20 +31,30 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: lychee
         uses: lycheeverse/lychee-action@v2
         with:
-          # Example addresses in the docs, and the docs site itself before its first deploy, aren't real links.
-          args: >-
-            --include-fragments --no-progress --exclude-path node_modules --exclude-path evals
-            --exclude '^https?://(localhost|127\.0\.0\.1|chefbot\.(local|example\.com)|homeassistant\.local|example\.com)'
-            --exclude '^https?://[^/]*:(8080|8443|8123)'
-            './**/*.md'
+          args: --config lychee.toml --include-fragments './**/*.md'
           fail: false
+      # One issue at a time: a new failure updates the open issue, a clean run closes it.
+      - id: issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --author app/github-actions \
+            --search 'in:title "Broken links in the documentation"' --json number --jq '.[0].number // empty')
+          echo "number=$number" >> "$GITHUB_OUTPUT"
       - if: steps.lychee.outputs.exit_code != 0
         uses: peter-evans/create-issue-from-file@v6
         with:
           title: Broken links in the documentation
           content-filepath: ./lychee/out.md
           labels: documentation
+          issue-number: ${{ steps.issue.outputs.number }}
+      - if: steps.lychee.outputs.exit_code == 0 && steps.issue.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue close "${{ steps.issue.outputs.number }}" --repo "$GITHUB_REPOSITORY" \
+            --comment "All links work again as of run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."

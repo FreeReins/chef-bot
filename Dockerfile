@@ -13,7 +13,7 @@ RUN npm run build
 # The documentation (docs/, MkDocs Material) is built here for /help, so it is there on a home network with no
 # internet. SITE_URL is empty so every address in it stays relative to /help; the privacy plugin downloads the few
 # outside assets (Mermaid) now, so the pages make no outside requests later.
-FROM docker.io/library/python:3.13-slim AS docs
+FROM docker.io/library/python:3.15-slim AS docs
 WORKDIR /source
 COPY docs/requirements.txt docs/
 RUN pip install --no-cache-dir -r docs/requirements.txt

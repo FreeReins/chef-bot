@@ -1,0 +1,13 @@
+# Link check settings, shared by ./dev.sh links and .github/workflows/links.yml so both check the same way.
+# Run it with --include-fragments on './**/*.md'; add --offline to check only links and anchors inside the repository.
+# Anchors are turned on with the flag, not here: this setting's format changed in lychee 0.24, the flag's didn't.
+
+no_progress = true
+
+exclude_path = ["node_modules", "evals"]
+
+# Example addresses in the docs aren't real links.
+exclude = [
+    '^https?://(localhost|127\.0\.0\.1|chefbot\.(local|example\.com)|homeassistant\.local|example\.com)',
+    '^https?://[^/]*:(8080|8443|8123)',
+]

@@ -1,7 +1,7 @@
 // Offline mode: the shopping list, pantry and the plan's recipes saved in the browser when ChefBot can't be reached,
 // and the changes made meanwhile sent once it answers again (src/lib/offline.svelte.js, src/lib/outbox.svelte.js). `api.offline` makes
-// every API request fail as with no signal. The service worker isn't part of these tests: Vite's dev server serves
-// the page, and the page registers it only in a build.
+// every API request fail as with no signal. The service worker isn't part of these tests: playwright.config.js
+// blocks it, so the stubs answer every request.
 import { test, expect, open, reply, expectInbox } from './fixtures.js';
 import * as data from './data.js';
 

@@ -160,13 +160,14 @@ ul.plain li:first-child { border-top: 0; }
 .check:first-of-type { border-top: 0; }
 .check:hover { background: var(--accent-bg); }
 .check input { margin-top: .3rem; flex: none; }
-/* An on/off switch. Still a checkbox underneath, so keys and screen readers treat it as one. */
-input[type="checkbox"].switch { appearance: none; width: 2.3rem; height: 1.3rem; margin-top: .15rem; border-radius: 999px; cursor: pointer;
+/* An on/off switch. Still a checkbox underneath, so keys and screen readers treat it as one. 1.5rem tall, the 24px
+   that WCAG asks of a target, so it passes however close a neighbour sits. */
+input[type="checkbox"].switch { appearance: none; width: 2.6rem; height: 1.5rem; margin-top: 0; border-radius: 999px; cursor: pointer;
   background: var(--chip); border: 1px solid var(--muted); position: relative; transition: background-color .15s, border-color .15s; }
-input[type="checkbox"].switch::after { content: ""; position: absolute; top: 50%; left: .15rem; width: .9rem; height: .9rem; border-radius: 50%;
+input[type="checkbox"].switch::after { content: ""; position: absolute; top: 50%; left: .15rem; width: 1.1rem; height: 1.1rem; border-radius: 50%;
   background: var(--muted); translate: 0 -50%; transition: left .15s, background-color .15s; }
 input[type="checkbox"].switch:checked { background: var(--accent); border-color: var(--accent); }
-input[type="checkbox"].switch:checked::after { left: calc(100% - 1.05rem); background: var(--accent-ink); }
+input[type="checkbox"].switch:checked::after { left: calc(100% - 1.25rem); background: var(--accent-ink); }
 input[type="checkbox"].switch:disabled { opacity: .5; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) { input[type="checkbox"].switch, input[type="checkbox"].switch::after { transition: none; } }
 
