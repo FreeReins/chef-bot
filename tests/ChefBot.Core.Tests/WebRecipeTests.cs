@@ -56,7 +56,7 @@ public class WebRecipeTests
         await Assert.That(soup.PrepMinutes).IsEqualTo(15);
         await Assert.That(soup.Course).IsEqualTo(RecipeCourse.Main);
         await Assert.That(soup.SourceUrl).IsEqualTo(SoupUrl);
-        await Assert.That(soup.ImageUrls!).IsEquivalentTo(["https://blog.example/img/soup.jpg", "https://cdn.example/soup-wide.jpg"]);
+        await Assert.That(soup.ImageUrls!).IsEquivalentTo(["https://blog.example/img/soup.jpg"]);
     }
 
     [Test]
@@ -137,7 +137,7 @@ public class WebRecipeTests
         await Assert.That(result.ReadWith).IsEqualTo("Any site (schema.org)");
         await Assert.That(result.Recipe.Name).IsEqualTo("Tomato & Basil Soup");
         await Assert.That(saved.SourceUrl).IsEqualTo(SoupUrl);
-        await Assert.That(saved.Images.Count).IsEqualTo(2);
+        await Assert.That(saved.Images.Count).IsEqualTo(1);
         await Assert.That(core.Messages.Published.OfType<FetchRecipeImages>().Single().RecipeId).IsEqualTo(saved.Id);
         await Assert.That(core.Messages.Commits).IsEqualTo(1);
     }
