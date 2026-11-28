@@ -15,7 +15,7 @@ add them.
 1. Copy the address of a recipe page from your browser.
 2. Choose **Add from a link**, paste it into **Address of a recipe page**, and press **Add**.
 
-ChefBot reads the recipe from the page and downloads its photos in the background, so they still show if the site
+ChefBot reads the recipe from the page and downloads its main photo in the background, so it still shows if the site
 goes away later. Most recipe sites work, because they describe their recipes for search engines in a standard way
 (schema.org). If a site doesn't, ChefBot says so. See [Recipe import problems](../troubleshooting/recipe-imports.md).
 

@@ -33,7 +33,8 @@ internal sealed partial class TransformationEngine(
 
     /// <summary>
     /// Reads the recipe on a downloaded page with the reader chosen for its address. The recipe's source is the
-    /// address that was given, without any <c>#fragment</c>, and its photo addresses are made absolute.
+    /// address that was given, without any <c>#fragment</c>. Only the page's first usable photo is kept, made absolute:
+    /// sites list the same photo in several sizes and crops, so one link gives one photo.
     /// </summary>
     /// <param name="reader">The reader chosen for the address.</param>
     /// <param name="url">The address that was given.</param>
@@ -51,7 +52,7 @@ internal sealed partial class TransformationEngine(
             .Select(image => Uri.TryCreate(page.Address, image, out var absolute) ? absolute : null)
             .Where(image => image is not null && (image.Scheme == Uri.UriSchemeHttp || image.Scheme == Uri.UriSchemeHttps))
             .Select(image => image!.AbsoluteUri)
-            .Distinct(StringComparer.Ordinal)
+            .Take(1)
             .ToList();
         return recipe with { SourceUrl = SourceAddress(url), ImageUrls = images };
     }
